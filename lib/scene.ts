@@ -1,32 +1,67 @@
-import * as THREE from 'three';
+import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-export function createViewer(host:HTMLDivElement) {
- const scene=new THREE.Scene();
- const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setClearColor(0x000000,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.6;host.appendChild(renderer.domElement);
- const camera=new THREE.PerspectiveCamera(32,1,.1,100);camera.position.set(10,12,15);
- const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,0,0);controls.minDistance=5;controls.maxDistance=40;
- scene.add(new THREE.HemisphereLight(0xd6e6ff,0x555146,3));
- for(const [pos,power,color] of [[[3,9,3],100,0xffffff],[[-7,5,0],70,0xc2d8ef],[[0,3,-8],80,0xffe6cf]] as const){const light=new THREE.PointLight(color,power,40);light.position.set(pos[0],pos[1],pos[2]);scene.add(light)}
- const assembly=new THREE.Group();scene.add(assembly);assembly.rotation.y=-.16;
- const pieces:{object:THREE.Object3D,base:THREE.Vector3,delta:THREE.Vector3}[]=[];
- const mat=(c:string,metal=.5,rough=.4)=>new THREE.MeshStandardMaterial({color:c,metalness:metal,roughness:rough});
- const dark=mat('#252b2c'),silver=mat('#9cabae',.85,.3),black=mat('#151a1b'),green=mat('#164439',.35),gold=mat('#b9a16b',.7),chip=mat('#111619'),copper=mat('#b48b6d',.8);
- const add=(object:THREE.Object3D,pos:number[],delta:number[])=>{object.position.set(pos[0],pos[1],pos[2]);assembly.add(object);pieces.push({object,base:object.position.clone(),delta:new THREE.Vector3(...delta)});return object};
- const box=(size:number[],m:THREE.Material,r=.03)=>new THREE.Mesh(new RoundedBoxGeometry(size[0],size[1],size[2],2,r),m);
- add(box([8,.12,3.2],green),[0,0,0],[0,-1,0]);add(box([8.7,.15,3.55],dark),[0,-.26,0],[0,-2.3,0]);
- add(box([1.6,.13,1.6],green),[-.3,.13,0],[0,1,0]);add(box([1.12,.1,1.12],silver),[-.3,.25,0],[0,1.2,0]);
- for(let i=0;i<16;i++){const a=i*Math.PI/8;add(box([.43,.12,.4],chip),[-.3+Math.cos(a)*1.3,.14,Math.sin(a)*1.13],[Math.cos(a)*1.8,.5,Math.sin(a)*1.8])}
- for(let i=0;i<18;i++)add(box([.28,.25,.32],silver),[2.3+(i%3)*.42,.2,-1.1+Math.floor(i/3)*.43],[2,0,0]);
- add(box([2.4,.24,2.25],copper),[-.3,.43,0],[0,2.4,0]);
- for(let side=0;side<2;side++){const fins=new THREE.Group();for(let i=0;i<60;i++){const fin=box([.026,.68,3.13],silver,.005);fin.position.x=(i-30)*.058;fins.add(fin)}add(fins,[-2.12+side*4.24,.69,0],[side===0?-1:1,3,0])}
- const frame=new THREE.Group();for(const z of [-1.78,1.78]){const rail=box([8.9,.48,.16],silver);rail.position.set(0,1,z);frame.add(rail)}for(const x of [-4.38,4.38]){const rail=box([.17,.48,3.6],silver);rail.position.set(x,1,0);frame.add(rail)}const center=box([1.15,.2,3.4],dark);center.position.y=1.12;frame.add(center);add(frame,[0,0,0],[0,4.8,0]);
- for(const x of [-2.3,2.3]){const fan=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(1.47,.09,10,64),dark);ring.rotation.x=Math.PI/2;fan.add(ring);for(let i=0;i<11;i++){const blade=new THREE.Mesh(new THREE.CylinderGeometry(.68,.68,.065,3),black);const a=i*Math.PI*2/11;blade.scale.set(.7,1,1.05);blade.position.set(Math.cos(a)*.83,0,Math.sin(a)*.83);blade.rotation.y=-a+.5;fan.add(blade)}fan.add(new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.17,40),dark));const hub=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.18,32),silver);fan.add(hub);add(fan,[x,1.22,0],[x*.25,5.2,0])}
- add(box([.14,1.3,3.7],silver),[-4.55,.35,0],[-1.4,0,0]);add(box([3.4,.09,.35],gold),[-1.3,-.05,1.74],[0,-1.4,1]);add(box([.85,.4,.42],black),[1.1,.3,-1.7],[0,.4,-1.4]);
- let target=0,current=0,frameId=0;
- const resize=()=>{renderer.setSize(host.clientWidth,host.clientHeight);camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix()};const observer=new ResizeObserver(resize);observer.observe(host);resize();
- function render(){frameId=requestAnimationFrame(render);current=THREE.MathUtils.lerp(current,target,.09);for(const p of pieces)p.object.position.copy(p.base).addScaledVector(p.delta,current);controls.target.y=2*current;controls.update();renderer.render(scene,camera)}render();
- return {update:(value:number)=>{target=value/100},dispose:()=>{cancelAnimationFrame(frameId);observer.disconnect();controls.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>m.dispose())}});renderer.dispose();renderer.domElement.remove()}};
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { buildModel, type Piece } from './models';
+import { byId, colors, type ExplorerState, type Selection } from './manifest';
+import { inventoryLayout, smoothstep } from './layout';
+export type SceneCallbacks={select:(selection:Selection|null)=>void;hover:(name:string|null,x:number,y:number)=>void;stats:(visible:number)=>void;error:(message:string)=>void};
+export function createViewer(host:HTMLDivElement,initial:ExplorerState,callbacks:SceneCallbacks){
+ const scene=new T.Scene();const renderer=new T.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.setClearColor(0,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.03;host.appendChild(renderer.domElement);
+ const pmrem=new T.PMREMGenerator(renderer),room=new RoomEnvironment(),env=pmrem.fromScene(room,.04);scene.environment=env.texture;scene.environmentIntensity=.9;room.dispose();pmrem.dispose();
+ scene.add(new T.HemisphereLight(0xe0edff,0x34352b,1.2));const key=new T.DirectionalLight(0xf6f7ee,2);key.position.set(2,8,4);scene.add(key);const rim=new T.DirectionalLight(0xbed6e3,2);rim.position.set(-5,3,-4);scene.add(rim);
+ const camera=new T.PerspectiveCamera(32,1,.1,200);camera.position.set(9,11,14);
+ const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=100;controls.enablePan=true;
+ controls.mouseButtons={LEFT:T.MOUSE.ROTATE,MIDDLE:T.MOUSE.DOLLY,RIGHT:T.MOUSE.PAN};controls.touches={ONE:T.TOUCH.ROTATE,TWO:T.TOUCH.DOLLY_PAN};
+ let state=initial,model=buildModel(state.level),amount=state.explode/100,frameId=0,settle=80,autoCamera=true,disposed=false,dragStart:[number,number]=[0,0],hovered:Piece|null=null;
+ scene.add(model.root);const selectedBox=new T.Box3Helper(new T.Box3(),0xd9ebce),hoverBox=new T.Box3Helper(new T.Box3(),0xa9c5b4);selectedBox.visible=false;hoverBox.visible=false;scene.add(selectedBox,hoverBox);
+ const targetPosition=new T.Vector3(),targetLook=new T.Vector3(),layoutPosition=new T.Vector3(),matrix=new T.Matrix4(),scale=new T.Vector3(),quat=new T.Quaternion(),bounds=new T.Box3(),v=new T.Vector3(),color=new T.Color();
+ const raycaster=new T.Raycaster(),pointer=new T.Vector2();
+ function matches(p:Piece,selection:Selection|null){return !!selection&&p.concept===selection.concept&&(selection.instance===undefined||selection.instance===p.instance)}
+ function shown(p:Piece){return state.visible.includes(byId[p.concept].category)&&!state.hidden.includes(p.concept)&&(!state.isolated||matches(p,state.selection))&&(p.reveal===0||state.explode/100>p.reveal)}
+ function disposeModel(){const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();model.root.traverse(o=>{if(o instanceof T.Mesh){gs.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m))}});gs.forEach(g=>g.dispose());ms.forEach(m=>{if(m instanceof T.MeshBasicMaterial||m instanceof T.MeshStandardMaterial)m.map?.dispose();m.dispose()});scene.remove(model.root)}
+ function refresh(){
+ const visible=model.pieces.filter(shown);const positions=inventoryLayout(visible.length,Math.max(.6,host.clientWidth/host.clientHeight));visible.forEach((p,i)=>p.inventory.set(...positions[i]));for(const p of model.pieces)p.visible=shown(p);callbacks.stats(visible.length);host.dataset.visible=String(visible.length);host.dataset.level=state.level;settle=90;autoCamera=true;
+ }
+ function destination(p:Piece,value:number){
+ const stage=p.concept==='fan'||p.concept==='shroud'||p.concept==='heatsink'||p.concept==='vapor'||p.concept==='backplate'?smoothstep(0,.48,value):smoothstep(.22,.68,value);
+ layoutPosition.copy(p.base).addScaledVector(p.delta,state.level==='card'?stage:smoothstep(0,.75,value));const grid=smoothstep(.8,1,value);layoutPosition.lerp(p.inventory,grid);return {position:layoutPosition,scale:T.MathUtils.lerp(1,1.12/p.size,grid)};
+ }
+ function fit(){
+ bounds.makeEmpty();let focus=state.focusRevision>0&&!!state.selection;const candidates=model.pieces.filter(p=>p.visible&&(!focus||matches(p,state.selection)));if(!candidates.length){focus=false;candidates.push(...model.pieces.filter(p=>p.visible))}
+ for(const p of candidates){const dst=destination(p,state.explode/100);const half=p.extent.clone().multiplyScalar(dst.scale*.52);bounds.expandByPoint(v.copy(dst.position).add(half));bounds.expandByPoint(v.copy(dst.position).sub(half))}
+ if(bounds.isEmpty()){bounds.set(new T.Vector3(-4,-1,-2),new T.Vector3(4,1,2))}bounds.getCenter(targetLook);const size=bounds.getSize(v);const direction=state.explode>85?new T.Vector3(0,1,.001):state.view==='top'?new T.Vector3(0,1,.001):state.view==='front'?new T.Vector3(0,.05,1):state.view==='back'?new T.Vector3(0,.05,-1):new T.Vector3(.7,1,1.2);
+ direction.normalize();const isTop=state.explode>85||state.view==='top';const w=isTop?size.x:Math.hypot(size.x,size.z)*.82;const h=isTop?size.z:Math.max(size.y*.8+size.z*.75,size.x*.3);const d=Math.max(h,w/camera.aspect)/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2)))*1.43+size.y*.25;
+ targetPosition.copy(targetLook).addScaledVector(direction,Math.max(focus?2.8:6,d));
+ }
+ function boxFor(p:Piece,target:T.Box3){if(p.batch){const s=p.object.scale.x;target.setFromCenterAndSize(p.object.position,new T.Vector3(p.size*s,p.size*s,p.size*s))}else target.setFromObject(p.object)}
+ let lastTime=performance.now();
+ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function render(){
+ if(disposed)return;const now=performance.now(),dt=Math.min(1,(now-lastTime)/1000);lastTime=now;amount=reducedMotion?state.explode/100:T.MathUtils.damp(amount,state.explode/100,10,dt);let changed=Math.abs(amount-state.explode/100)>.0001;
+ const batches=new Set<T.InstancedMesh>();let selected=false;
+ for(const p of model.pieces){const dst=destination(p,amount);const reveal=p.reveal?smoothstep(p.reveal,p.reveal+.07,amount):1;const s=p.visible?dst.scale*reveal:0;
+ p.object.position.copy(dst.position);p.object.scale.setScalar(s);if(p.batch){matrix.compose(p.object.position,quat,scale.setScalar(s));p.batch.setMatrixAt(p.index!,matrix);color.set(matches(p,state.selection)?'#ecdfa9':hovered===p?'#d4e4c9':p.concept==='tensor'?'#cab886':p.concept==='gddr7'?'#252d32':p.concept==='vrm'?'#9d9990':colors[byId[p.concept].category]);p.batch.setColorAt(p.index!,color);batches.add(p.batch)}else p.object.visible=p.visible;
+ if(matches(p,state.selection)&&p.visible&&state.selection?.instance!==undefined){boxFor(p,selectedBox.box);selected=true}
+ }
+ for(const b of batches){b.instanceMatrix.needsUpdate=true;if(b.instanceColor)b.instanceColor.needsUpdate=true}
+ selectedBox.visible=selected;hoverBox.visible=!!hovered&&hovered.visible;if(hovered)boxFor(hovered,hoverBox.box);
+ if(autoCamera){fit();const blend=reducedMotion?1:1-Math.exp(-9*dt);camera.position.lerp(targetPosition,blend);controls.target.lerp(targetLook,blend);changed ||= camera.position.distanceToSquared(targetPosition)>.00001}
+ controls.update();renderer.render(scene,camera);host.dataset.drawCalls=String(renderer.info.render.calls);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.explode=String(Math.round(amount*100));
+ if(changed||settle-->0)frameId=requestAnimationFrame(render);else frameId=0;
+ }
+ function wake(){settle=35;if(!frameId)frameId=requestAnimationFrame(render)}
+ controls.addEventListener('start',()=>{autoCamera=false;wake()});controls.addEventListener('change',wake);
+ const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();refresh();wake()};const observer=new ResizeObserver(resize);observer.observe(host);
+ function hit(e:PointerEvent){const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObject(model.root,true);for(const h of hits){let obj:T.Object3D|null=h.object;let p:Piece|undefined;if(h.object instanceof T.InstancedMesh&&h.object.userData.pieces)p=h.object.userData.pieces[h.instanceId!];else while(obj&&!p){p=obj.userData.piece;obj=obj.parent}if(p?.visible&&p.object.scale.x>.02)return p}return null}
+ function down(e:PointerEvent){dragStart=[e.clientX,e.clientY]}
+ function up(e:PointerEvent){if(e.button!==0||Math.hypot(e.clientX-dragStart[0],e.clientY-dragStart[1])>5)return;const p=hit(e);callbacks.select(p?{concept:p.concept,instance:p.instance}:null);wake()}
+ function move(e:PointerEvent){if(e.buttons)return;const p=hit(e);hovered=p;renderer.domElement.style.cursor=p?'pointer':'grab';callbacks.hover(p?byId[p.concept].shortName+(model.pieces.filter(x=>x.concept===p.concept).length>1?' '+String(p.instance+1).padStart(2,'0'):''):null,e.clientX,e.clientY);wake()}
+ function leave(){hovered=null;callbacks.hover(null,0,0);wake()}
+ function lost(e:Event){e.preventDefault();callbacks.error('The 3D context was interrupted. Reload the viewer to continue.');}
+ const canvas=renderer.domElement;canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerleave',leave);canvas.addEventListener('webglcontextlost',lost);
+ refresh();resize();
+ return {update(next:ExplorerState){if(next.level!==state.level){disposeModel();model=buildModel(next.level);scene.add(model.root);amount=next.explode/100;hovered=null}const cameraChange=next.explode!==state.explode||next.level!==state.level||next.cameraRevision!==state.cameraRevision||next.focusRevision!==state.focusRevision||next.isolated!==state.isolated;state=next;const priorAuto=autoCamera;refresh();autoCamera=cameraChange||priorAuto;wake()},dispose(){disposed=true;cancelAnimationFrame(frameId);observer.disconnect();controls.dispose();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerleave',leave);canvas.removeEventListener('webglcontextlost',lost);disposeModel();selectedBox.geometry.dispose();(selectedBox.material as T.Material).dispose();hoverBox.geometry.dispose();(hoverBox.material as T.Material).dispose();env.dispose();renderer.dispose();canvas.remove()}};
 }
+
 

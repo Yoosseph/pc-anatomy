@@ -16,6 +16,13 @@ import {
   Box,
   Microscope,
   ChevronDown,
+  Play,
+  Pause,
+  PcCase,
+  CircuitBoard,
+  Zap,
+  Fan,
+  HardDrive,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -46,19 +53,43 @@ import {
   categories,
   colors,
   initialState,
-  levelNames,
   levelPath,
+  openLevel,
   selectSearch,
   searchConcepts,
   sources,
   type ExplorerState,
-  type Level,
   type Selection,
   type Category,
 } from '@/lib/manifest';
+import {
+  branchRoot,
+  branches,
+  isPhysical,
+  levels,
+  rootLevel,
+  type LevelId,
+} from '@/lib/levels';
+
+/** One icon per scale, so the branch you are on is recognisable at a glance. */
+const levelIcon: Record<LevelId, typeof Box> = {
+  pc: PcCase,
+  motherboard: CircuitBoard,
+  cpu: Cpu,
+  psu: Zap,
+  fan: Fan,
+  cooler: Fan,
+  disk: HardDrive,
+  card: Box,
+  die: Cpu,
+  gpc: Layers3,
+  tpc: Layers3,
+  sm: Microscope,
+};
 import Viewer from './viewer';
 
 export default function Home() {
+  const [playing, setPlaying] = useState(false);
   const [state, setState] = useState<ExplorerState>(initialState),
     [search, setSearch] = useState(false),
     [query, setQuery] = useState(''),
@@ -66,28 +97,27 @@ export default function Home() {
     [layers, setLayers] = useState(false),
     [expanded, setExpanded] = useState<Category | null>(null),
     [count, setCount] = useState(0);
-  const selected = state.selection ? byId[state.selection.concept] : null;
-  const logical = state.level !== 'card',
-    path = levelPath[state.level];
-  const phases = logical
-    ? [
-        ['Grouped', 0],
-        ['Resources', 25],
-        ['Partitions', 50],
-        ['Separated', 75],
-        ['Inventory', 100],
-      ]
-    : [
-        ['Assembled', 0],
-        ['Cooling', 25],
-        ['Board', 50],
-        ['Silicon', 75],
-        ['Inventory', 100],
-      ];
-  const navigate = useCallback((level: Level) => {
+  // While a dive is in flight the selection exists only to aim the camera at
+  // the part being opened. Showing its panel would flash the outer component's
+  // description — and its "Take apart" button — for a few hundred milliseconds
+  // before the deeper scale replaces it. The panel appears on arrival instead.
+  const selected =
+    state.selection && !state.diveInto ? byId[state.selection.concept] : null;
+  const level = levels[state.level],
+    logical = !isPhysical(state.level),
+    path = levelPath(state.level),
+    menus = branches(),
+    phases = level.phases;
+  // The subsystem whose menu is open. Follows wherever you are unless you
+  // deliberately open another one.
+  const [openMenu, setOpenMenu] = useState<LevelId | null>(null);
+  const shownMenu = openMenu ?? branchRoot(state.level);
+  const navigate = useCallback((level: LevelId) => {
+    setPlaying(false);
     setState((s) => ({
       ...s,
       level,
+      diveInto: null,
       explode: 0,
       selection: null,
       isolated: false,
@@ -100,16 +130,68 @@ export default function Home() {
     setLayers(false);
   }, []);
   const reset = useCallback(() => {
+    setPlaying(false);
     setState((s) => ({
       ...initialState,
       cameraRevision: s.cameraRevision + 1,
     }));
     setLayers(false);
   }, []);
-  const choose = useCallback((selection: Selection | null) => {
-    setState((s) => ({ ...s, selection, isolated: false, focusRevision: 0 }));
+  // Descending is one continuous move owned by the scene: the stage clears
+  // around the part you clicked while the camera closes in on it, and when the
+  // scene reports the stage is clear we swap in the deeper scale, which then
+  // grows back out of the same spot. Nothing cuts to black, and no timer here
+  // can drift out of step with the animation. `diveInto` is the whole record of
+  // a dive in flight, so cancelling one is just clearing it.
+  const dive = useCallback((conceptId: string) => {
+    if (!openLevel(conceptId)) return false;
+    setPlaying(false);
     setLayers(false);
+    setState((s) =>
+      s.diveInto
+        ? s
+        : {
+            ...s,
+            selection: { concept: conceptId },
+            isolated: false,
+            diveInto: conceptId,
+            diveRevision: s.diveRevision + 1,
+            focusRevision: s.focusRevision + 1,
+            cameraRevision: s.cameraRevision + 1,
+          },
+    );
+    return true;
   }, []);
+
+  const arrive = useCallback(() => {
+    setState((s) => {
+      const target = s.diveInto ? openLevel(s.diveInto) : null;
+      if (!target) return s;
+      return {
+        ...s,
+        level: target,
+        explode: 0,
+        visible: [...categories],
+        hidden: [],
+        isolated: false,
+        view: 'perspective',
+        diveInto: null,
+        focusRevision: 0,
+        cameraRevision: s.cameraRevision + 1,
+        // Arrive with the thing you opened already described.
+        selection: { concept: levels[target].concept },
+      };
+    });
+  }, []);
+
+  const choose = useCallback(
+    (selection: Selection | null) => {
+      if (selection && dive(selection.concept)) return;
+      setState((s) => ({ ...s, selection, isolated: false, focusRevision: 0 }));
+      setLayers(false);
+    },
+    [dive],
+  );
   const selectResult = (id: string) => {
     setState((s) => selectSearch(s, id));
     setSearch(false);
@@ -119,7 +201,7 @@ export default function Home() {
   useEffect(() => {
     document
       .querySelector('input[type=range]')
-      ?.setAttribute('aria-label', 'Explode GPU');
+      ?.setAttribute('aria-label', 'Disassemble the specimen');
     const key = (event: KeyboardEvent) => {
       const el = event.target as HTMLElement;
       if (el.closest('input,textarea,[contenteditable=true]')) return;
@@ -144,6 +226,34 @@ export default function Home() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [navigate, path]);
+  // Runs the disassembly slowly enough to follow, and hands control straight
+  // back the moment the viewer touches the slider or changes scale.
+  useEffect(() => {
+    if (!playing) return;
+    let frame = 0,
+      last = performance.now();
+    const step = (now: number) => {
+      // Clamp the step so one stalled frame — a slow machine, a background
+      // tab, a heavy rebuild — cannot teleport the disassembly to the end.
+      // The run then takes a little longer on slow hardware but stays watchable.
+      const delta = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      setState((s) => {
+        const next = Math.min(100, s.explode + delta * 11);
+        if (next >= 100) setPlaying(false);
+        return { ...s, explode: next, focusRevision: 0 };
+      });
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [playing]);
+
+  const setExplode = useCallback((value: number) => {
+    setPlaying(false);
+    setState((s) => ({ ...s, explode: value, focusRevision: 0 }));
+  }, []);
+
   const toggle = (category: Category) =>
     setState((s) => ({
       ...s,
@@ -175,13 +285,9 @@ export default function Home() {
             <Cpu size={21} />
           </span>
           <span>
-            DIEDIVE<small>HARDWARE, UNDERSTOOD.</small>
+            PC Anatomy
           </span>
         </button>
-        <div className="header-specimen">
-          <span className="live-dot" /> SPECIMEN 001 <span>/</span> NVIDIA
-          BLACKWELL
-        </div>
         <div className="header-actions">
           <button
             className="mobile-layers"
@@ -213,22 +319,6 @@ export default function Home() {
         className={'explorer' + (layers ? ' mobile-open' : '')}
         aria-label="System visibility"
       >
-        <div className="specimen-heading">
-          <p className="eyebrow">THE REFERENCE SPECIMEN</p>
-          <h1>
-            GeForce
-            <br />
-            <strong>RTX 5090</strong>
-          </h1>
-          <p>GB202 · Blackwell architecture</p>
-          <div className="specimen-index">
-            <span>01</span>
-            <div>
-              Desktop graphics processor
-              <small>Physical & architectural model</small>
-            </div>
-          </div>
-        </div>
         <div className="explore-section">
           <div className="section-heading">
             EXPLORE BY SCALE
@@ -242,65 +332,72 @@ export default function Home() {
           </div>
           <nav className="scale-navigation" aria-label="Exploration scale">
             <button
-              className={!logical && state.explode < 30 ? 'active' : ''}
-              onClick={() => navigate('card')}
-            >
-              <span>01</span>
-              <Box size={18} />
-              <div>
-                Complete assembly<small>The whole graphics card</small>
-              </div>
-              <ChevronRight size={15} />
-            </button>
-            <button
-              className={!logical && state.explode >= 30 ? 'active' : ''}
+              className={state.level === rootLevel ? 'active' : ''}
+              aria-current={state.level === rootLevel ? 'true' : undefined}
               onClick={() => {
-                setState((s) => ({
-                  ...s,
-                  level: 'card',
-                  explode: 48,
-                  visible: categories.filter((c) => c !== 'Cooling'),
-                  selection: null,
-                  hidden: [],
-                  isolated: false,
-                  focusRevision: 0,
-                  cameraRevision: s.cameraRevision + 1,
-                }));
-                setLayers(false);
+                setOpenMenu(null);
+                navigate(rootLevel);
               }}
             >
-              <span>02</span>
-              <Layers3 size={18} />
+              <span>01</span>
+              <PcCase size={18} />
               <div>
-                Circuit board<small>Packages, power & connections</small>
+                {levels[rootLevel].name}
+                <small>{levels[rootLevel].summary}</small>
               </div>
               <ChevronRight size={15} />
             </button>
-            <button
-              className={state.level === 'die' ? 'active' : ''}
-              onClick={() => navigate('die')}
-            >
-              <span>03</span>
-              <Cpu size={18} />
-              <div>
-                GPU architecture<small>Inside the Blackwell chip</small>
-              </div>
-              <ChevronRight size={15} />
-            </button>
-            <button
-              className={
-                ['gpc', 'tpc', 'sm'].includes(state.level) ? 'active' : ''
-              }
-              onClick={() => navigate('sm')}
-            >
-              <span>04</span>
-              <Microscope size={18} />
-              <div>
-                Compute resources
-                <small>Inside a streaming multiprocessor</small>
-              </div>
-              <ChevronRight size={15} />
-            </button>
+
+            {menus.map(({ root, label, levels: scales }, index) => {
+              const Icon = levelIcon[root];
+              const open = shownMenu === root;
+              const here = branchRoot(state.level) === root;
+              return (
+                <div
+                  className={'branch' + (open ? ' open' : '') + (here ? ' here' : '')}
+                  key={root}
+                >
+                  <button
+                    className="branch-head"
+                    aria-expanded={open}
+                    onClick={() => setOpenMenu(open ? rootLevel : root)}
+                  >
+                    <span>{String(index + 2).padStart(2, '0')}</span>
+                    <Icon size={18} />
+                    <div>
+                      {label}
+                      <small>
+                        {scales.length}{' '}
+                        {scales.length === 1 ? 'scale' : 'scales'} inside
+                      </small>
+                    </div>
+                    <ChevronDown size={15} />
+                  </button>
+                  {open && (
+                    <div className="branch-scales">
+                      {scales.map((id) => (
+                        <button
+                          key={id}
+                          className={id === state.level ? 'active' : ''}
+                          aria-current={id === state.level ? 'true' : undefined}
+                          onClick={() => navigate(id)}
+                        >
+                          <i />
+                          <div>
+                            {levels[id].name}
+                            <small>
+                              {levels[id].detailed
+                                ? levels[id].summary
+                                : levels[id].summary + ' · placeholder'}
+                            </small>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
         <div className="systems-section">
@@ -310,7 +407,7 @@ export default function Home() {
               onClick={() =>
                 setState((s) => ({
                   ...s,
-                  visible: s.visible.length === 6 ? [] : [...categories],
+                  visible: s.visible.length === categories.length ? [] : [...categories],
                   hidden: [],
                   selection: null,
                   isolated: false,
@@ -318,7 +415,7 @@ export default function Home() {
                 }))
               }
             >
-              {state.visible.length === 6 ? 'Hide all' : 'Show all'}
+              {state.visible.length === categories.length ? 'Hide all' : 'Show all'}
             </button>
           </div>
           <div className="layer-scroll">
@@ -385,41 +482,33 @@ export default function Home() {
         <div className="reference-stats">
           <div>
             <strong>
-              32 <small>GB</small>
+              305 <small>MM</small>
             </strong>
-            <span>GDDR7 MEMORY</span>
+            <span>ATX BOARD</span>
           </div>
           <div>
             <strong>
-              92.2 <small>B</small>
+              5.0 <small>GEN</small>
             </strong>
-            <span>TRANSISTORS</span>
+            <span>PCI EXPRESS</span>
           </div>
           <div>
-            <strong>170</strong>
-            <span>ENABLED SMs</span>
+            <strong>{manifest.length}</strong>
+            <span>CONCEPTS</span>
           </div>
         </div>
       </aside>
       <section className="stage-heading">
         <div>
-          <p className="eyebrow">
-            {logical ? 'ARCHITECTURAL SCALE' : 'PHYSICAL SCALE'}
-          </p>
+          <p className="eyebrow">{level.caption}</p>
           <h2>
-            {state.level === 'card'
-              ? state.explode === 100
-                ? 'Component inventory'
-                : state.explode > 0
-                  ? 'Beneath the enclosure'
-                  : 'The complete assembly.'
-              : state.level === 'die'
-                ? 'GB202 architecture.'
-                : state.level === 'sm'
-                  ? 'Streaming Multiprocessor.'
-                  : state.level === 'gpc'
-                    ? 'Graphics Processing Cluster.'
-                    : 'Texture Processing Cluster.'}
+            {state.explode === 100
+              ? 'Component inventory'
+              : state.explode > 0
+                ? logical
+                  ? 'Resources, separated'
+                  : 'Coming apart'
+                : level.title}
           </h2>
           <nav className="breadcrumbs" aria-label="Component hierarchy">
             {path.length > 1 && (
@@ -430,18 +519,18 @@ export default function Home() {
                 <ArrowLeft size={14} />
               </button>
             )}
-            {path.map((level, i) => (
-              <span key={level}>
+            {path.map((id, i) => (
+              <span key={id}>
                 {i > 0 && <ChevronRight size={12} />}
                 <button
-                  aria-current={level === state.level ? 'page' : undefined}
-                  onClick={() => navigate(level)}
+                  aria-current={id === state.level ? 'page' : undefined}
+                  onClick={() => navigate(id)}
                 >
-                  {levelNames[level]}
+                  {levels[id].name}
                 </button>
               </span>
             ))}
-            {selected && (
+            {selected && selected.shortName !== level.name && (
               <span>
                 <ChevronRight size={12} />
                 <span className="crumb-selected">{selected.shortName}</span>
@@ -451,10 +540,15 @@ export default function Home() {
         </div>
         <div className="stage-counter">
           <strong>{count.toString().padStart(3, '0')}</strong>
-          <span>VISIBLE STRUCTURES</span>
+          <span>PARTS</span>
         </div>
       </section>
-      <Viewer state={state} onSelect={choose} onCount={setCount} />
+      <Viewer
+        state={state}
+        onSelect={choose}
+        onCount={setCount}
+        onDived={arrive}
+      />
       {!count && (
         <div className="empty-scene">
           <EyeOff size={27} />
@@ -480,12 +574,14 @@ export default function Home() {
               key={view}
               title={view[0].toUpperCase() + view.slice(1) + ' view'}
               aria-label={view[0].toUpperCase() + view.slice(1) + ' view'}
-              disabled={state.explode > 85 && view !== 'top'}
+              disabled={logical && state.explode > 85 && view !== 'top'}
               aria-pressed={
-                state.explode > 85 ? view === 'top' : state.view === view
+                logical && state.explode > 85 ? view === 'top' : state.view === view
               }
               className={
-                (state.explode > 85 ? view === 'top' : state.view === view)
+                (logical && state.explode > 85
+                  ? view === 'top'
+                  : state.view === view)
                   ? 'active'
                   : ''
               }
@@ -516,24 +612,38 @@ export default function Home() {
             <Maximize size={15} />
           </button>
         </div>
-        <span className="orbit-hint">
-          DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM
-        </span>
       </div>
       <section className="disassembly" aria-label="Explosion control">
+        <button
+          className={'play' + (playing ? ' running' : '')}
+          onClick={() => {
+            if (playing) {
+              setPlaying(false);
+              return;
+            }
+            // Someone who has asked for less motion gets the end state, not a
+            // nine-second animation they did not want.
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              setState((s) => ({ ...s, explode: 100, focusRevision: 0 }));
+              return;
+            }
+            setState((s) => ({
+              ...s,
+              explode: s.explode >= 99 ? 0 : s.explode,
+              focusRevision: 0,
+            }));
+            setPlaying(true);
+          }}
+          aria-label={
+            playing ? 'Pause automatic disassembly' : 'Take it apart automatically'
+          }
+        >
+          {playing ? <Pause size={17} /> : <Play size={17} />}
+          <span>{playing ? 'Pause' : 'Auto'}</span>
+        </button>
         <div className="disassembly-label">
-          <Layers3 size={19} />
           <div>
-            <strong>{logical ? 'Expand architecture' : 'Disassemble'}</strong>
-            <span>
-              {state.explode === 100
-                ? 'EVERY VISIBLE STRUCTURE'
-                : state.explode === 0
-                  ? 'START EXPLORING'
-                  : !logical && state.explode < 60
-                    ? 'HARDWARE SEPARATION'
-                    : 'LOGICAL STRUCTURES'}
-            </span>
+            <strong>{logical ? 'Expand' : 'Disassemble'}</strong>
           </div>
         </div>
         <div className="timeline">
@@ -544,13 +654,7 @@ export default function Home() {
                 className={
                   Math.abs(state.explode - Number(value)) < 13 ? 'active' : ''
                 }
-                onClick={() =>
-                  setState((s) => ({
-                    ...s,
-                    explode: Number(value),
-                    focusRevision: 0,
-                  }))
-                }
+                onClick={() => setExplode(Number(value))}
               >
                 {name}
               </button>
@@ -559,13 +663,9 @@ export default function Home() {
           <Slider
             value={[state.explode]}
             onValueChange={(value) =>
-              setState((s) => ({
-                ...s,
-                explode: Array.isArray(value) ? value[0] : value,
-                focusRevision: 0,
-              }))
+              setExplode(Array.isArray(value) ? value[0] : value)
             }
-            aria-label="Explode GPU"
+            aria-label="Disassemble the specimen"
           />
           <div className="ruler" aria-hidden="true">
             {Array.from({ length: 41 }, (_, i) => (
@@ -574,7 +674,7 @@ export default function Home() {
           </div>
         </div>
         <output>
-          {state.explode}
+          {Math.round(state.explode)}
           <small>%</small>
         </output>
         <button
@@ -586,20 +686,6 @@ export default function Home() {
           <span>Reset</span>
         </button>
       </section>
-      <footer>
-        <span>
-          <i className="live-dot" />
-          {state.level === 'gpc'
-            ? 'REPRESENTATIVE FULL GPC · NOT THE ENABLED RTX 5090 MAP'
-            : logical || state.explode > 60
-              ? 'LOGICAL ARCHITECTURE · NOT A PHYSICAL DIE FLOORPLAN'
-              : 'ORIGINAL EDUCATIONAL MODEL · PHYSICAL GEOMETRY IS APPROXIMATE'}
-        </span>
-        <button onClick={() => setAbout(true)}>
-          Sources & methodology
-          <ArrowUpRight size={13} />
-        </button>
-      </footer>
       <Dialog open={search} onOpenChange={setSearch}>
         <DialogContent className="search-dialog">
           <DialogTitle>Find a component</DialogTitle>
@@ -695,7 +781,10 @@ export default function Home() {
                   : 'COMPONENT GROUP'}
               </div>
               <SheetDescription>{selected.description}</SheetDescription>
-              <p className="purpose">{selected.purpose}</p>
+              <div className="purpose">
+                <h3>What it does</h3>
+                <p>{selected.purpose}</p>
+              </div>
               <div className="quantity">{selected.quantity}</div>
               <dl>
                 {Object.entries(selected.specifications).map(([k, v]) => (
@@ -714,15 +803,16 @@ export default function Home() {
                   </button>
                 </div>
               )}
-              {selected.open && (
+              {openLevel(selected.id) &&
+                openLevel(selected.id) !== state.level && (
                 <button
                   className="open-component"
-                  onClick={() => navigate(selected.open!)}
+                  onClick={() => navigate(openLevel(selected.id)!)}
                 >
-                  Open {selected.open === 'die' ? 'GB202' : selected.shortName}
+                  Take apart {levels[openLevel(selected.id)!].name}
                   <ChevronRight size={17} />
                 </button>
-              )}
+                )}
               <div className="detail-actions">
                 <button
                   onClick={() =>
@@ -765,6 +855,7 @@ export default function Home() {
                 </button>
               </div>
               <p className="accuracy">{selected.physicalAccuracy}</p>
+              {selected.sources.length > 0 && (
               <div className="source-links">
                 {selected.sources.map((s) => (
                   <a
@@ -778,25 +869,33 @@ export default function Home() {
                   </a>
                 ))}
               </div>
+              )}
             </>
           )}
         </SheetContent>
       </Sheet>
       <Dialog open={about} onOpenChange={setAbout}>
         <DialogContent className="about-dialog">
-          <DialogTitle>From cooler to compute core.</DialogTitle>
+          <DialogTitle>From the case down to a compute core.</DialogTitle>
           <DialogDescription>
-            DieDive is an independent, open-source GPU anatomy explorer.
+            PC Anatomy is an independent, open-source explorer of a whole
+            desktop computer.
           </DialogDescription>
           <p>
-            Explore a modern GPU from the cooler down to its compute cores. The
-            reference is the NVIDIA GeForce RTX 5090, powered by GB202.
+            Start with an assembled ATX tower, take it apart, and keep going:
+            into the motherboard, into the graphics card, and down through the
+            GB202 processor to a single streaming multiprocessor. Every scale
+            is a branch you can descend or step back out of.
           </p>
-          <h3>Two scales. One specimen.</h3>
+          <h3>Two kinds of model.</h3>
           <p>
-            <strong>Hardware</strong> is an original, approximate mechanical
-            model. Board layout, power stages and cooling details are
-            illustrative, not manufacturing or repair data.
+            <strong>Hardware</strong> is original, approximate mechanical
+            geometry. The ATX board outline, the expansion-slot pitch and the
+            rear I/O aperture follow the published form factor; everything else
+            — which controller sits where, how many regulator phases there are,
+            how cables run — is a representative example of the component
+            family, not a bill of materials for any real product. No part here
+            is a named model except the graphics card.
           </p>
           <p>
             <strong>Silicon</strong> shows documented logical architecture.
@@ -834,7 +933,7 @@ export default function Home() {
             target="_blank"
             rel="noreferrer"
           >
-            DieDive source code · MIT license
+            PC Anatomy source code
             <ArrowUpRight size={15} />
           </a>
           <p className="about-foot">

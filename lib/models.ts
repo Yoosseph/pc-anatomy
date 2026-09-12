@@ -1,9 +1,20 @@
-import { resourceTexture, siliconColor } from './silicon-texture';
-import { buildHardware } from './hardware';
+import { resourceTexture, siliconColor } from './silicon-texture.ts';
+import { buildHardware, type ModelTools } from './hardware.ts';
+import { buildGpuArchitecture } from './gpu-architecture.ts';
+import { buildMachine } from './machine.ts';
+import { buildMotherboard } from './mainboard.ts';
+import { buildPowerSupply } from './power-supply.ts';
+import { buildFanUnit } from './fan-unit.ts';
+import { buildCooler } from './cooler.ts';
+import { buildDisk } from './disk.ts';
+import { buildProcessor } from './processor.ts';
+import { packageTexture, surfaceTexture } from './surfaces.ts';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { byId, colors, type Level } from './manifest';
-import type { Vec3 } from './layout';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { byId, colors } from './manifest.ts';
+import type { LevelId } from './levels.ts';
+import type { Vec3 } from './layout.ts';
 export interface Piece {
   key: string;
   concept: string;
@@ -12,32 +23,64 @@ export interface Piece {
   base: T.Vector3;
   delta: T.Vector3;
   extent: T.Vector3;
+  center: T.Vector3;
   size: number;
   reveal: number;
   batch?: T.InstancedMesh;
   index?: number;
   inventory: T.Vector3;
+  inventoryScale?: number;
   visible: boolean;
 }
-export function buildModel(level: Level) {
+
+/**
+ * One builder per scale. Adding a branch to the machine means adding a line
+ * here and an entry in `levels`; nothing else dispatches on the scale id.
+ */
+const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
+  pc: buildMachine,
+  motherboard: buildMotherboard,
+  cpu: buildProcessor,
+  psu: buildPowerSupply,
+  fan: buildFanUnit,
+  cooler: buildCooler,
+  disk: buildDisk,
+  card: (tools) => buildHardware(tools),
+  die: (tools, root) => buildGpuArchitecture('die', tools, root),
+  gpc: (tools, root) => buildGpuArchitecture('gpc', tools, root),
+  tpc: (tools, root) => buildGpuArchitecture('tpc', tools, root),
+  sm: (tools, root) => buildGpuArchitecture('sm', tools, root),
+};
+
+export function buildModel(level: LevelId) {
   const root = new T.Group(),
     pieces: Piece[] = [];
   const geometry = new Map<string, T.BufferGeometry>(),
     materials = new Map<string, T.MeshStandardMaterial>();
+  const surfaces = new Map<string, T.Texture>();
   const material = (color: string, metal = 0.5, rough = 0.4) => {
     const key = [color, metal, rough].join();
-    if (!materials.has(key))
+    if (!materials.has(key)) {
+      const kind = metal > 0.7 ? 'brushed' : 'molded';
+      if (!surfaces.has(kind)) surfaces.set(kind, surfaceTexture(kind));
       materials.set(
         key,
         new T.MeshStandardMaterial({
           color,
           metalness: metal,
-          roughness: rough,
+          // Polish the metals: a tighter highlight is what reads as machined
+          // aluminium rather than as a grey box, and it costs no brightness.
+          roughness: metal > 0.7 ? rough * 0.72 : rough,
+          bumpMap: surfaces.get(kind),
+          bumpScale: metal > 0.7 ? 0.0015 : 0.001,
+          envMapIntensity: metal > 0.7 ? 1.85 : 1.1,
         }),
       );
+    }
     return materials.get(key)!;
   };
-  function box(size: Vec3, color: string, metal = 0.5, r = 0.035) {
+  function box(size: Vec3, color: string, metal = 0.5, r = 0.008) {
+    r = Math.min(r, Math.min(...size) * 0.2);
     const key = size.join() + r;
     let g = geometry.get(key);
     if (!g) {
@@ -70,11 +113,21 @@ export function buildModel(level: Level) {
       base: new T.Vector3(...pos),
       delta: new T.Vector3(...delta),
       extent: v.clone(),
+      center: bounds.getCenter(new T.Vector3()),
       size: Math.max(v.x, v.y, v.z, 0.1),
       reveal,
       inventory: new T.Vector3(),
       visible: true,
     };
+    object.traverse((child) => {
+      if (
+        child instanceof T.Mesh &&
+        !(child.material instanceof T.MeshBasicMaterial)
+      ) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
     object.position.copy(p.base);
     object.userData.piece = p;
     root.add(object);
@@ -89,13 +142,21 @@ export function buildModel(level: Level) {
     color = siliconColor[concept] ?? colors[byId[concept].category],
     customGeometry?: T.BufferGeometry,
   ) {
+    const physical = byId[concept].representationType === 'physical';
+    const metallic = ['heatsink', 'fastener', 'bga', 'standoff'].includes(
+      concept,
+    );
     const baseMaterial = customGeometry
       ? new T.MeshStandardMaterial({
           vertexColors: true,
-          metalness: 0.65,
-          roughness: 0.35,
+          metalness: metallic ? 0.82 : 0.22,
+          roughness: metallic ? 0.32 : 0.57,
         })
-      : material(color, 0.62, 0.36);
+      : material(
+          color,
+          physical ? (metallic ? 0.88 : 0.04) : 0.48,
+          physical ? (metallic ? 0.31 : 0.65) : 0.48,
+        );
     let blockMaterials: T.Material | T.Material[] = baseMaterial;
     if (
       [
@@ -116,9 +177,9 @@ export function buildModel(level: Level) {
       ].includes(concept)
     ) {
       const top = new T.MeshStandardMaterial({
-        map: resourceTexture(concept),
-        metalness: 0.42,
-        roughness: 0.48,
+        map: physical ? packageTexture(concept) : resourceTexture(concept),
+        metalness: physical ? 0.03 : 0.42,
+        roughness: physical ? 0.7 : 0.48,
       });
       blockMaterials = [
         baseMaterial,
@@ -137,19 +198,23 @@ export function buildModel(level: Level) {
     );
     mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
     mesh.frustumCulled = false;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     root.add(mesh);
     const refs: Piece[] = [];
+    const offset = pieces.filter((p) => p.concept === concept).length;
     for (let i = 0; i < positions.length; i++) {
       const object = new T.Object3D();
       object.position.set(...positions[i]);
       const p: Piece = {
-        key: concept + '-' + i,
+        key: concept + '-' + (offset + i),
         concept,
-        instance: i,
+        instance: offset + i,
         object,
         base: object.position.clone(),
         delta: new T.Vector3((i % 2 ? 1 : -1) * 0.5, 1 + (i % 3) * 0.4, 0),
         extent: new T.Vector3(...size),
+        center: new T.Vector3(),
         size: Math.max(...size),
         reveal,
         batch: mesh,
@@ -190,133 +255,52 @@ export function buildModel(level: Level) {
     plane.rotation.x = -Math.PI / 2;
     put(parent, plane, pos);
   }
-  if (level === 'card') {
-    buildHardware({ add, instances, box, material, label });
-  } else if (level === 'die') {
-    instances(
-      'gpc',
-      Array.from(
-        { length: 11 },
-        (_, i) =>
-          [
-            ((i % 6) - 2.5) * 1.45,
-            0.2,
-            (Math.floor(i / 6) - 0.5) * 2.3,
-          ] as Vec3,
-      ),
-      [1.21, 0.3, 1.72],
-    );
-    const l2 = new T.Group();
-    put(l2, box([8.5, 0.2, 0.45], '#294757', 0.65), [0, 0, 0]);
-    label(l2, 'L2 CACHE · 96 MB', [0, 0.12, 0], 3.2, '#a5cce0');
-    add('l2', l2, [0, 0.15, 0], [0, 1.5, 0]);
-    instances(
-      'controller',
-      Array.from(
-        { length: 16 },
-        (_, i) => [((i % 8) - 3.5) * 1.08, 0.18, i < 8 ? -2.7 : 2.7] as Vec3,
-      ),
-      [0.85, 0.2, 0.43],
-    );
-  } else if (level === 'gpc') {
-    instances(
-      'tpc',
-      Array.from(
-        { length: 8 },
-        (_, i) =>
-          [((i % 4) - 1.5) * 1.9, 0.2, (Math.floor(i / 4) - 0.5) * 2.1] as Vec3,
-      ),
-      [1.65, 0.28, 1.5],
-    );
-    const raster = new T.Group();
-    put(raster, box([7.4, 0.2, 0.55], '#594865', 0.65), [0, 0, 0]);
-    label(raster, 'RASTER ENGINE', [0, 0.12, 0], 3);
-    add('raster', raster, [0, 0.2, -2.35]);
-    instances(
-      'rop',
-      [
-        [-2, 0.2, 2.35],
-        [2, 0.2, 2.35],
-      ],
-      [3.5, 0.22, 0.55],
-      0,
-      '#645678',
-    );
-  } else if (level === 'tpc') {
-    instances(
-      'sm',
-      [
-        [-2, 0.2, 0],
-        [2, 0.2, 0],
-      ],
-      [3.4, 0.32, 3.5],
-    );
-    const poly = new T.Group();
-    put(poly, box([7.3, 0.2, 0.6], '#594865', 0.65), [0, 0, 0]);
-    label(poly, 'POLYMORPH ENGINE', [0, 0.12, 0], 3.9);
-    add('polymorph', poly, [0, 0.18, -2.25]);
-  } else {
-    const cuda: Vec3[] = [],
-      tensor: Vec3[] = [],
-      sched: Vec3[] = [],
-      regs: Vec3[] = [],
-      tex: Vec3[] = [],
-      ls: Vec3[] = [],
-      sfu: Vec3[] = [];
-    for (let q = 0; q < 4; q++) {
-      const x = (q - 1.5) * 2.1;
-      for (let i = 0; i < 32; i++)
-        cuda.push([
-          x + ((i % 4) - 1.5) * 0.43,
-          0.2,
-          -1.1 + Math.floor(i / 4) * 0.34,
-        ]);
-      tensor.push([x, 0.2, 2.05]);
-      sched.push([x, 0.2, -2.65]);
-      regs.push([x, 0.2, -2.05]);
-      tex.push([x, 0.2, 2.75]);
-      ls.push([x - 0.48, 0.2, 1.57]);
-      sfu.push([x + 0.48, 0.2, 1.57]);
+  builders[level]({ add, instances, box, material, label }, root);
+  // Consolidate authored submeshes within each selectable assembly. Lead pins,
+  // frame rails and socket contacts retain the assembly's picking identity.
+  const retired = new Set<T.BufferGeometry>();
+  root.updateMatrixWorld(true);
+  for (const child of root.children) {
+    if (!(child instanceof T.Group)) continue;
+    const groups = new Map<T.Material, T.Mesh[]>();
+    child.traverse((o) => {
+      if (
+        o instanceof T.Mesh &&
+        !(o instanceof T.InstancedMesh) &&
+        o.material instanceof T.MeshStandardMaterial
+      ) {
+        const group = groups.get(o.material) ?? [];
+        group.push(o);
+        groups.set(o.material, group);
+      }
+    });
+    const inverse = child.matrixWorld.clone().invert();
+    for (const [mat, meshes] of groups) {
+      if (meshes.length < 2) continue;
+      const parts = meshes.map((mesh) => {
+        const g = mesh.geometry.index
+          ? mesh.geometry.toNonIndexed()
+          : mesh.geometry.clone();
+        g.applyMatrix4(
+          new T.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld),
+        );
+        return g;
+      });
+      const merged = mergeGeometries(parts);
+      parts.forEach((g) => g.dispose());
+      if (!merged) continue;
+      for (const mesh of meshes) {
+        retired.add(mesh.geometry);
+        mesh.removeFromParent();
+      }
+      const mesh = new T.Mesh(merged, mat);
+      mesh.castShadow = mesh.receiveShadow = true;
+      child.add(mesh);
     }
-    const partitions = new T.Group();
-    partitions.userData.contextFrame = true;
-    for (let q = 0; q < 4; q++) {
-      const x = (q - 1.5) * 2.1;
-      put(partitions, box([2, 0.09, 6.25], '#192733', 0.6), [x, -0.07, 0]);
-      for (const side of [-1, 1])
-        put(partitions, box([0.023, 0.045, 6.15], '#557287', 0.7), [
-          x + side * 0.97,
-          0.01,
-          0,
-        ]);
-      label(partitions, 'PARTITION 0' + q, [x, 0.01, -3], 1.6, '#6d98b5');
-    }
-    root.add(partitions);
-    instances('cuda', cuda, [0.35, 0.16, 0.24]);
-    instances('tensor', tensor, [1.8, 0.26, 0.53], 0, '#9b743d');
-    instances('scheduler', sched, [1.8, 0.2, 0.4], 0, '#966944');
-    instances('register', regs, [1.8, 0.18, 0.43]);
-    instances('texture', tex, [1.8, 0.19, 0.42]);
-    instances('loadstore', ls, [0.8, 0.17, 0.25]);
-    instances('sfu', sfu, [0.8, 0.17, 0.25]);
-    const l1 = new T.Group();
-    put(l1, box([8.1, 0.18, 0.55], '#264757', 0.65), [0, 0, 0]);
-    label(l1, 'L1 / SHARED MEMORY · 128 KB', [0, 0.11, 0], 4.8, '#b0d1e1');
-    add('l1', l1, [0, 0.15, 3.55]);
-    const rt = new T.Group();
-    put(rt, box([1.65, 0.26, 3.15], '#4e3e65', 0.65, 0.1), [0, 0, 0]);
-    put(rt, box([1.45, 0.045, 2.92], '#252435', 0.55), [0, 0.15, 0]);
-    label(rt, 'RT CORE', [0, 0.184, -1], 1.3, '#d0bfed');
-    label(rt, '4TH GEN', [0, 0.184, 1.03], 1.13, '#9c8faf');
-    for (let j = 0; j < 3; j++) {
-      const triangle = new T.Mesh(
-        new T.CylinderGeometry(0.33, 0.33, 0.055, 3),
-        material('#9a82b3', 0.65, 0.35),
-      );
-      put(rt, triangle, [j === 1 ? 0.25 : -0.25, 0.2, -0.42 + j * 0.45]);
-      triangle.rotation.y = j * 0.5;
-    }
-    add('rt', rt, [5.2, 0.12, 0], [0.8, 1.2, 0]);
   }
+  root.traverse((o) => {
+    if (o instanceof T.Mesh) retired.delete(o.geometry);
+  });
+  retired.forEach((g) => g.dispose());
   return { root, pieces };
 }

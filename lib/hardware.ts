@@ -1,9 +1,11 @@
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { Piece } from './models';
-import type { Vec3 } from './layout';
+import type { Piece } from './models.ts';
+import type { Vec3 } from './layout.ts';
+import { boardTexture } from './surfaces.ts';
+import { buildBoardDetails } from './board-details.ts';
 
-type ModelTools = {
+export type ModelTools = {
   add: (
     concept: string,
     object: T.Object3D,
@@ -121,7 +123,24 @@ export function buildHardware({
   }
   // Layered board and routed copper. Trace count is ornamental, not an electrical netlist.
   const board = new T.Group();
-  place(board, box([7.96, 0.095, 3.28], '#103b31', 0.16), [0, 0, 0]);
+  const boardSurface = new T.MeshStandardMaterial({
+    map: boardTexture(),
+    roughness: 0.78,
+    metalness: 0.08,
+  });
+  const boardEdge = material('#393b2b', 0.05, 0.82);
+  place(
+    board,
+    new T.Mesh(new T.BoxGeometry(7.96, 0.095, 3.28), [
+      boardEdge,
+      boardEdge,
+      boardSurface,
+      boardSurface,
+      boardEdge,
+      boardEdge,
+    ]),
+    [0, 0, 0],
+  );
   place(board, box([7.92, 0.024, 3.24], '#24453a', 0.25), [0, -0.06, 0]);
   const traces: Vec3[] = [],
     traceScale: Vec3[] = [];
@@ -155,13 +174,7 @@ export function buildHardware({
     material('#ae9c66', 0.8),
     vias,
   );
-  label(
-    board,
-    'DIEDIVE / GB202 · EDUCATIONAL ASSEMBLY',
-    [-2.4, 0.058, 1.03],
-    2.4,
-    '#92ac96',
-  );
+  label(board, 'GPU ANATOMY / GB202', [-2.4, 0.058, 1.03], 2.4, '#92ac96');
   add('pcb', board, [0, 0, 0], [0, -0.7, 0]);
   // Machined rear plate: cut-out air paths and reinforcing ribs.
   const back = new T.Group();
@@ -181,9 +194,11 @@ export function buildHardware({
   const pkg = new T.Group();
   place(pkg, box([1.61, 0.065, 1.64], '#173e30', 0.2), [0, 0, 0]);
   place(pkg, box([1.54, 0.04, 1.57], '#233f30', 0.3), [0, 0.05, 0]);
-  place(pkg, box([1.05, 0.085, 1.08], '#8c9ba5', 0.96, 0.018), [0, 0.115, 0]);
-  label(pkg, 'GB202', [0, 0.162, -0.04], 0.65, '#dbe2e5');
-  label(pkg, 'BLACKWELL', [0, 0.164, 0.2], 0.64, '#9db1bd');
+  const die = new T.Group();
+  place(die, box([1.05, 0.07, 1.08], '#777c81', 0.98, 0.002), [0, 0, 0]);
+  label(die, 'GB202-300', [0, 0.038, -0.14], 0.58, '#b7bec0');
+  label(die, 'NVIDIA', [0, 0.038, 0.1], 0.43, '#b7bec0');
+  add('silicon', die, [-0.24, 0.265, 0], [0, 1.68, 0]);
   const decaps: Vec3[] = [];
   for (let i = 0; i < 12; i++) {
     decaps.push(
@@ -204,12 +219,14 @@ export function buildHardware({
       -0.066,
       (Math.floor(i / 14) - 6.5) * 0.106,
     ]);
+  const solder = new T.Group();
   batch(
-    pkg,
+    solder,
     new T.SphereGeometry(0.025, 6, 4),
     material('#a9b0ac', 0.8),
     balls,
   );
+  add('bga', solder, [-0.24, 0.135, 0], [0, 0.98, 0]);
   add('package', pkg, [-0.24, 0.135, 0], [0, 1.3, 0]);
   const mem: Vec3[] = [];
   for (let i = 0; i < 4; i++)
@@ -283,12 +300,33 @@ export function buildHardware({
       -1.33 + Math.floor(i / 8) * 0.38,
     ]);
   }
-  instances('mlcc', mlcc, [0.13, 0.047, 0.063], 0, '#bfa57b').forEach((p) =>
-    p.delta.set(p.base.x * 0.65, 0.4, p.base.z * 0.5),
-  );
-  instances('resistor', resistors, [0.095, 0.035, 0.05], 0, '#4b5256').forEach(
-    (p) => p.delta.set(-1.8, 0.2, p.base.z * 0.5),
-  );
+  const passiveGeometry = (w: number, h: number, d: number, color: string) =>
+    merge([
+      colored(new T.BoxGeometry(w * 0.65, h, d), color),
+      ...[-1, 1].map((s) =>
+        colored(new T.BoxGeometry(w * 0.19, h * 1.06, d * 1.03), '#a8abaa', [
+          s * w * 0.405,
+          0,
+          0,
+        ]),
+      ),
+    ]);
+  instances(
+    'mlcc',
+    mlcc,
+    [0.13, 0.047, 0.063],
+    0,
+    '#ffffff',
+    passiveGeometry(0.13, 0.047, 0.063, '#9c8969'),
+  ).forEach((p) => p.delta.set(p.base.x * 0.65, 0.4, p.base.z * 0.5));
+  instances(
+    'resistor',
+    resistors,
+    [0.095, 0.035, 0.05],
+    0,
+    '#ffffff',
+    passiveGeometry(0.095, 0.035, 0.05, '#292b2c'),
+  ).forEach((p) => p.delta.set(-1.8, 0.2, p.base.z * 0.5));
   // Heat pickup, six shaped transport paths, and individually selectable fins.
   const vapor = new T.Group();
   place(vapor, box([3.42, 0.15, 2.9], '#987456', 0.88), [0, 0, 0]);
@@ -326,12 +364,15 @@ export function buildHardware({
     shroud,
     new T.Mesh(
       panelWithHoles(8.93, 3.78, 0.13, 0.18, 1.52),
-      material('#1c242c', 0.72, 0.3),
+      material('#373c40', 0.86, 0.48),
     ),
     [0, 0, 0],
   );
   for (const z of [-1.88, 1.88]) {
-    place(shroud, box([8.67, 1.13, 0.075], '#252f38', 0.78), [0, -0.48, z]);
+    place(shroud, box([8.67, 0.31, 0.075], '#303539', 0.85), [0, -0.06, z]);
+    place(shroud, box([8.67, 0.2, 0.075], '#303539', 0.85), [0, -0.95, z]);
+    for (const x of [-4.26, -0.53, 0.53, 4.26])
+      place(shroud, box([0.11, 0.76, 0.075], '#32383b', 0.85), [x, -0.51, z]);
     place(shroud, box([8.55, 0.045, 0.036], '#a3afb5', 0.92, 0.009), [
       0,
       0.135,
@@ -422,7 +463,7 @@ export function buildHardware({
     }
     const blades = new T.InstancedMesh(
       bladeGeometry,
-      material('#202b34', 0.7, 0.27),
+      material('#1c2023', 0.06, 0.6),
       11,
     );
     for (let i = 0; i < 11; i++) {
@@ -437,7 +478,7 @@ export function buildHardware({
       fan,
       new T.Mesh(
         new T.CylinderGeometry(0.32, 0.4, 0.25, 64),
-        material('#222c35', 0.75, 0.28),
+        material('#242729', 0.08, 0.56),
       ),
       [0, 0.045, 0],
     );
@@ -445,11 +486,11 @@ export function buildHardware({
       fan,
       new T.Mesh(
         new T.CylinderGeometry(0.24, 0.24, 0.014, 64),
-        material('#7f8e98', 0.9, 0.23),
+        material('#50575a', 0.86, 0.4),
       ),
       [0, 0.18, 0],
     );
-    label(fan, 'DD', [0, 0.191, 0], 0.29, '#142028');
+    label(fan, 'GA', [0, 0.191, 0], 0.23, '#b2b8b8');
     add('fan', fan, [x, 1.5, 0], [x * 0.16, 5.1, 0]);
   }
   const screwGeometry = merge([
@@ -483,21 +524,54 @@ export function buildHardware({
   ).forEach((p) => p.delta.set(0, 5.7, 0));
   // I/O mounting bracket and the four individually identifiable connectors.
   const bracket = new T.Group();
-  place(bracket, box([0.08, 1.8, 3.85], '#78848a', 0.85), [0, 0, 0]);
-  for (let i = 0; i < 12; i++)
-    place(bracket, box([0.09, 0.08, 0.16], '#111923', 0.1), [
-      -0.005,
-      0.54,
-      -1.56 + i * 0.28,
+  // Stamped bracket with actual open ventilation and port apertures.
+  for (const y of [-0.82, -0.48, 0.05, 0.35, 0.83])
+    place(bracket, box([0.055, 0.095, 3.85], '#858c8e', 0.9), [0, y, 0]);
+  for (let i = 0; i < 17; i++)
+    place(bracket, box([0.055, 0.5, 0.025], '#858c8e', 0.9), [
+      0,
+      0.58,
+      -1.83 + i * 0.23,
     ]);
+  for (let i = 0; i < 5; i++)
+    place(bracket, box([0.055, 0.75, 0.13], '#858c8e', 0.9), [
+      0,
+      -0.3,
+      -1.58 + i * 0.79,
+    ]);
+  for (const z of [-1.88, 1.88])
+    place(bracket, box([0.055, 1.8, 0.08], '#858c8e', 0.9), [0, 0, z]);
   place(bracket, box([0.3, 0.07, 3.85], '#849197', 0.85), [-0.1, 0.87, 0]);
   add('bracket', bracket, [-4.57, 0.49, 0], [-2, 0, 0]);
   for (let i = 0; i < 4; i++) {
     const port = new T.Group();
-    place(port, box([0.62, 0.3, 0.64], '#889596', 0.85), [0, 0, 0]);
-    place(port, box([0.025, 0.21, 0.5], '#0d151d', 0.05), [-0.32, 0, 0]);
-    place(port, box([0.03, 0.07, 0.4], '#35404a', 0.5), [-0.34, -0.035, 0]);
-    add('io', port, [-4.24, 0.29, -1.19 + i * 0.79], [-2.25, 0, 0]);
+    for (const y of [-0.13, 0.13])
+      place(port, box([0.62, 0.035, 0.64], '#959d9e', 0.92), [0, y, 0]);
+    for (const z of [-0.3, 0.3])
+      place(port, box([0.62, 0.26, 0.035], '#959d9e', 0.92), [0, 0, z]);
+    place(port, box([0.03, 0.24, 0.57], '#131516', 0.02), [0.28, 0, 0]);
+    place(
+      port,
+      box([0.42, 0.035, i === 3 ? 0.38 : 0.45], '#24282a', 0.02),
+      [0.015, -0.03, 0],
+    );
+    const pins: Vec3[] = Array.from({ length: i === 3 ? 19 : 20 }, (_, n) => [
+      -0.11,
+      -0.008,
+      -0.21 + n * 0.022,
+    ]);
+    batch(
+      port,
+      new T.BoxGeometry(0.22, 0.007, 0.01),
+      material('#b4a16c', 0.86),
+      pins,
+    );
+    add(
+      i === 3 ? 'hdmi' : 'displayport',
+      port,
+      [-4.24, 0.29, -1.19 + i * 0.79],
+      [-2.25, 0, (i - 1.5) * 0.15],
+    );
   }
   const pcie = new T.Group();
   place(pcie, box([3.66, 0.065, 0.38], '#23402f', 0.2), [0, 0, 0]);
@@ -524,27 +598,13 @@ export function buildHardware({
       -0.12 + Math.floor(i / 6) * 0.24,
     ]);
   }
+  for (let i = 0; i < 4; i++)
+    place(power, box([0.047, 0.04, 0.047], '#af9f73', 0.9), [
+      -0.15 + i * 0.1,
+      0.25,
+      -0.235,
+    ]);
   place(power, box([0.26, 0.09, 0.2], '#2e3b43', 0.3), [0, 0.23, 0.3]);
   add('power', power, [1.22, 0.3, -1.63], [0, 0.6, -1.8]);
-  // The late stage is explicitly logical and uses a different visual language.
-  instances(
-    'gpc',
-    Array.from(
-      { length: 11 },
-      (_, i) =>
-        [((i % 6) - 2.5) * 1.05, 2.7, (Math.floor(i / 6) - 0.5) * 1.2] as Vec3,
-    ),
-    [0.84, 0.16, 0.9],
-    0.61,
-  );
-  instances(
-    'sm',
-    Array.from(
-      { length: 170 },
-      (_, i) =>
-        [((i % 17) - 8) * 0.4, 3.5, (Math.floor(i / 17) - 4.5) * 0.38] as Vec3,
-    ),
-    [0.29, 0.11, 0.27],
-    0.72,
-  );
+  buildBoardDetails({ add, instances, box, material, label });
 }

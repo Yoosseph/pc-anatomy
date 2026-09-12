@@ -2,14 +2,19 @@ import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildModel, type Piece } from './models';
-import { byId, type ExplorerState, type Selection } from './manifest';
-import { inventoryLayout, smoothstep } from './layout';
+import { resolvePick } from './picking.ts';
+import { byId, openLevel, type ExplorerState, type Selection } from './manifest';
+import { isPhysical, levels } from './levels.ts';
+import { inventoryLayout, smoothstep, spatialInventory } from './layout';
 export type SceneCallbacks = {
   select: (selection: Selection | null) => void;
-  hover: (name: string | null, x: number, y: number) => void;
+  /** The isolate-and-close-in ramp has finished; open the deeper scale now. */
+  dived: () => void;
+  hover: (name: string | null, x: number, y: number, opens: boolean) => void;
   stats: (visible: number) => void;
   error: (message: string) => void;
 };
+
 export function createViewer(
   host: HTMLDivElement,
   initial: ExplorerState,
@@ -21,26 +26,46 @@ export function createViewer(
     alpha: true,
     powerPreference: 'high-performance',
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.setClearColor(0, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.03;
+  renderer.toneMappingExposure = 1.06;
   host.appendChild(renderer.domElement);
   const pmrem = new T.PMREMGenerator(renderer),
     room = new RoomEnvironment(),
     env = pmrem.fromScene(room, 0.04);
   scene.environment = env.texture;
-  scene.environmentIntensity = 0.9;
+  scene.environmentIntensity = 1.0;
   room.dispose();
   pmrem.dispose();
-  scene.add(new T.HemisphereLight(0xe0edff, 0x34352b, 1.2));
-  const key = new T.DirectionalLight(0xf6f7ee, 2);
-  key.position.set(2, 8, 4);
+  const fill = new T.HemisphereLight(0xe0e9ed, 0x292824, 0.65);
+  scene.add(fill);
+  const key = new T.DirectionalLight(0xfff4e6, 2.6);
+  key.position.set(-3, 10, 5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, {
+    left: -8,
+    right: 8,
+    top: 8,
+    bottom: -8,
+    near: 0.1,
+    far: 35,
+  });
+  key.shadow.bias = -0.00015;
+  key.shadow.normalBias = 0.012;
   scene.add(key);
   const rim = new T.DirectionalLight(0xbed6e3, 2);
   rim.position.set(-5, 3, -4);
   scene.add(rim);
+  // A dim light from below and in front. Without it every downward face goes
+  // flat black and the parts read as silhouettes rather than as objects.
+  const kick = new T.DirectionalLight(0xa9c4d6, 0.62);
+  kick.position.set(6, -5, 7);
+  scene.add(kick);
   const camera = new T.PerspectiveCamera(32, 1, 0.1, 200);
   camera.position.set(9, 11, 14);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -63,16 +88,30 @@ export function createViewer(
     autoCamera = true,
     disposed = false,
     dragStart: [number, number] = [0, 0],
+    activePointer: number | null = null,
+    gestureMoved = false,
+    pointerPosition: { clientX: number; clientY: number } | null = null,
     hovered: Piece | null = null;
+  /**
+   * Descending is one continuous move, not a cut. `out` shrinks everything
+   * except the part being opened while the camera closes in on it, leaving it
+   * alone on the stage; `in` grows the deeper scale back up in its place. The
+   * ramp lives here rather than in React so it does not re-render every frame.
+   */
+  let dive: { concept: string; t: number; phase: 'out' | 'in' } | null = null;
+  const OUT_SECONDS = 0.8,
+    IN_SECONDS = 0.62;
+  const ease = (t: number) => t * t * (3 - 2 * t);
   scene.add(model.root);
-  const selectedBox = new T.Box3Helper(new T.Box3(), 0xd9ebce),
-    hoverBox = new T.Box3Helper(new T.Box3(), 0xa9c5b4);
+  const selectedBox = new T.Box3Helper(new T.Box3(), 0xeab878),
+    hoverBox = new T.Box3Helper(new T.Box3(), 0xc4d8e3);
   selectedBox.visible = false;
   hoverBox.visible = false;
   scene.add(selectedBox, hoverBox);
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
     layoutPosition = new T.Vector3(),
+    inventoryTarget = new T.Vector3(),
     matrix = new T.Matrix4(),
     scale = new T.Vector3(),
     quat = new T.Quaternion(),
@@ -81,6 +120,8 @@ export function createViewer(
     color = new T.Color();
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
+  const activeTouches = new Set<number>(),
+    selectionBounds = new T.Box3();
   function matches(p: Piece, selection: Selection | null) {
     return (
       !!selection &&
@@ -113,21 +154,43 @@ export function createViewer(
         m instanceof T.MeshBasicMaterial ||
         m instanceof T.MeshStandardMaterial
       )
-        m.map?.dispose();
+        for (const value of Object.values(m))
+          if (value instanceof T.Texture) value.dispose();
       m.dispose();
     });
     scene.remove(model.root);
   }
   function refresh() {
-    scene.environmentIntensity = state.level === 'card' ? 0.9 : 0.45;
-    key.intensity = state.level === 'card' ? 2 : 0.85;
-    rim.intensity = state.level === 'card' ? 2 : 0.7;
+    // Hardware is lit like hardware; diagrams are lit flat so the blocks read
+    // as a drawing rather than as objects sitting on a table.
+    const hardwareScale = isPhysical(state.level);
+    // Shine comes from specular contrast, not from turning everything up:
+    // a strong environment for highlights, a restrained key so the diffuse
+    // surfaces keep their tone instead of blowing out to chalk.
+    scene.environmentIntensity = hardwareScale ? 0.86 : 0.48;
+    key.intensity = hardwareScale ? 2.5 : 0.85;
+    key.castShadow = hardwareScale && state.explode < 80;
+    rim.intensity = hardwareScale ? 1.7 : 0.7;
+    kick.intensity = hardwareScale ? 0.62 : 0.28;
     const visible = model.pieces.filter(shown);
     const positions = inventoryLayout(
       visible.length,
       Math.max(0.6, host.clientWidth / host.clientHeight),
     );
-    visible.forEach((p, i) => p.inventory.set(...positions[i]));
+    const hardware =
+      hardwareScale
+        ? spatialInventory(
+            visible.map((p) => ({
+              extent: p.extent.toArray() as [number, number, number],
+              size: p.size,
+            })),
+            host.clientWidth / host.clientHeight,
+          )
+        : null;
+    visible.forEach((p, i) => {
+      p.inventory.set(...(hardware?.[i].position ?? positions[i]));
+      p.inventoryScale = hardware?.[i].scale ?? 1.12 / p.size;
+    });
     for (const p of model.pieces) p.visible = shown(p);
     for (const child of model.root.children)
       if (child.userData.contextFrame)
@@ -136,6 +199,9 @@ export function createViewer(
     callbacks.stats(visible.length);
     host.dataset.visible = String(visible.length);
     host.dataset.level = state.level;
+    host.dataset.componentTypes = String(
+      new Set(visible.map((p) => p.concept)).size,
+    );
     settle = 90;
     autoCamera = true;
   }
@@ -148,13 +214,17 @@ export function createViewer(
       .copy(p.base)
       .addScaledVector(
         p.delta,
-        state.level === 'card' ? stage : smoothstep(0, 0.75, value),
+        (isPhysical(state.level) ? stage : smoothstep(0, 0.75, value)) *
+          (levels[state.level].spread ?? 1),
       );
     const grid = smoothstep(0.8, 1, value);
-    layoutPosition.lerp(p.inventory, grid);
+    inventoryTarget
+      .copy(p.inventory)
+      .addScaledVector(p.center, -(p.inventoryScale ?? 1));
+    layoutPosition.lerp(inventoryTarget, grid);
     return {
       position: layoutPosition,
-      scale: T.MathUtils.lerp(1, 1.12 / p.size, grid),
+      scale: T.MathUtils.lerp(1, p.inventoryScale ?? 1, grid),
     };
   }
   function fit() {
@@ -170,8 +240,12 @@ export function createViewer(
     for (const p of candidates) {
       const dst = destination(p, state.explode / 100);
       const half = p.extent.clone().multiplyScalar(dst.scale * 0.52);
-      bounds.expandByPoint(v.copy(dst.position).add(half));
-      bounds.expandByPoint(v.copy(dst.position).sub(half));
+      bounds.expandByPoint(
+        v.copy(dst.position).addScaledVector(p.center, dst.scale).add(half),
+      );
+      bounds.expandByPoint(
+        v.copy(dst.position).addScaledVector(p.center, dst.scale).sub(half),
+      );
     }
     if (bounds.isEmpty()) {
       bounds.set(new T.Vector3(-4, -1, -2), new T.Vector3(4, 1, 2));
@@ -179,7 +253,9 @@ export function createViewer(
     bounds.getCenter(targetLook);
     const size = bounds.getSize(v);
     const direction =
-      state.explode > 85
+      // Diagrams read from directly above once they are fully separated.
+      // Hardware does not: it is laid out in depth, so stay on the orbit.
+      state.explode > 85 && !isPhysical(state.level)
         ? new T.Vector3(0, 1, 0.001)
         : state.view === 'top'
           ? new T.Vector3(0, 1, 0.001)
@@ -187,18 +263,25 @@ export function createViewer(
             ? new T.Vector3(0, 0.05, 1)
             : state.view === 'back'
               ? new T.Vector3(0, 0.05, -1)
-              : new T.Vector3(0.7, 1, 1.2);
+              : // Look down on something flat like a card; stand nearer eye
+                // level for something tall like a tower, or the lid is all
+                // you see.
+                new T.Vector3(
+                  0.7,
+                  T.MathUtils.lerp(
+                    1,
+                    0.44,
+                    Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
+                  ),
+                  1.2,
+                );
     direction.normalize();
-    const isTop = state.explode > 85 || state.view === 'top';
-    const w = isTop ? size.x : Math.hypot(size.x, size.z) * 0.82;
-    const h = isTop
-      ? size.z
-      : Math.max(size.y * 0.8 + size.z * 0.75, size.x * 0.3);
-    const d =
-      (Math.max(h, w / camera.aspect) /
-        (2 * Math.tan(T.MathUtils.degToRad(camera.fov / 2)))) *
-        1.43 +
-      size.y * 0.25;
+    // Fit the bounding sphere rather than guessing from width and height: a
+    // flat card and a tall tower then frame the same way, at any aspect ratio.
+    const radius = Math.max(size.length() / 2, 0.35);
+    const vertical = T.MathUtils.degToRad(camera.fov);
+    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * camera.aspect);
+    const d = (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 0.8;
     targetPosition
       .copy(targetLook)
       .addScaledVector(direction, Math.max(focus ? 2.8 : 6, d));
@@ -208,7 +291,7 @@ export function createViewer(
       const s = p.object.scale.x;
       target.setFromCenterAndSize(
         p.object.position,
-        new T.Vector3(p.size * s, p.size * s, p.size * s),
+        p.extent.clone().multiplyScalar(s).addScalar(0.018),
       );
     } else target.setFromObject(p.object);
   }
@@ -223,14 +306,43 @@ export function createViewer(
       ? state.explode / 100
       : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
+    if (dive) {
+      dive.t = reducedMotion
+        ? 1
+        : Math.min(
+            1,
+            dive.t + dt / (dive.phase === 'out' ? OUT_SECONDS : IN_SECONDS),
+          );
+      changed = true;
+      if (dive.t >= 1) {
+        const finished = dive;
+        dive = dive.phase === 'in' ? null : dive;
+        if (finished.phase === 'out') {
+          // Hold the stage cleared while React swaps in the deeper scale.
+          dive = { ...finished, t: 1 };
+          callbacks.dived();
+        }
+      }
+    }
     const batches = new Set<T.InstancedMesh>();
     let selected = false;
+    selectedBox.box.makeEmpty();
     for (const p of model.pieces) {
       const dst = destination(p, amount);
       const reveal = p.reveal
         ? smoothstep(p.reveal, p.reveal + 0.07, amount)
         : 1;
-      const s = p.visible ? dst.scale * reveal : 0;
+      // Everything but the part being opened clears away, then the new scale
+      // grows back in. Multiplying the scale keeps explode and reveal intact.
+      let ramp = 1;
+      if (dive)
+        ramp =
+          dive.phase === 'out'
+            ? p.concept === dive.concept
+              ? 1
+              : 1 - ease(dive.t)
+            : ease(dive.t);
+      const s = p.visible ? dst.scale * reveal * ramp : 0;
       p.object.position.copy(dst.position);
       p.object.scale.setScalar(s);
       if (p.batch) {
@@ -246,12 +358,9 @@ export function createViewer(
         p.batch.setColorAt(p.index!, color);
         batches.add(p.batch);
       } else p.object.visible = p.visible;
-      if (
-        matches(p, state.selection) &&
-        p.visible &&
-        state.selection?.instance !== undefined
-      ) {
-        boxFor(p, selectedBox.box);
+      if (matches(p, state.selection) && p.visible) {
+        boxFor(p, selectionBounds);
+        selectedBox.box.union(selectionBounds);
         selected = true;
       }
     }
@@ -264,12 +373,18 @@ export function createViewer(
     if (hovered) boxFor(hovered, hoverBox.box);
     if (autoCamera) {
       fit();
+      if (dive?.phase === 'in' && dive.t === 0)
+        camera.position.copy(targetLook).lerp(targetPosition, 0.5);
       const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
       camera.position.lerp(targetPosition, blend);
       controls.target.lerp(targetLook, blend);
       changed ||= camera.position.distanceToSquared(targetPosition) > 0.00001;
     }
     controls.update();
+    model.root.updateMatrixWorld(true);
+    // Keep names attached to the part under the cursor as the assembly moves.
+    if (pointerPosition && activePointer === null && changed)
+      updateHover(pointerPosition);
     renderer.render(scene, camera);
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
@@ -298,33 +413,34 @@ export function createViewer(
   };
   const observer = new ResizeObserver(resize);
   observer.observe(host);
-  function hit(e: PointerEvent) {
+  function hit(e: { clientX: number; clientY: number }) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.set(
       ((e.clientX - rect.left) / rect.width) * 2 - 1,
       (-(e.clientY - rect.top) / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObject(model.root, true);
-    for (const h of hits) {
-      let obj: T.Object3D | null = h.object;
-      let p: Piece | undefined;
-      if (h.object instanceof T.InstancedMesh && h.object.userData.pieces)
-        p = h.object.userData.pieces[h.instanceId!];
-      else
-        while (obj && !p) {
-          p = obj.userData.piece;
-          obj = obj.parent;
-        }
-      if (p?.visible && p.object.scale.x > 0.02) return p;
-    }
-    return null;
+    return resolvePick(raycaster.intersectObject(model.root, true));
   }
   function down(e: PointerEvent) {
+    if (e.pointerType === 'touch') activeTouches.add(e.pointerId);
+    if (activeTouches.size > 1) {
+      gestureMoved = true;
+      return;
+    }
     dragStart = [e.clientX, e.clientY];
+    gestureMoved = false;
+    activePointer = e.pointerId;
+    hovered = null;
+    callbacks.hover(null, 0, 0, false);
   }
   function up(e: PointerEvent) {
+    activeTouches.delete(e.pointerId);
+    if (e.pointerId !== activePointer) return;
+    activePointer = null;
     if (
+      gestureMoved ||
+      activeTouches.size > 0 ||
       e.button !== 0 ||
       Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 5
     )
@@ -334,7 +450,17 @@ export function createViewer(
     wake();
   }
   function move(e: PointerEvent) {
-    if (e.buttons) return;
+    if (
+      activePointer === e.pointerId &&
+      Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 5
+    )
+      gestureMoved = true;
+    pointerPosition = { clientX: e.clientX, clientY: e.clientY };
+    if (e.buttons || e.pointerType === 'touch') return;
+    updateHover(e);
+    wake();
+  }
+  function updateHover(e: { clientX: number; clientY: number }) {
     const p = hit(e);
     hovered = p;
     renderer.domElement.style.cursor = p ? 'pointer' : 'grab';
@@ -347,12 +473,15 @@ export function createViewer(
         : null,
       e.clientX,
       e.clientY,
+      !!p && !!openLevel(p.concept),
     );
-    wake();
   }
   function leave() {
     hovered = null;
-    callbacks.hover(null, 0, 0);
+    pointerPosition = null;
+    activePointer = null;
+    activeTouches.clear();
+    callbacks.hover(null, 0, 0, false);
     wake();
   }
   function lost(e: Event) {
@@ -366,17 +495,26 @@ export function createViewer(
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointermove', move);
   canvas.addEventListener('pointerleave', leave);
+  canvas.addEventListener('pointercancel', leave);
   canvas.addEventListener('webglcontextlost', lost);
   refresh();
   resize();
   return {
     update(next: ExplorerState) {
+      hovered = null;
+      callbacks.hover(null, 0, 0, false);
+      const arriving = dive?.phase === 'out' && next.level !== state.level;
+      if (next.diveRevision !== state.diveRevision && next.diveInto)
+        dive = { concept: next.diveInto, t: 0, phase: 'out' };
       if (next.level !== state.level) {
         disposeModel();
         model = buildModel(next.level);
         scene.add(model.root);
         amount = next.explode / 100;
         hovered = null;
+        // Arrive close in, so the deeper scale opens out of the part you
+        // clicked rather than appearing from nowhere at a new distance.
+        dive = arriving ? { concept: next.diveInto ?? '', t: 0, phase: 'in' } : null;
       }
       const cameraChange =
         next.explode !== state.explode ||
@@ -399,6 +537,7 @@ export function createViewer(
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerleave', leave);
+      canvas.removeEventListener('pointercancel', leave);
       canvas.removeEventListener('webglcontextlost', lost);
       disposeModel();
       selectedBox.geometry.dispose();
@@ -406,6 +545,7 @@ export function createViewer(
       hoverBox.geometry.dispose();
       (hoverBox.material as T.Material).dispose();
       env.dispose();
+      key.shadow.map?.dispose();
       renderer.dispose();
       canvas.remove();
     },

@@ -1,223 +1,225 @@
-# DieDive — handoff for the next AI / engineer
+# PC Anatomy — handoff
 
-Updated: 2026-09-10.
+Updated: 2026-09-12.
 
-## Read this first: the current result is not accepted
+An interactive, open-source explorer of a desktop computer. The machine is the
+root; you take it apart, pick a component, and descend into that component's own
+disassembly. The graphics card and its Blackwell architecture — the project's
+original subject, when it was called DieDive — are now one branch of it,
+unchanged internally.
 
-The user stopped implementation to request this handoff. Their latest feedback is the controlling product direction:
+Repository: <https://github.com/Yoosseph/gpu_anatomy> (folder name predates the
+rename). Branch `main`. Workspace: `C:\Users\Yoseph\Desktop\personal_projects\gpu_anatomy`.
 
-> “You copied the UI From Human atlas this does not look like a good UI I want improvements and uniqueness, the GPU graphics quality is not good I want huge improvements, the components of the gpu arent many and these green things needs to be more defined.”
-
-They want another AI, such as Claude, to continue the work. They also explicitly requested `git add`, commits, and pushes at suitable checkpoints.
-
-**Do not present the current application as a finished or polished V1.** It is a functioning foundation with a rejected visual direction. The next work needs substantial interface redesign, much better GPU geometry/materials, more meaningful mechanical detail, and clearly differentiated architectural structures. Small color or spacing changes will not satisfy this feedback.
-
-No Human Atlas code or meshes were copied, but the current screen composition follows the supplied reference far too closely: title at upper left, systems panel on the left, camera strip on the right, and a floating explode slider at the bottom. The user's objection concerns the resulting experience, not just code provenance.
-
-## Product to build
-
-**DieDive** — “Explore a modern GPU from the cooler down to its compute cores.”
-
-An interactive, open-source, scientific GPU explorer. The 3D specimen should be the primary interface. One GPU is in scope: NVIDIA GeForce RTX 5090 / GB202 Blackwell.
-
-The intended journey:
-
-1. Open on a recognizable, compelling assembled graphics card.
-2. Orbit, pan, zoom, hover, and select real component structures.
-3. Progressively disassemble the cooler, board, package, memory, and power delivery.
-4. Descend through GB202 → GPC → TPC → SM → execution and memory resources.
-5. Inspect concise explanations, relationships, quantities, and sources.
-6. Search globally and restore the complete card without getting lost.
-
-The signature explosion must move from assembled hardware to orderly, inspectable component groups. At 100%, the visible pieces form a clean inventory rather than a random cloud. The interaction may retain that principle without retaining Human Atlas's UI layout.
-
-Original constraints still relevant:
-
-- Static web app; no backend, database, login, API key, or paid service required for exploration.
-- Dark, restrained, premium scientific presentation. Avoid gaming RGB, excessive glow, dashboard-card clutter, or an educational slide-deck appearance.
-- Original procedural/authored geometry is acceptable. A perfect downloaded model is not required.
-- Repeated resources should use instancing/batching and remain selectable.
-- Desktop first, but genuinely usable on phones and tablets.
-- Document sources and uncertainty. Do not copy copyrighted architecture diagrams into the app.
-
-## Repository and run commands
-
-- Repository: <https://github.com/Yoosseph/gpu_anatomy>
-- Branch used so far: `main`.
-- Workspace on the original machine: `C:\Users\Yoseph\Desktop\personal_projects\gpu_anatomy`.
-- Existing checkpoints:
-  - `80d74ea`: initial interactive physical model and source provenance.
-  - `d81f483`: architecture hierarchy, search, selection, inventory, and tests.
-  - A subsequent handoff commit contains this document and baseline screenshots. Use `git log` for its hash.
+## Run it
 
 ```bash
 npm ci
-npm run dev
-# http://127.0.0.1:5173/
+npm run dev        # http://127.0.0.1:5173/
 
-npm test
-npm run check
-npm run lint
-npm run build
-
-npm run start -- --port 4173
-# Production preview: http://127.0.0.1:4173/
+npm run check      # strict tsc
+npm run lint       # oxlint
+npm test           # node --experimental-strip-types --test
+npm run build      # tsc --noEmit && vite build
+npm run start      # production preview
 ```
 
-Node >=22.13 is declared; development used Node 24.14.1 on Windows. `npm test` uses Node's native TypeScript stripping, not tsx. A tsx runner attempt failed under the Windows sandbox; the native Node runner passed.
+Node >=22.13. `npm test` uses Node's native type stripping, not tsx — which is
+why `lib/scene.ts` cannot be imported from a test: it imports `./models`
+without a `.ts` extension. Anything a test needs to reach lives outside it
+(`lib/picking.ts` was split out of the scene for exactly this reason).
 
-The app is React 19 + strict TypeScript + Vite + direct Three.js, with Tailwind and generated shadcn/Base UI primitives. React Three Fiber is not used. The 3D engine is dynamically imported to split its bundle.
+React 19 + strict TypeScript + Vite 8 + Three.js used directly. No
+react-three-fiber. Tailwind 4 with generated shadcn/Base UI primitives. The 3D
+engine is dynamically imported so it lands in its own chunk. `app/layout.tsx`
+and `next.config.ts` are unused starter remnants; the entry point is
+`index.html` → `app/main.tsx`.
 
-The initial Sites starter included Vinext, Cloudflare, and a large primitive catalog. The active app was changed to plain static Vite because it requires no server. `app/layout.tsx`, `next.config.ts`, and some dependencies are unused starter remnants, not the entry point. The package lock is committed. Do not mistake the presence of Vinext for the active architecture.
+## The scale tree
+
+Exploration is data, not code. `lib/levels.ts` is the whole structure; adding a
+scale means adding an entry there, a concept file, a geometry builder, and one
+line in the `builders` registry.
+
+| Scale | Parent | Menu | Concepts | State |
+| --- | --- | --- | ---: | --- |
+| `pc` | — | root | 17 | built |
+| `motherboard` | pc | Motherboard | 24 | built |
+| `cpu` | motherboard | Motherboard | 4 | **placeholder** |
+| `psu` | pc | Power supply | 17 | built |
+| `fan` | pc | Cooling | 8 | built |
+| `cooler` | pc | Cooling | 8 | built |
+| `disk` | pc | Storage | 10 | built |
+| `card` | pc | GPU | 40 | built |
+| `die` | card | GPU | 9 | built |
+| `gpc` | die | GPU | 3 | built |
+| `tpc` | gpc | GPU | 2 | built |
+| `sm` | tpc | GPU | 9 | built |
+
+151 concepts total. The sidebar groups scales by `branchLabel`, not by branch
+root — which is why `fan` and `cooler` share one "Cooling" menu instead of
+nesting. A scale marked `detailed: false` is listed with a "placeholder" note;
+`cpu` is the only one left.
+
+Each level declares `phases` (the named stops along the 0–100 disassembly) and
+`spread` (how far apart the inventory pushes its pieces — big assemblies need
+more). `concept` names the component one scale up that opens it, and that
+component must carry `open: '<level>'`. Tests enforce both directions.
 
 ## Where the implementation lives
 
 | File | Responsibility |
 | --- | --- |
-| `index.html` | Static document, metadata, entry script. |
-| `app/main.tsx` | React root; imports global CSS. |
-| `app/page.tsx` | Main interface and explorer state; search, layers, breadcrumbs, inspection, camera controls, scale switch, source dialog. |
-| `app/viewer.tsx` | React bridge to the Three.js engine; async initialization, hover UI, loading/error state, disposal. |
-| `app/globals.css` | Entire visual direction and responsive rules. Needs a deliberate redesign; currently contains many successive overrides. |
-| `lib/manifest.ts` | Concept manifest, sources, categories, level paths, search, state types, search-selection transition. |
-| `lib/models.ts` | Procedural hardware and logical geometry; meshes, instances, labels, per-piece metadata. Main target for graphics improvements. |
-| `lib/scene.ts` | Renderer, lighting, orbit controls, picking, visibility, animation, camera fitting, isolation, cleanup. |
-| `lib/layout.ts` | Deterministic normalized grid and explosion interpolation. |
-| `tests/manifest.test.ts` | Six data/state/layout tests. |
-| `SOURCES.md` | Research provenance and representation limitations. |
-| `components/ui/` | Generated UI primitives. |
+| `lib/levels.ts` | The scale tree: parents, phases, spread, menu grouping. |
+| `lib/concept.ts` | The `Concept` shape, categories, colors, accuracy strings. |
+| `lib/concepts/*.ts` | The text: one file per branch. Ids are global — collisions are a real hazard. |
+| `lib/sources.ts` | Every citable reference. |
+| `lib/manifest.ts` | Composes the concept files; search, level paths, state transitions. |
+| `lib/models.ts` | `builders` registry + the shared `material()` helper. |
+| `lib/machine.ts` | The PC itself (1 unit ≈ 35 mm), ATX constants, RGB palette. |
+| `lib/mainboard.ts`, `processor.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `disk.ts` | One geometry builder per scale. |
+| `lib/parts.ts` | Shared realistic parts: fans, fin stacks, screws, connectors, `glowMaterial`, `buildLightStrip`. |
+| `lib/hardware.ts` | `ModelTools` — the `add` / `box` / `instances` / `label` interface every builder is handed. |
+| `lib/scene.ts` | Renderer, lights, orbit, visibility, the dive ramp, camera fitting, disposal. |
+| `lib/picking.ts` | `resolvePick` — the see-through picking policy. Separate from the scene so tests can import it. |
+| `lib/layout.ts` | `inventoryLayout`, `spatialInventory`, `smoothstep`. |
+| `app/page.tsx` | Sidebar, menus, search, detail panel, disassembly control. |
+| `app/viewer.tsx` | React ↔ Three bridge; async init, hover, error state. |
+| `app/globals.css`, `app/workbench.css` | The visual direction. |
 
-Some authored files are still densely formatted. A cleanup/refactor is warranted before substantial extension. Avoid treating the current component boundaries or CSS as final design decisions.
+## Conventions that matter
 
-## What currently works
+**Geometry is millimetres.** Every builder opens with a local `mm()` helper
+converting to scene units, and states its scale in the file header. The PC is
+1 unit ≈ 35 mm, the cooler 11 mm, the disk 8 mm. Keep it.
 
-- Original procedural graphics card with two fans, frame, two fin arrays, vapor chamber representation, backplate, PCB, GPU package, memory, power components, PCIe edge, power connector, and display I/O.
-- Orbit/pan/zoom through `OrbitControls`; tap versus drag picking uses a 5-pixel movement threshold.
-- A 0–100 explode slider with staged physical separation, later logical resources, and a normalized inventory.
-- Five view contexts: card, die, GPC, TPC, and SM.
-- Search across concept names and aliases; selecting a result changes context, restores its layer, and opens details.
-- Hover names, selection box/instance tint, details with sources, focus, isolate, hide, and parent links.
-- Category and concept visibility controls, show/hide all, breadcrumbs, back action, and reset.
-- Hardware/silicon switch and explicit logical-versus-physical notices.
-- Keyboard slider operation and `/` to open search.
-- Instanced repeated logical blocks, memory packages, power-stage blocks, and heatsink fins.
-- Time-based camera/explosion damping and reduced-motion handling.
-- WebGL initialization/context-loss messaging.
+**`add(concept, object, pos, delta?, reveal?)`.** `delta` is the direction the
+piece travels as you disassemble. `reveal` is the disassembly fraction below
+which the piece is hidden — and it is only for parts that are genuinely
+*inside* something. An assembled cooler must look like a cooler; putting a
+`reveal` on the fin stack meant the assembled view was a bare coldplate. This
+was a real bug, fixed on 2026-09-12. The rule: if you could see it before
+picking up a screwdriver, `reveal` is 0.
 
-These are implementation facts, not an assertion that every interaction or layout is finished.
+**Every rendered object belongs to a named concept.** `tests/models.test.ts`
+enforces it. An unnamed mesh is one the viewer can hover and get nothing from,
+which is the complaint that produced the rule.
 
-## What the counts actually mean
+**Rotation traps.** `buildFinStack` rotates fins by `π/2` on Z, so the *first*
+size component becomes the fin's height, not its length. Three heatsinks once
+shipped metre-tall fins because of this. `buildBlockSink` needs `rotation.x =
++π/2` or its fins bury themselves in the board.
 
-Do not use the displayed counts to imply high modeling fidelity:
+**Shine is contrast, not brightness.** High `envMapIntensity` and low roughness
+on metals, restrained key light. Raising overall exposure washes everything to
+chalk — that was tried and reverted.
 
-- The default card has **52 selectable modeled hardware structures**.
-- The card's fully expanded inventory has **233 structures**: those 52 hardware entries plus 11 logical GPC blocks and 170 logical SM blocks.
-- The SM context has **154 entries**, including 128 CUDA blocks and grouped architectural resources.
-- A fin array is a selectable assembly, not a separate selectable entity for each fin.
-- Much of the apparent complexity comes from repeated boxes. It does not fulfill the user's request for a richly detailed GPU specimen.
-- Sixteen memory packages and the modeled power/passive component counts are authored approximations. The app does not establish an exact Founders Edition PCB bill of materials or placement.
+**Emissive materials do not light anything.** RGB needs `glowMaterial` for the
+surface *and* a `PointLight` beside it.
 
-The “green things” are generic compute/GPC/SM/CUDA blocks. Labels and a few texture marks have been added, but the shapes remain crude rectangular abstractions. The user explicitly wants much greater definition and visual distinction.
+## Sourcing rules
 
-## Major work needed next
+`concept()` defaults `sources` to `['specs']` — the NVIDIA RTX 5090 page — for
+any physical concept that does not name its own. This silently produced 49
+components citing NVIDIA for drive cages, CMOS batteries and audio codecs. That
+was corrected on 2026-09-12: sources were reassigned where a real reference
+applies, and set to `[]` where none honestly does. **19 concepts now cite
+nothing, deliberately.** Sheet metal, fin stacks and grilles do not need a
+vendor document, and inventing one is worse than admitting there is none.
 
-### 1. Redesign the interface around DieDive
+`tests/manifest.test.ts` checks that every cited id resolves and that no
+concept cites the same source twice. It does not require a citation to exist.
 
-Develop a visibly original exploration system. Reconsider navigation, specimen framing, hierarchy, inspection, layers, and disassembly controls together. Do not preserve the current layout just because it functions. Maintain the useful interactions while changing the experience meaningfully. Keep the specimen dominant and readable during inspection.
+**Still unfixed:** the `card` / `die` GPU concepts predate this cleanup and many
+still default to `['specs']`. Some of those are legitimate; some are not. Worth
+an audit.
 
-### 2. Rebuild the physical GPU presentation
-
-Current shortcomings include flat petal-like fan blades, simple rails and slabs, approximate exposed PCB, simplistic contacts/ports, repetitive fins, limited assembly detail, and fairly flat lighting. The result looks like a low-detail procedural construction rather than a convincing specimen.
-
-Possible areas to develop: proper blade curvature and thickness, fan housings/hubs, believable shroud construction, mechanically plausible fin stacks and heat transport, connectors and their actual openings, mounting structures, fasteners, package/substrate detail, memory package markings, differentiated power stages/inductors/capacitors, and researched board structure. These are suggestions, not asserted facts about the Founders Edition.
-
-Use source evidence to choose what to represent. Add meaningful components and inspectable assemblies, not arbitrary decorative objects to inflate a counter. Preserve clear approximate-geometry notices wherever detail is not sourced.
-
-### 3. Make architecture understandable through form
-
-GPC, TPC, SM, CUDA, Tensor, RT, scheduling, register, cache, and memory-interface structures need a clear visual hierarchy and distinct identities. Current pale-green blocks, broad bars, repeated stamp textures, and gold Tensor rectangles are insufficient.
-
-Represent nesting, grouping, connections, boundaries, and scale transitions explicitly. Avoid implying that a logical block diagram is an exact physical die floorplan. More detailed schematic geometry is welcome; invented undocumented transistor-level layouts are not.
-
-### 4. Improve explosion and camera behavior
-
-The inventory currently scales every piece to a common maximum extent and packs it into equal cells. This is deterministic and nonoverlapping at the layout level but loses physical size relationships and produces rows of nearly identical tiles. Explore category-aware packing, retained assembly relationships, readable labels, and a more compelling transition.
-
-Camera fitting is heuristic. Test it with all levels, isolation, arbitrary visibility, selection panels, extreme aspect ratios, and intermediate explosion values. Inventory mode currently forces a near-top camera above 85%, while the perspective/front/back controls remain enabled; fix that misleading affordance or make those controls work.
-
-### 5. Complete engineering and product QA
-
-Finish desktop and mobile testing, actual picking/drill-down, search after hiding layers, empty states, keyboard accessibility, touch input, and reset behavior. Add meaningful interaction regressions. Check concept-only search results such as the root card/die, which do not have matching rendered piece IDs in their contexts, so selection highlighting is not guaranteed.
-
-Finish README, architecture documentation, contribution guidance, LICENSE, and a compelling demo after the product merits them. None of those should claim completion prematurely.
-
-## Factual basis and accuracy rules
-
-Primary reference:
-
-<https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf>
-
-NVIDIA whitepaper v1.1, printed pages 8–12 and 46–48:
+The full reference list is in `lib/sources.ts` and `SOURCES.md`. Primary for the
+GPU branch is the NVIDIA Blackwell whitepaper v1.1, pages 8–12 and 46–48:
 
 | Configuration | GPC | TPC | SM | L2 |
 | --- | ---: | ---: | ---: | ---: |
-| RTX 5090 enabled configuration | 11 | 85 | 170 | 96 MB |
-| Full GB202 design | 12 | 96 | 192 | 128 MB |
+| RTX 5090 shipping | 11 | 85 | 170 | 96 MB |
+| Full GB202 | 12 | 96 | 192 | 128 MB |
 
-One full GPC contains eight TPCs. A TPC contains two SMs. The current GPC drill-down is explicitly a **representative full GPC**, not a map of which TPCs are enabled within each of the shipping card's eleven GPCs.
+The GPC drill-down is a representative *full* GPC, not a map of which TPCs are
+enabled in the shipping card. Per SM: 128 CUDA, 4 Tensor, 1 RT, 4 texture units,
+256 KB registers, 128 KB combined L1/shared.
 
-Per SM: 128 CUDA resources, four fifth-generation Tensor cores, one fourth-generation RT core, four texture units, 256 KB registers, and 128 KB combined L1/shared memory. RTX 5090 totals include 21,760 CUDA cores, 680 Tensor cores, and 170 RT cores.
+Nothing here claims a specific product's bill of materials. Every physical
+concept carries a `physicalAccuracy` string saying so, and they are not
+decorative — read one before adding a component that implies more precision
+than the model has.
 
-Other references:
+## Interaction decisions worth not re-litigating
 
-- <https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/>
-- <https://www.nvidia.com/en-us/geforce/news/rtx-50-series-graphics-cards-gpu-laptop-announcements/>
-- Interaction inspiration only: <https://github.com/ashemag/human-atlas>
+- **The dive is a zoom, not a scene change.** Clicking a component scales the
+  rest of the stage away while the camera closes on it, then swaps in the
+  deeper scale, which grows back in. The ramp is owned by `lib/scene.ts`, not by
+  React timers — timers drifted against the render loop.
+- **The detail panel is suppressed mid-dive.** `selected` is null while
+  `state.diveInto` is set. Otherwise the outer component's panel flashes for a
+  few hundred milliseconds before the deeper scale replaces it.
+- **Menus do not nest.** Clicking GPU opens a menu of every GPU scale; you pick
+  one. Chaining "click deeper, another row appears" was explicitly rejected.
+- **Glass is see-through to the cursor.** `resolvePick` steps past transparent
+  surfaces. Before it existed the side panel answered for the whole machine and
+  nothing inside the case could be hovered.
+- **Text is expensive.** Repeated feedback: less prose, fewer labels, no
+  strapline, no footer. When in doubt, cut it.
 
-Preserve provenance and independently verify new technical details. The current physical board is not a faithful Founders Edition layout. No credible teardown-derived exact layout has yet been implemented. Avoid mixing RTX GB202 details with datacenter Blackwell architectures.
+## Verification
 
-## Verification completed and its limits
+Passing as of 2026-09-12:
 
-Last code checkpoint passed:
+- `npm run check` — clean.
+- `npm run lint` — clean.
+- `npm test` — 18 tests. Manifest identities, parent reciprocity, cycles, source
+  resolution, SKU counts, search behaviour, reachability of every scale,
+  inventory non-overlap across aspect ratios, spatial inventory depth, picking
+  through glass, and the every-object-is-named rule.
+- `npm run build` — clean. ~461 KB app JS + ~682 KB lazy scene JS + ~196 KB CSS
+  (~146 / ~181 / ~32 KB gzip).
+- Headless Chromium (SwiftShader) through `cooler`, `disk` and `fan` at 0 / 50 /
+  100 % disassembly: no console errors, correct part counts at each stop.
 
-- `npm test`: six tests covering manifest identities/parent reciprocity/cycles, SKU counts, requested search aliases, search restoring hidden categories, grid nonoverlap across aspect ratios, and bounded monotonic stage interpolation.
-- `npm run check`: strict TypeScript.
-- `npm run lint`: authored code. Generated `components/ui/**` and `hooks/use-mobile.ts` are excluded because the starter itself triggered lint errors; this is not a whole-dependency audit.
-- `npm run build`: successful static production build.
+Testing notes for whoever automates the browser next:
 
-Browser checks used the Codex in-app browser against development and production previews. Observed: assembled render, keyboard explosion to 100%, a settled 233-entry inventory, Tensor search opening the SM/detail view, and triggering isolation. The isolation action changed UI state, but its final rendered result was not fully verified before the user's handoff request.
+- `page.click()` fails Playwright's stability check on this app even on
+  provably still elements. Use `page.evaluate(el => el.click())`.
+- `deviceScaleFactor: 1` is required or screenshots time out under SwiftShader.
+- The `data-*` diagnostics on `.viewport` (`data-level`, `data-visible`,
+  `data-explode`, `data-draw-calls`, `data-triangles`) lag several seconds
+  behind a level change under software rendering. Wait, don't poll tightly.
+- There is no URL routing. Drive navigation by clicking `button.branch-head`
+  then the entry in `.branch-scales`.
 
-A 1440×900 desktop override and the browser's smaller default surface were inspected. **The requested tablet, 390×844, 320×568, and landscape-phone test matrix is not complete. Real touch/pinch testing is not complete. The entire click-through package→GPC→TPC→SM sequence is not verified.** Do not describe those as passing.
+**Not verified:** real touch and pinch input, the tablet and small-phone matrix
+(390×844, 320×568, landscape), and a clean-run console audit across every
+scale. Do not report those as passing.
 
-Development hot reload briefly produced stale module/hook errors during large edits; a fresh production preview loaded successfully. No comprehensive clean-run browser error audit has been finished.
+## Open work
 
-Observed production scene counters: approximately 175 draw calls and 42,888 triangles for the card/inventory. This is not a measured frame-rate benchmark. Repeated PCIe contact geometry still costs avoidable draw calls. The renderer exposes `data-level`, `data-visible`, `data-explode`, `data-draw-calls`, and `data-triangles` on `.viewport` for diagnostics.
+1. **`cpu` is a placeholder.** It is the one scale in the menu that does not
+   deliver. Cores, cache, memory controller — the tree the project was
+   restructured around originally named it.
+2. **Audit the GPU branch's citations** (see Sourcing rules above).
+3. **The disk's interior reads poorly at mid-disassembly.** The base walls
+   occlude the mechanism from the default camera angle before the parts have
+   travelled far enough. Either raise the internals faster or tilt the framing.
+4. **Platters render matte.** `metalness: 1, roughness: 0.055,
+   envMapIntensity: 2.4` is set but there is little in the environment to
+   reflect. They should be mirrors.
+5. **Inventory layout still flattens size relationships** for very mixed
+   assemblies. `spatialInventory` preserves relative size better than the old
+   grid, but a screw next to a side panel is still awkward.
+6. **The scene chunk is 682 KB.** Three.js is most of it. Worth a look if
+   mobile load time matters.
+7. Dependency advisories from `npm ci` have never been triaged.
 
-Last build sizes were about 410 KB application JavaScript + 611 KB lazy scene JavaScript + 192 KB CSS before compression; roughly 132 KB + 156 KB + 31 KB gzip. The large starter dependency set has not been rationalized. Installation reported 11 dependency advisories; no security audit/remediation was completed. Do not apply blind breaking upgrades without reviewing the actual dependency paths.
+## Hosting
 
-## Baseline screenshots
-
-These document the current, rejected baseline; they are not target-quality examples:
-
-- `docs/screenshots/desktop-assembled.png`
-- `docs/screenshots/desktop-inventory.png`
-
-The original four user-supplied screenshots show Human Atlas. Use them only to understand the desired assembled/exploded/inventory behavior. The latest feedback explicitly rejects copying their UI composition.
-
-## Hosting and operational notes
-
-`.openai/hosting.json` contains an already registered Sites project:
-
-```json
-{"project_id":"appgprj_6aa1e09f9f3c8191b741362d1ce34bc9","static":{"directory":"dist"}}
-```
-
-It is **not deployed**. No version was saved or published. Do not create a duplicate Sites project. Any short-lived credential from registration has expired and is not stored in the repository. GitHub pushes to the existing `origin` succeeded.
-
-Static hosting is otherwise straightforward: `npm run build`, serve `dist/`. Keep future publishing distinct from claiming the visual work is accepted. The user's latest request was handoff and Git push, not publication.
-
-At handoff, the app had been viewed at port 4173. Start or restart the commands above as needed; do not assume an earlier AI's terminal sessions survive. On the original Windows machine, npm network/cache operations and Git index writes required sandbox elevation. This is an environment permission issue, not an application requirement.
-
-## Suggested starting point
-
-Read this file and the latest user feedback, inspect the current app and screenshots, then establish a clearly different design and a concrete plan for a much better 3D specimen. Keep the working data/search/state foundation where useful, but do not let the existing UI or primitive geometry constrain the redesign. Demonstrate meaningful visual progress early, verify it in a real browser, and commit/push coherent checkpoints as requested.
+`.openai/hosting.json` holds a registered but **undeployed** Sites project
+(`appgprj_6aa1e09f9f3c8191b741362d1ce34bc9`, static directory `dist`). Do not
+create a duplicate. Any credential from that registration has expired and is not
+in the repo. Otherwise: `npm run build`, serve `dist/`.

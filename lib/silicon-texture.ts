@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { byId } from './manifest';
+import { byId } from './manifest.ts';
 
 export const siliconColor: Record<string, string> = {
   gpc: '#264c69',

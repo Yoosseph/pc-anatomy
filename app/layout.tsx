@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Untitled site',
+  title: 'PC Anatomy',
 };
 
 export default function RootLayout({

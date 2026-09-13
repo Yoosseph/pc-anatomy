@@ -199,7 +199,6 @@ export const levels: Record<LevelId, LevelDef> = {
   cooler: {
     id: 'cooler',
     parent: 'pc',
-    alternative: true,
     name: 'CPU cooler',
     title: 'Inside the cooler.',
     caption: 'TOWER AIR COOLER',
@@ -220,6 +219,9 @@ export const levels: Record<LevelId, LevelDef> = {
   liquid: {
     id: 'liquid',
     parent: 'pc',
+    // The machine is built with the air tower bolted to the socket, so the
+    // liquid loop is the alternative: same job, same socket, different answer.
+    alternative: true,
     name: 'Liquid cooling',
     title: 'Inside the liquid loop.',
     caption: '360 MM ALL-IN-ONE',

@@ -187,6 +187,8 @@ export function createViewer(
     });
     scene.remove(model.root);
   }
+  /** Which set of pieces the shelves were last packed for. */
+  let layoutSignature = '';
   function refresh() {
     // Hardware is lit like hardware; diagrams are lit flat so the blocks read
     // as a drawing rather than as objects sitting on a table.
@@ -196,16 +198,25 @@ export function createViewer(
     // surfaces keep their tone instead of blowing out to chalk.
     scene.environmentIntensity = hardwareScale ? 0.86 : 0.48;
     key.intensity = hardwareScale ? 2.5 : 0.85;
-    key.castShadow = hardwareScale && state.explode < 80;
     rim.intensity = hardwareScale ? 1.7 : 0.7;
     kick.intensity = hardwareScale ? 0.62 : 0.28;
     const visible = model.pieces.filter(shown);
-    const positions = inventoryLayout(
-      visible.length,
-      Math.max(0.6, host.clientWidth / host.clientHeight),
-    );
-    const hardware =
-      hardwareScale
+    // Packing the shelves is the one expensive thing in here, and `refresh`
+    // runs on every state change, which includes every step of the explode
+    // slider. The packing only depends on which pieces are on stage and on the
+    // shape of the viewport, so it is redone when one of those changes and not
+    // sixty times a second while the parts are in flight.
+    const aspect = host.clientWidth / host.clientHeight;
+    const signature =
+      state.level +
+      '|' +
+      aspect.toFixed(3) +
+      '|' +
+      visible.map((p) => p.key).join(',');
+    if (signature !== layoutSignature) {
+      layoutSignature = signature;
+      const positions = inventoryLayout(visible.length, Math.max(0.6, aspect));
+      const hardware = hardwareScale
         ? spatialInventory(
             visible.map((p) => ({
               extent: (p.lieExtent ?? p.extent).toArray() as [
@@ -215,13 +226,14 @@ export function createViewer(
               ],
               size: p.size,
             })),
-            host.clientWidth / host.clientHeight,
+            aspect,
           )
         : null;
-    visible.forEach((p, i) => {
-      p.inventory.set(...(hardware?.[i].position ?? positions[i]));
-      p.inventoryScale = hardware?.[i].scale ?? 1.12 / p.size;
-    });
+      visible.forEach((p, i) => {
+        p.inventory.set(...(hardware?.[i].position ?? positions[i]));
+        p.inventoryScale = hardware?.[i].scale ?? 1.12 / p.size;
+      });
+    }
     for (const p of model.pieces) p.visible = shown(p);
     for (const child of model.root.children)
       if (child.userData.contextFrame)
@@ -236,8 +248,15 @@ export function createViewer(
     settle = 90;
     autoCamera = true;
   }
-  /** How far the parts have settled onto the shelves, 0 to 1. */
-  const laidOut = (value: number) => smoothstep(0.8, 1, value);
+  /**
+   * How far the parts have settled onto the shelves, 0 to 1.
+   *
+   * It starts where the explosion finishes (`smoothstep(0.22, 0.68, …)` above)
+   * rather than at 0.8. The gap between the two left the slider doing nothing
+   * at all between 68% and 80% and then moving every part at once over the
+   * last fifth, which is what read as a pause followed by a lurch.
+   */
+  const laidOut = (value: number) => smoothstep(0.7, 1, value);
   /** A piece's extent and box centre, part way through turning face up. */
   function posture(p: Piece, grid: number) {
     if (!p.lie || !p.lieExtent || !p.lieCenter)
@@ -371,6 +390,19 @@ export function createViewer(
         }
       }
     }
+    // Shadows fade out as the parts lay themselves out. They used to switch
+    // off the moment the slider passed 80, and `castShadow` is a shader define:
+    // flipping it makes three.js recompile every material in the scene, which
+    // on a first pass froze the viewer for about a second right at the point
+    // the reader was dragging through. Intensity is a uniform and costs
+    // nothing to animate, and once it reaches zero the shadow pass is skipped
+    // as well, which is the performance the switch was there for.
+    const shadowFade = isPhysical(state.level)
+      ? 1 - smoothstep(0.62, 0.9, amount)
+      : 0;
+    key.shadow.intensity = shadowFade;
+    renderer.shadowMap.autoUpdate = shadowFade > 0.002;
+
     const batches = new Set<T.InstancedMesh>();
     let selected = false;
     selectedBox.box.makeEmpty();
@@ -560,6 +592,10 @@ export function createViewer(
       if (next.level !== state.level) {
         disposeModel();
         model = buildModel(next.level);
+        // New pieces, so the cached packing belongs to objects that no longer
+        // exist. Returning to a scale would otherwise leave every part of it
+        // with an inventory position of zero, in a heap at the origin.
+        layoutSignature = '';
         scene.add(model.root);
         amount = next.explode / 100;
         hovered = null;

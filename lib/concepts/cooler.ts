@@ -18,7 +18,6 @@ export const coolerConcepts: Concept[] = [
     category: 'Cooling',
     parent: 'cpucooler',
     level: 'cooler',
-    open: 'cooler',
     description:
       'A lapped copper block, usually nickel-plated, clamped flat against the processor lid.',
     purpose:

@@ -21,7 +21,6 @@ export const liquidConcepts: Concept[] = [
     category: 'Cooling',
     parent: 'aio',
     level: 'liquid',
-    open: 'liquid',
     description:
       'An aluminium core of flat coolant channels threaded through a dense folded fin matrix, closed at each end by a tank.',
     purpose:

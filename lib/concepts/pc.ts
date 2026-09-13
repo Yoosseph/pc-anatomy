@@ -266,13 +266,12 @@ export const pcConcepts: Concept[] = [
     shortName: 'CPU cooler',
     category: 'Cooling',
     parent: 'pc',
-    // The machine is built with the liquid loop fitted, so the air tower is no
-    // longer a part you can point at inside the case. It stays a scale of its
-    // own under Cooling, which is what `level === open` marks.
-    level: 'cooler',
+    // This is the cooler the machine is built with: a part you can point at
+    // inside the case, and the way into its own scale.
+    level: 'pc',
     open: 'cooler',
     description:
-      'A finned tower on heat pipes, with a fan pushing air through it.',
+      'A finned tower on heat pipes, bolted to the socket, with a fan pushing case air through it.',
     purpose:
       'Moves heat off the processor lid fast enough to keep it below its throttling limit.',
     quantity: '1 modeled tower cooler',
@@ -290,10 +289,14 @@ export const pcConcepts: Concept[] = [
     shortName: 'Liquid cooler',
     category: 'Cooling',
     parent: 'pc',
-    level: 'pc',
+    // The other answer to the same problem. Only one cooler bolts to one
+    // socket, so the loop is not fitted to this build and has nothing inside
+    // the case to click on. `level === open` makes it the root of its own
+    // scale, reached from the Cooling menu.
+    level: 'liquid',
     open: 'liquid',
     description:
-      'A sealed loop: a pump and water block on the processor, flexible tubing, and a three fan radiator in the roof of the case.',
+      'A sealed loop: a pump and water block on the processor, flexible tubing, and a three fan radiator mounted in the roof of the case.',
     purpose:
       'Carries heat away from the processor as warm liquid instead of through metal, so the large finned area that sheds it can sit wherever the case has room rather than directly above the socket.',
     quantity: '1 modeled 360 mm unit',
@@ -315,11 +318,11 @@ export const pcConcepts: Concept[] = [
     level: 'pc',
     open: 'fan',
     description:
-      'Intake fans at the front and an exhaust fan at the rear set the direction air travels.',
+      'Intake fans behind the front panel and an exhaust fan in the roof set the direction air travels.',
     purpose:
       'Keeps a steady current of cool air moving past every component instead of letting heat pool.',
     quantity: '4 modeled fans',
-    specifications: { Layout: '3 front intake · 1 rear exhaust' },
+    specifications: { Layout: '3 front intake · 1 roof exhaust' },
     representationType: 'physical',
     sources: ['bldc'],
     searchTerms: ['fan', 'airflow', 'intake', 'exhaust', 'cooling'],

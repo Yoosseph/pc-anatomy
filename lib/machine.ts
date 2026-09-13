@@ -121,22 +121,29 @@ export function buildMotherboardAssembly(tools: ModelTools) {
   }
 
   // Memory: four slots, two populated, standing off the board.
+  //
+  // `memY` is a clearance, not a styling choice. A 133 mm module hung level
+  // with the socket reaches down past the primary ×16 slot and straight
+  // through the graphics card in it, which is what used to happen here. Real
+  // boards put the slots high, close to the top edge, for exactly this reason,
+  // so the modules are seated to leave the card its own air.
+  const memY = socketY + mm(32);
   for (let i = 0; i < 4; i++) {
     const x = socketX + mm(62) + i * mm(11);
     put(box([mm(7.4), mm(133), 0.2], i % 2 ? '#33383d' : '#4c545a', 0.14), [
       x,
-      socketY + mm(6),
+      memY,
       0.11,
     ]);
     if (i % 2 === 1) {
-      put(box([mm(6.6), mm(131), 0.86], '#6a747a', 0.86, 0.01), [x, socketY + mm(6), 0.58]);
-      put(box([mm(7), mm(40), 0.08], '#9ba5ab', 0.92), [x, socketY + mm(6), 1.0]);
+      put(box([mm(6.6), mm(131), 0.86], '#6a747a', 0.86, 0.01), [x, memY, 0.58]);
+      put(box([mm(7), mm(40), 0.08], '#9ba5ab', 0.92), [x, memY, 1.0]);
       // Frosted diffuser along the top of the heatspreader.
       const bar = new T.Mesh(
         new T.BoxGeometry(mm(5), mm(124), 0.07),
         glowMaterial(BOARD_ACCENT, 1.6),
       );
-      put(bar, [x, socketY + mm(6), 1.02]);
+      put(bar, [x, memY, 1.02]);
     }
   }
 
@@ -157,23 +164,33 @@ export function buildMotherboardAssembly(tools: ModelTools) {
   for (let i = 0; i < 2; i++)
     put(box([mm(88), mm(26), 0.18], '#737c82', 0.88), [-mm(18), -mm(30) - i * mm(64), 0.11]);
 
-  // Regulator heatsinks: the tall finned blocks above and beside the socket.
-  for (const [w, h, x, y, along] of [
-    [mm(150), mm(30), socketX + mm(12), socketY + mm(78), true],
-    [mm(28), mm(120), socketX - mm(70), socketY + mm(10), false],
+  // Regulator heatsinks: the finned blocks above and beside the socket.
+  //
+  // `buildBlockSink` grows its fins along +Y, so `rotation.x = π/2` is the one
+  // turn that lifts them off the board. A second turn on Z used to stand the
+  // left sink on end, and it did not: composed in XYZ order the pair sends the
+  // block's 120 mm length along Z and its fins along −X, so that sink ran
+  // backwards through the board, through the tray and out of the rear panel.
+  // Passing the dimensions the right way round needs only the one turn.
+  for (const [w, h, x, y] of [
+    [mm(150), mm(30), socketX + mm(12), socketY + mm(78)],
+    [mm(28), mm(120), socketX - mm(70), socketY + mm(10)],
   ] as const) {
-    const sink = buildBlockSink(material, along ? w : h, along ? h : w, 0.56, '#646d73');
+    const sink = buildBlockSink(material, w, h, 0.56, '#646d73');
     sink.rotation.x = Math.PI / 2;
-    if (!along) sink.rotation.z = Math.PI / 2;
     put(sink, [x, y, 0.3]);
   }
 
   const ramGlow = new T.PointLight(BOARD_ACCENT, 4.5, 4.5, 2);
-  ramGlow.position.set(socketX + mm(74), socketY + mm(6), 1.5);
+  ramGlow.position.set(socketX + mm(74), memY, 1.5);
   group.add(ramGlow);
 
-  put(box([mm(20), mm(52), 0.34], '#26292c', 0.1), [BOARD_D / 2 - mm(18), mm(30), 0.19]);
-  put(box([mm(38), mm(16), 0.3], '#26292c', 0.1), [socketX - mm(4), BOARD_H / 2 - mm(16), 0.17]);
+  // Power connectors. The 24-pin sits high on the front edge and the 8-pin in
+  // the top corner clear of the regulator heatsink, which is where the cable
+  // runs below can actually reach them: down at the old positions both blocks
+  // stood inside the graphics card, and the 8-pin was buried in the sink.
+  put(box([mm(20), mm(52), 0.34], '#26292c', 0.1), [BOARD_D / 2 - mm(18), mm(48), 0.19]);
+  put(box([mm(38), mm(16), 0.3], '#26292c', 0.1), [-mm(101), BOARD_H / 2 - mm(16), 0.17]);
 
   // Scattered small parts, so the empty board area is not a flat plane.
   for (let i = 0; i < 16; i++) {
@@ -344,45 +361,56 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
   add('toppanel', top, [(FRONT + REAR) / 2, ROOF + 0.14, 0], [0, 4.4, 0]);
 
   // Power supply shroud.
+  // Ends at the intake fan wall, not through it: the deck used to reach past
+  // the front fans, so the lit ring of the bottom one came out of its top face.
+  const SHROUD_W = FRONT - REAR - 1.6;
   const shroud = new T.Group();
-  place(shroud, box([FRONT - REAR - 0.6, 0.12, 5.9], '#3c4349', 0.72), [0, 0, 0]);
-  place(shroud, box([0.12, 1.4, 5.9], '#3c4349', 0.72), [(FRONT - REAR) / 2 - 0.4, -0.7, 0]);
+  place(shroud, box([SHROUD_W, 0.12, 5.9], '#3c4349', 0.72), [0, 0, 0]);
+  place(shroud, box([0.12, 1.4, 5.3], '#3c4349', 0.72), [SHROUD_W / 2, -0.7, 0.1]);
   for (let i = 0; i < 9; i++)
     place(shroud, box([0.3, 0.06, 2.6], '#131617', 0.42), [-3.6 + i * 0.42, 0.07, 1.2]);
   // Brushed top plate and a chamfered lip, so the biggest flat surface in the
   // machine is not one bare rectangle from the front three-quarter view.
-  place(shroud, box([FRONT - REAR - 1.6, 0.04, 4.6], '#4a5259', 0.86), [0, 0.09, -0.5]);
-  place(shroud, box([FRONT - REAR - 0.6, 0.16, 0.2], '#525a61', 0.88), [0, 0.02, 2.92]);
-  const shroudStrip = buildLightStrip(FRONT - REAR - 1.4, 0.12, ACCENT, 2.3);
+  place(shroud, box([SHROUD_W - 1.0, 0.04, 4.6], '#4a5259', 0.86), [0, 0.09, -0.5]);
+  place(shroud, box([SHROUD_W, 0.16, 0.2], '#525a61', 0.88), [0, 0.02, 2.92]);
+  const shroudStrip = buildLightStrip(SHROUD_W - 0.8, 0.12, ACCENT, 2.3);
   place(shroud, shroudStrip, [0, 0.02, 2.78]);
   const shroudGlow = new T.PointLight(ACCENT, 7, 7.5, 2);
   shroudGlow.position.set(0.4, 0.6, 2.2);
   shroud.add(shroudGlow);
-  add('psushroud', shroud, [(FRONT + REAR) / 2 + 0.3, FLOOR + 2.85, -0.2], [0, 2.6, 0]);
+  // Sits high enough that a loom fits between it and the top of the supply.
+  add('psushroud', shroud, [(FRONT + REAR) / 2 - 0.2, FLOOR + 3.0, -0.2], [0, 2.6, 0]);
 
   // Drive cage.
+  //
+  // Sized from the drive it holds, and stood back from the intake fans. It
+  // used to be 2.7 units across with a 4.2-unit disk in it, so the drive hung
+  // out of both ends of its own cage and into the front fans.
+  const CAGE_X = 3.3,
+    CAGE_W = mm(154),
+    CAGE_D = mm(112);
   const cage = new T.Group();
   for (const sy of [-1, 1])
-    place(cage, box([2.7, 0.07, 4.4], '#4e565b', 0.8), [0, sy * 0.95, 0]);
+    place(cage, box([CAGE_W, 0.07, CAGE_D], '#4e565b', 0.8), [0, sy * 0.95, 0]);
   for (const sz of [-1, 1])
-    place(cage, box([2.7, 1.9, 0.07], '#4e565b', 0.8), [0, 0, sz * 2.1]);
-  add('drivecage', cage, [FRONT - 2.2, FLOOR + 1.5, -0.3], [1.6, 0, 0]);
+    place(cage, box([CAGE_W, 1.9, 0.07], '#4e565b', 0.8), [0, 0, (sz * CAGE_D) / 2]);
+  add('drivecage', cage, [CAGE_X, FLOOR + 1.5, -0.3], [1.6, 0, 0]);
 
   // ── Storage ─────────────────────────────────────────────────────────────
   const hdd = new T.Group();
   place(hdd, box([mm(147), mm(26), mm(102)], '#959da1', 0.92, 0.01), [0, 0, 0]);
   place(hdd, box([mm(120), 0.02, mm(80)], '#a9b1b5', 0.94), [0, mm(14), 0]);
-  place(hdd, box([mm(40), mm(6), mm(30)], '#2d3134', 0.3), [mm(48), -mm(14), mm(30)]);
+  place(hdd, box([mm(40), mm(6), mm(30)], '#2d3134', 0.3), [mm(48), -mm(9), mm(30)]);
   for (const sx of [-1, 1])
     for (const sz of [-1, 1])
       place(hdd, buildScrew(material, mm(2.4)), [sx * mm(62), mm(13.5), sz * mm(40)]);
   label(hdd, '3.5" HDD', [0, mm(15), 0], 1.2, '#40464a');
-  add('hdd', hdd, [FRONT - 2.2, FLOOR + 0.95, -0.3], [1.9, -0.4, 0]);
+  add('hdd', hdd, [CAGE_X, FLOOR + 0.95, -0.3], [1.9, -0.4, 0]);
 
   const ssd = new T.Group();
   place(ssd, box([mm(100), mm(7), mm(70)], '#565e64', 0.84, 0.01), [0, 0, 0]);
   label(ssd, 'SATA SSD', [0, mm(4.2), 0], 0.9, '#a2aaae');
-  add('ssd', ssd, [FRONT - 2.2, FLOOR + 1.95, -0.3], [1.9, 0.4, 0]);
+  add('ssd', ssd, [CAGE_X, FLOOR + 1.95, -0.3], [1.9, 0.4, 0]);
 
   // ── Power supply ────────────────────────────────────────────────────────
   const psu = new T.Group();
@@ -400,7 +428,7 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
     guard: true,
   });
   psuFan.rotation.x = Math.PI;
-  place(psu, psuFan, [0, -ph / 2 + mm(14), 0]);
+  place(psu, psuFan, [0, -ph / 2 + mm(24), 0]);
 
   // Rear face: hex exhaust grille, mains inlet and switch.
   const grille = buildHoneycomb(material, ph * 0.82, pd * 0.62, 0.04, mm(5), '#3c4247');
@@ -429,64 +457,69 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
   add('psu', psu, [REAR + mm(100), FLOOR + mm(46), -0.4], [-1.2, -2.4, 0]);
 
   // Cable looms from the supply up to the board and the card.
+  //
+  // Three runs, one per connector the supply actually feeds, each ending on
+  // the connector it plugs into rather than somewhere inside the part. There
+  // used to be five: two pairs went to the same two connectors, and both of
+  // the spares terminated inside the graphics card.
   const cables = new T.Group();
   const loom = (points: Vec3[], radius: number, color: string) => {
     const curve = new T.CatmullRomCurve3(points.map((p) => new T.Vector3(...p)));
     cables.add(
       new T.Mesh(
-        new T.TubeGeometry(curve, 26, radius, 7, false),
+        new T.TubeGeometry(curve, 30, radius, 7, false),
         material(color, 0.16, 0.7),
       ),
     );
   };
+  // 24-pin: up through the shroud and along the front edge of the board, in
+  // plain sight through the window, passing in front of the card rather than
+  // through it.
   loom(
     [
-      [REAR + 1.4, FLOOR + 1.3, -1.2],
-      [REAR + 0.8, FLOOR + 3.2, -2.3],
-      [REAR + 0.9, 1.4, -2.6],
-      [BOARD_X + BOARD_D / 2 - 0.2, mm(30) + BOARD_Y, TRAY + 0.5],
-    ],
-    0.14,
-    '#1f2325',
-  );
-  loom(
-    [
-      [REAR + 1.2, FLOOR + 1.4, -1.6],
-      [REAR + 0.7, 3.0, -2.6],
-      [REAR + 0.9, ROOF - 1.0, -2.4],
-      [BOARD_X - 0.5, BOARD_Y + BOARD_H / 2 - 0.3, TRAY + 0.45],
-    ],
-    0.1,
-    '#1f2325',
-  );
-  loom(
-    [
-      [REAR + 2.0, FLOOR + 1.3, -0.6],
-      [REAR + 2.6, FLOOR + 3.4, 1.2],
-      [-1.0, SLOT1_Y + 1.4, 1.4],
-      [-0.2, SLOT1_Y + 0.42, 0.2],
-    ],
-    0.12,
-    '#292d31',
-  );
-  // Two sleeved runs that come up over the shroud in plain sight, rather than
-  // only behind the tray where the window never shows them.
-  loom(
-    [
-      [2.6, FLOOR + 2.95, 1.4],
-      [1.4, FLOOR + 3.6, 1.9],
-      [0.2, BOARD_Y + mm(10), 0.9],
-      [BOARD_X + BOARD_D / 2 - 0.3, BOARD_Y + mm(28), TRAY + 0.6],
+      [2.6, FLOOR + 3.1, 1.4],
+      [1.7, FLOOR + 3.65, 1.9],
+      [1.0, 0.2, 1.95],
+      [0.72, BOARD_Y + mm(22), 1.6],
+      [0.52, BOARD_Y + mm(44), 0.1],
+      [0.42, BOARD_Y + mm(48), -2.36],
     ],
     0.16,
     '#16191b',
   );
+  // 8-pin EPS: up the narrow gap behind the rear edge of the board, over the
+  // top edge and down onto the connector in the corner. This is the run a
+  // build hides, so it is routed where a builder would hide it.
   loom(
     [
-      [3.4, FLOOR + 2.95, 0.4],
-      [2.2, FLOOR + 3.4, 1.2],
-      [0.6, SLOT1_Y - 0.2, 1.5],
-      [-0.4, SLOT1_Y + 0.36, 0.3],
+      [REAR + 5.19, FLOOR + 1.75, -0.55],
+      [REAR + 5.32, FLOOR + 2.45, -0.75],
+      [REAR + 5.28, FLOOR + 2.72, -1.25],
+      [REAR + 3.3, FLOOR + 2.72, -2.1],
+      [REAR + 1.1, FLOOR + 2.73, -2.5],
+      [REAR + 0.45, FLOOR + 3.15, -2.6],
+      [REAR + 0.3, FLOOR + 3.7, -2.64],
+      [REAR + 0.28, -2.0, -2.66],
+      [REAR + 0.26, 1.0, -2.66],
+      [REAR + 0.26, 3.6, -2.66],
+      [REAR + 0.28, ROOF - 0.6, -2.62],
+      [REAR + 0.46, ROOF - 0.42, -2.58],
+      [BOARD_X - mm(101) + 0.6, BOARD_Y + BOARD_H / 2 + 0.3, -2.54],
+      [BOARD_X - mm(101), BOARD_Y + BOARD_H / 2 - mm(8), -2.48],
+      [BOARD_X - mm(101), BOARD_Y + BOARD_H / 2 - mm(26), -2.44],
+    ],
+    0.1,
+    '#1f2325',
+  );
+  // 12V-2x6 to the card: out of the shroud, forward of everything, and down
+  // onto the socket on the card's top face.
+  loom(
+    [
+      [3.4, FLOOR + 3.1, 0.4],
+      [2.3, FLOOR + 3.65, 1.5],
+      [0.6, SLOT1_Y + 0.6, 1.9],
+      [-0.55, SLOT1_Y + 1.5, 0.7],
+      [-0.874, SLOT1_Y + 1.72, 0.12],
     ],
     0.13,
     '#1d2124',
@@ -496,133 +529,110 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
   // ── Motherboard ─────────────────────────────────────────────────────────
   add('motherboard', buildMotherboardAssembly(tools), [BOARD_X, BOARD_Y, BOARD_Z], [0, 0, -3.2]);
 
-  // ── Liquid cooler ───────────────────────────────────────────────────────
-  // A 360 mm all-in-one in the roof. The loop is what makes this shape
-  // possible: the fins that actually shed the heat no longer have to sit on
-  // top of the socket, so the space above the processor is free and the core
-  // goes where the case is widest.
-  const blockX = BOARD_X - 0.55,
-    blockY = BOARD_Y + 1.55,
-    blockZ = BOARD_Z + 0.42;
-  const RAD_Y = ROOF - 0.62,
-    RAD_Z = 0.1,
-    RAD_HALF = mm(390) / 2;
+  // ── Processor cooler ────────────────────────────────────────────────────
+  // A tower air cooler, bolted to the socket, which is the build this machine
+  // actually runs. Heat leaves the lid through the coldplate, rises through
+  // four pipes and is shed by a fin stack standing in the path of the front to
+  // rear airflow, so the cooler is the one part that ties the board and the
+  // case fans together.
+  //
+  // Three clearances fix every number below, and all three are the reasons a
+  // liquid loop exists at all: the fin stack has to sit clear of the regulator
+  // heatsinks along the top of the board, its fan has to clear the memory
+  // beside the socket, and the whole tower has to fit under the roof. The loop
+  // is modelled at its own scale rather than fitted here.
+  //
+  // Local frame: +Y up the tower, +X toward the front of the case (the way the
+  // fan faces), +Z off the board. The coldplate is therefore thin in Z, lying
+  // flat on the lid, and the fins are stacked along Y.
+  const SOCK_X = BOARD_X - 0.55,
+    SOCK_Y = BOARD_Y + 1.55,
+    SOCK_Z = BOARD_Z + 0.25; // on top of the socket retention frame
+  const STACK_NEAR = mm(28), // clears the regulator heatsinks below it
+    STACK_W = mm(120), // how far the stack reaches off the board
+    STACK_D = mm(52), // depth along the airflow
+    STACK_Z = STACK_NEAR + STACK_W / 2,
+    STACK_Y = mm(56);
+  const PIPE_X = [-1.5, -0.5, 0.5, 1.5];
 
-  const pump = new T.Group();
-  const housing = new T.Mesh(
-    new T.CylinderGeometry(mm(39), mm(42), mm(46), 30),
-    material('#282d32', 0.55, 0.44),
-  );
-  housing.rotation.x = Math.PI / 2;
-  place(pump, housing, [0, 0, 0]);
-  const crown = new T.Mesh(
-    new T.CircleGeometry(mm(33), 30),
-    glowMaterial(RGB[1], 1.35, 0.9),
-  );
-  place(pump, crown, [0, 0, mm(24)]);
-  const pumpGlow = new T.PointLight(RGB[1], 6, 5.5, 2);
-  pumpGlow.position.set(0, 0, mm(40));
-  pump.add(pumpGlow);
-  for (const side of [-1, 1]) {
-    const outlet = new T.Mesh(
-      new T.CylinderGeometry(mm(10), mm(10), mm(20), 16),
-      material('#848d93', 0.92, 0.3),
-    );
-    outlet.rotation.z = Math.PI / 2;
-    place(pump, outlet, [side * mm(48), mm(16), 0]);
-  }
-  place(pump, box([mm(96), mm(10), mm(8)], '#8d9599', 0.9), [0, 0, -mm(26)]);
+  const tower = new T.Group();
 
-  // Radiator and its three fans, one group so the roof reads as one unit.
-  const radiator = new T.Group();
-  for (const side of [-1, 1])
-    place(radiator, box([mm(17), mm(120), mm(27)], '#2f3438', 0.82, 0.004), [
-      side * (RAD_HALF - mm(8)),
-      0,
-      0,
-    ]);
-  const core = buildFinStack(
-    material,
-    54,
-    [mm(356), 0.02, mm(25)],
-    mm(120) / 54,
-    '#99a1a6',
-  );
-  core.rotation.x = Math.PI / 2;
-  place(radiator, core, [0, 0, 0]);
-  for (let i = 0; i < 11; i++)
-    place(
-      radiator,
-      box([mm(356), mm(2.2), mm(25)], '#a8b1b6', 0.9, 0.001),
-      [0, (i / 10 - 0.5) * mm(108), 0],
-    );
-  place(radiator, box([mm(384), mm(126), mm(1.4)], '#23282c', 0.8), [
-    0,
-    0,
-    -mm(15),
-  ]);
-  for (let i = 0; i < 3; i++) {
-    const fan = buildFan(material, {
-      size: mm(120),
-      phase: 0.6 + i * 0.8,
-      pads: true,
-      cable: i === 2,
-      frameColor: '#24282c',
-      rgb: RGB[1],
-    });
-    place(fan, new T.Object3D(), [0, 0, 0]);
-    fan.position.set((i - 1) * mm(122), 0, mm(26));
-    radiator.add(fan);
-    const spill = new T.PointLight(RGB[1], 5, 6, 2);
-    spill.position.set((i - 1) * mm(122), 0, mm(44));
-    radiator.add(spill);
-  }
-  radiator.rotation.x = Math.PI / 2; // lay it under the roof, blowing up
-  const loop = new T.Group();
-  loop.add(pump);
-  pump.position.set(0, 0, 0);
+  // Coldplate, and the crossbar whose two sprung screws pull it onto the lid.
+  place(tower, box([mm(54), mm(54), mm(8)], '#c9d0d4', 0.95, 0.004), [0, 0, mm(4)]);
+  place(tower, box([mm(78), mm(11), mm(6)], '#9aa2a7', 0.9), [0, 0, mm(11)]);
+  for (const sx of [-1, 1])
+    place(tower, buildScrew(material, mm(5)), [sx * mm(38), 0, mm(15)]);
 
-  // Tubing from the block up to the tanks, sleeved, with the coolant showing
-  // as a lit column inside it.
-  const tubeGroup = new T.Group();
-  for (const side of [-1, 1]) {
+  // Four pipes out of the plate, bending away from the board as they rise so
+  // the stack can stand clear of everything mounted along the top of it.
+  for (const px of PIPE_X) {
     const path = new T.CatmullRomCurve3([
-      new T.Vector3(blockX + side * mm(56), blockY + mm(16), blockZ),
-      new T.Vector3(blockX + side * 1.35, blockY + 0.85, blockZ + 0.35),
-      new T.Vector3(blockX + side * 2.1, blockY + 2.3, RAD_Z + 0.25),
-      new T.Vector3(
-        blockX + side * 2.35 + (side > 0 ? 1.1 : -0.35),
-        RAD_Y - 0.72,
-        RAD_Z,
-      ),
+      new T.Vector3(px * mm(11), mm(2), mm(6)),
+      new T.Vector3(px * mm(12), mm(22), mm(12)),
+      new T.Vector3(px * mm(13), mm(40), STACK_NEAR + mm(16)),
+      new T.Vector3(px * mm(14), mm(62), STACK_Z - mm(10)),
+      new T.Vector3(px * mm(14), STACK_Y + mm(44), STACK_Z - mm(10)),
     ]);
-    tubeGroup.add(
+    place(
+      tower,
       new T.Mesh(
-        new T.TubeGeometry(path, 36, mm(10), 14, false),
-        material('#1e2226', 0.2, 0.68),
+        new T.TubeGeometry(path, 32, mm(3.2), 12, false),
+        material('#c07b3e', 0.95, 0.24),
       ),
-    );
-    tubeGroup.add(
-      new T.Mesh(
-        new T.TubeGeometry(path, 36, mm(6.4), 12, false),
-        glowMaterial('#3f7fa8', 0.85, 0.7),
-      ),
+      [0, 0, 0],
     );
   }
 
-  const aio = new T.Group();
-  pump.position.set(blockX, blockY, blockZ);
-  radiator.position.set((FRONT + REAR) / 2 + 0.2, RAD_Y, RAD_Z);
-  aio.add(pump, radiator, tubeGroup);
-  add('aio', aio, [0, 0, 0], [0, 2.6, 1.6]);
+  // Fin stack: horizontal plates stacked up the tower, air passing between
+  // them front to rear.
+  const stack = buildFinStack(
+    material,
+    30,
+    [STACK_D, mm(0.5), STACK_W],
+    mm(2.9),
+    '#c6cdd1',
+  );
+  place(tower, stack, [0, STACK_Y, STACK_Z]);
+  place(tower, box([STACK_D + mm(4), mm(3), STACK_W + mm(4)], '#3a4147', 0.8), [
+    0,
+    STACK_Y + mm(46),
+    STACK_Z,
+  ]);
+  const towerCap = new T.Mesh(
+    new T.PlaneGeometry(STACK_D - mm(10), STACK_W - mm(12)),
+    glowMaterial(RGB[1], 1.25, 0.9),
+  );
+  towerCap.rotation.x = -Math.PI / 2;
+  place(tower, towerCap, [0, STACK_Y + mm(48), STACK_Z]);
+
+  // The fan hangs on the front face of the stack and blows toward the rear
+  // exhaust, which is the direction the case is already moving air.
+  const towerFan = buildFan(material, {
+    size: mm(104),
+    phase: 1.1,
+    pads: true,
+    cable: true,
+    frameColor: '#262b30',
+    rgb: RGB[1],
+  });
+  towerFan.rotation.z = Math.PI / 2; // axis along −X: front to rear
+  place(tower, towerFan, [STACK_D / 2 + mm(13), STACK_Y, STACK_Z]);
+  const towerGlow = new T.PointLight(RGB[1], 6, 6.5, 2);
+  towerGlow.position.set(STACK_D / 2 + mm(32), STACK_Y, STACK_Z);
+  tower.add(towerGlow);
+
+  add('cpucooler', tower, [SOCK_X, SOCK_Y, SOCK_Z], [0, 2.4, 1.6]);
 
   // ── Case fans ───────────────────────────────────────────────────────────
   for (let i = 0; i < 3; i++) {
+    // No cable tail on these three. `buildFan` sweeps it out past the frame
+    // corner, which on a stacked wall of fans means through the front panel
+    // and into the neighbour above. A real build routes them behind the tray,
+    // where nothing here would show them anyway.
     const fan = buildFan(material, {
       size: mm(120),
       phase: i * 0.7,
       pads: true,
-      cable: true,
       rgb: RGB[i],
     });
     fan.rotation.z = Math.PI / 2;
@@ -631,19 +641,23 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
     fan.add(spill);
     add('casefan', fan, [FRONT - 0.55, -3.0 + i * mm(125), 0], [3.4, 0, 0]);
   }
+  // Exhaust, in the roof rather than on the rear panel.
+  //
+  // The rear panel of this build has no room for one: the I/O window takes
+  // everything above the top slot and the graphics card takes the height
+  // below it, so a 120 mm fan there stood inside the card. The roof is clear
+  // now that the radiator has gone, and it still blows out of the vented lid.
   const exhaust = buildFan(material, {
     size: mm(120),
     phase: 2.2,
     pads: true,
-    cable: true,
     guard: true,
     rgb: RGB[3],
   });
-  exhaust.rotation.z = -Math.PI / 2;
   const exhaustSpill = new T.PointLight(RGB[3], 6, 6, 2);
   exhaustSpill.position.set(0, -0.5, 0);
   exhaust.add(exhaustSpill);
-  add('casefan', exhaust, [REAR + 0.55, apertureTop - APERTURE_W - 0.4, 1.1], [-3.4, 0, 0]);
+  add('casefan', exhaust, [3.6, ROOF - 0.68, 0], [0, 3.4, 0]);
 
   // ── Graphics card, in the primary slot ──────────────────────────────────
   const card = new T.Group();
@@ -702,10 +716,16 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
       -mm(18),
     ]);
   label(card, 'GEFORCE RTX', [mm(10), mm(23), cardWide / 2 - mm(34)], 1.9, '#9aa4ad');
+  // Seated in the slot, not hovering over it. The group is authored with its
+  // PCB at +13 mm, so +24 mm put the board of the card 37 mm above the slot it
+  // is supposedly in, which lifted the whole card into the rear I/O stack and
+  // into the rear fan. −13 mm lands the PCB exactly on the slot. The stand-off
+  // in Z is the height of the connector, which is also what gives the M.2
+  // covers underneath the card their clearance.
   add(
     'graphicscard',
     card,
-    [REAR + 0.24 + cardLen / 2, SLOT1_Y + mm(24), BOARD_Z + cardWide / 2 + 0.14],
+    [REAR + 0.24 + cardLen / 2, SLOT1_Y - mm(13), BOARD_Z + cardWide / 2 + 0.34],
     [0, 0, 3.0],
   );
 }

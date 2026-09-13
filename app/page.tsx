@@ -99,7 +99,11 @@ export default function Home() {
     [about, setAbout] = useState(false),
     [layers, setLayers] = useState(false),
     [expanded, setExpanded] = useState<Category | null>(null),
-    [count, setCount] = useState(0);
+    // `null` until the viewer has reported for the first time. Zero means the
+    // viewer is running and nothing is switched on, which is a different thing
+    // to say to the reader, and saying the wrong one was what put "No
+    // structures visible" on screen for the whole of a cold load.
+    [count, setCount] = useState<number | null>(null);
   // While a dive is in flight the selection exists only to aim the camera at
   // the part being opened. Showing its panel would flash the outer component's
   // description, and its "Take apart" button, for a few hundred milliseconds
@@ -558,7 +562,7 @@ export default function Home() {
           </nav>
         </div>
         <div className="stage-counter">
-          <strong>{count.toString().padStart(3, '0')}</strong>
+          <strong>{(count ?? 0).toString().padStart(3, '0')}</strong>
           <span>PARTS</span>
         </div>
       </section>
@@ -568,7 +572,12 @@ export default function Home() {
         onCount={setCount}
         onDived={arrive}
       />
-      {!count && (
+      {count === null && (
+        <div className="empty-scene loading">
+          <h3>Loading components for you…</h3>
+        </div>
+      )}
+      {count === 0 && (
         <div className="empty-scene">
           <EyeOff size={27} />
           <h3>No structures visible</h3>

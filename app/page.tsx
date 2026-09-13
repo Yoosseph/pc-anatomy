@@ -203,8 +203,15 @@ export default function Home() {
       .querySelector('input[type=range]')
       ?.setAttribute('aria-label', 'Disassemble the specimen');
     const key = (event: KeyboardEvent) => {
-      const el = event.target as HTMLElement;
-      if (el.closest('input,textarea,[contenteditable=true]')) return;
+      // A key pressed while nothing is focused reports the document, not an
+      // element, and on some soft keyboards the target is the window itself.
+      // Reaching for closest() on either throws out of the handler.
+      const el = event.target;
+      if (
+        el instanceof Element &&
+        el.closest('input,textarea,[contenteditable=true]')
+      )
+        return;
       if (event.key === '/') {
         event.preventDefault();
         setSearch(true);
@@ -315,6 +322,15 @@ export default function Home() {
           </button>
         </div>
       </header>
+      {layers && (
+        // Without this the drawer floats over a live 3-D view: a tap meant to
+        // dismiss it lands in the scene and selects whatever was behind it.
+        <button
+          className="drawer-scrim"
+          aria-label="Close systems"
+          onClick={() => setLayers(false)}
+        />
+      )}
       <aside
         className={'explorer' + (layers ? ' mobile-open' : '')}
         aria-label="System visibility"

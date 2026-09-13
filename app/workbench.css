@@ -11,12 +11,38 @@
   --muted-foreground: #b3b5ba;
   --rail: 286px;
   --inspect: 330px;
+  /* The notch, the rounded corners and the home indicator, as four lengths.
+     Every browser that does not know about them reports 0px, so the same
+     rules hold on a desktop monitor. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
 }
 * {
   box-sizing: border-box;
 }
+/* The explorer is a fixed stage, not a document: there is nothing below the
+   fold to reach. Letting the page itself scroll on a phone only produces the
+   iOS rubber-band and a pull-to-refresh that fires mid-orbit. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
 body {
   margin: 0;
+  /* The stage gradient lives here rather than on .workbench so that it also
+     fills the safe-area margins — otherwise the rounded corners of a phone
+     screen show a seam in landscape. */
+  background: radial-gradient(
+    ellipse at 62% 45%,
+    #232528 0%,
+    #131415 44%,
+    #08090a 80%
+  );
 }
 button,
 input,
@@ -61,12 +87,51 @@ a {
   height: 100dvh;
   min-height: 440px;
   overflow: hidden;
-  background: radial-gradient(
-    ellipse at 62% 45%,
-    #232528 0%,
-    #131415 44%,
-    #08090a 80%
-  );
+  -webkit-touch-callout: none;
+  /* An absolutely positioned child is laid out against its containing block's
+     padding box — which padding does NOT move, but a border does. So a
+     transparent border of exactly the safe-area size insets the whole stage —
+     topbar, rail, viewport, disassembly, footer — out of the notch and the
+     home indicator in one move, instead of every rule having to know about
+     them. The body gradient shows through it, so there is no seam. Panels
+     that are position: fixed escape this and carry their own insets below. */
+  border: 0 solid transparent;
+  border-width: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+}
+/* Paint the strip behind the status bar in the header's own colour, and the
+   strip under the home indicator in the footer's, so the inset above does not
+   read as a gap. */
+.workbench::before,
+.workbench::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+.workbench::before {
+  top: 0;
+  height: var(--safe-t);
+  background: #101112;
+  z-index: 16;
+}
+.workbench::after {
+  bottom: 0;
+  height: var(--safe-b);
+  background: #111213;
+  z-index: 9;
+}
+/* Chrome is furniture: dragging across it should orbit or do nothing, never
+   start a text selection or pop the iOS callout menu. Prose keeps its
+   selection — see the detail panel and dialogs below. */
+.topbar,
+.explorer,
+.stage-heading,
+.stage-tools,
+.disassembly,
+footer {
+  -webkit-user-select: none;
+  user-select: none;
 }
 .topbar {
   position: absolute;
@@ -155,6 +220,16 @@ a {
 .mobile-layers,
 .mobile-close {
   display: none;
+}
+/* Backs the systems drawer on small screens. Without it a tap aimed just
+   outside the drawer lands in the 3-D view and selects a part behind it. */
+.drawer-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: #05060799;
+  cursor: default;
 }
 .explorer {
   position: absolute;
@@ -722,6 +797,13 @@ footer button {
   border-top: 1px solid #cacccf35;
   line-height: 1.4;
 }
+/* There is no cursor to follow on a touch screen: tapping a part opens its
+   panel directly, so the floating name would only ever be stale. */
+@media (hover: none) {
+  .hover-label {
+    display: none;
+  }
+}
 .hover-label span {
   display: block;
   margin-top: 3px;
@@ -734,9 +816,13 @@ footer button {
 }
 .detail-panel[data-slot='sheet-content'] {
   position: fixed;
-  inset: 76px 0 0 auto;
-  width: var(--inspect);
-  max-width: var(--inspect);
+  /* Fixed panels sit against the viewport, not against the padded stage, so
+     the notch and the home indicator have to be added back here by hand. */
+  inset: calc(76px + var(--safe-t)) 0 0 auto;
+  width: calc(var(--inspect) + var(--safe-r));
+  max-width: calc(var(--inspect) + var(--safe-r));
+  -webkit-user-select: text;
+  user-select: text;
   height: auto;
   background: #151618;
   border: 0;
@@ -749,6 +835,8 @@ footer button {
   scrollbar-color: #595c63 transparent;
   box-shadow: -15px 0 45px #0002;
   z-index: 20;
+  padding-right: calc(25px + var(--safe-r));
+  padding-bottom: calc(27px + var(--safe-b));
 }
 .detail-top {
   display: flex;
@@ -1171,7 +1259,9 @@ footer button {
   .explorer {
     display: none;
     position: absolute;
-    width: 290px;
+    /* 290px is wider than a 320px phone once the safe-area margin is taken
+       off, and a drawer that touches both edges cannot be dismissed. */
+    width: min(290px, 84vw);
     top: 65px;
     bottom: 0;
     padding: 25px;
@@ -1181,6 +1271,9 @@ footer button {
   }
   .explorer.mobile-open {
     display: flex;
+  }
+  .drawer-scrim {
+    display: block;
   }
   .mobile-layers {
     display: grid;
@@ -1216,7 +1309,7 @@ footer button {
     display: block;
   }
   .detail-panel[data-slot='sheet-content'] {
-    top: 65px;
+    top: calc(65px + var(--safe-t));
   }
   .has-selection .disassembly-label {
     display: none;
@@ -1266,9 +1359,6 @@ footer button {
   }
   .search-button > span,
   .search-button kbd {
-    display: none;
-  }
-  .info-button {
     display: none;
   }
   .stage-heading {
@@ -1329,8 +1419,12 @@ footer button {
     height: 142px;
     padding: 17px 21px;
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 11px 18px;
+    /* Play, label, percentage and Reset share the top row and the timeline
+       spans underneath. With only three columns Reset wrapped to a third row
+       and hung out of the bar. */
+    grid-template-columns: auto 1fr auto auto;
+    gap: 11px 14px;
+    align-items: center;
   }
   .disassembly-label {
     min-width: 0;
@@ -1348,10 +1442,20 @@ footer button {
     font-size: 22px;
   }
   .reset {
-    padding-left: 16px;
+    padding-left: 14px;
+    grid-row: 1;
+    grid-column: 4;
   }
   .reset span {
     display: none;
+  }
+  .disassembly .play {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .disassembly output {
+    grid-row: 1;
+    grid-column: 3;
   }
   .timeline {
     grid-column: 1/-1;
@@ -1386,12 +1490,15 @@ footer button {
     inset: auto 0 0;
     width: 100%;
     max-width: none;
-    height: 43dvh;
+    /* Grows by the home-indicator strip so the sheet still shows 43dvh of
+       reading area rather than 43dvh minus the indicator. */
+    height: calc(43dvh + var(--safe-b));
     min-height: 0;
     border-left: 0;
     border-top: 1px solid #595c62;
     border-radius: 10px 10px 0 0;
-    padding: 20px 24px 30px;
+    padding: 20px calc(24px + var(--safe-r)) calc(30px + var(--safe-b))
+      calc(24px + var(--safe-l));
   }
   .detail-top {
     margin-bottom: 12px;
@@ -1431,8 +1538,8 @@ footer button {
     min-height: 26px;
   }
   .search-dialog[data-slot='dialog-content'] {
-    top: 12%;
-    padding: 23px 18px;
+    top: max(12%, calc(var(--safe-t) + 10px));
+    padding: 23px 18px calc(23px + var(--safe-b));
     max-height: 82dvh;
     overflow: auto;
   }
@@ -1440,10 +1547,25 @@ footer button {
     max-height: 47dvh;
   }
   .about-dialog[data-slot='dialog-content'] {
-    padding: 25px 20px;
+    padding: 25px 20px calc(25px + var(--safe-b));
+    max-height: calc(85dvh - var(--safe-t) - var(--safe-b));
   }
   .hover-label {
     display: none;
+  }
+}
+@media (max-width: 359px) {
+  .disassembly-label {
+    display: none;
+  }
+  .disassembly {
+    grid-template-columns: auto 1fr auto;
+  }
+  .disassembly output {
+    grid-column: 2;
+  }
+  .reset {
+    grid-column: 3;
   }
 }
 @media (max-height: 650px) and (max-width: 600px) {
@@ -1507,13 +1629,16 @@ footer button {
     min-height: 23px;
   }
   .detail-panel[data-slot='sheet-content'] {
-    height: 42dvh;
+    height: calc(42dvh + var(--safe-b));
   }
 }
-@media (max-height: 500px) and (min-width: 601px) {
+@media (max-height: 500px) and (orientation: landscape) {
   :root {
     --rail: 0px;
-    --inspect: 280px;
+    /* A phone turned sideways is 568-932px wide. A fixed 280px rail leaves a
+       sliver of stage on the narrow end, so the panel takes a share of the
+       width instead. */
+    --inspect: min(280px, 46vw);
   }
   .workbench {
     min-height: 300px;
@@ -1527,11 +1652,15 @@ footer button {
   .explorer.mobile-open {
     display: flex;
     top: 53px;
-    width: 285px;
+    width: min(285px, 62vw);
     z-index: 30;
   }
-  .mobile-layers {
+  .drawer-scrim {
     display: block;
+  }
+  .mobile-layers {
+    display: grid;
+    place-items: center;
   }
   .header-specimen {
     display: none;
@@ -1572,17 +1701,36 @@ footer button {
   .disassembly {
     height: 82px;
     bottom: 27px;
-    padding: 13px 24px;
-    gap: 20px;
+    padding: 13px 20px;
+    gap: 16px;
+    /* Back to a single row: the stacked phone layout does not fit in 82px. */
+    display: flex;
+    grid-template-columns: none;
+  }
+  .disassembly .play,
+  .disassembly output,
+  .reset,
+  .timeline {
+    grid-row: auto;
+    grid-column: auto;
   }
   .disassembly-label {
-    min-width: 145px;
+    display: flex;
+  }
+  .disassembly-label {
+    min-width: 0;
   }
   .disassembly-label span {
     font-size: 7px;
   }
   .phase-labels {
     margin-bottom: 12px;
+    gap: 4px;
+  }
+  .phase-labels button {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .ruler {
     margin-top: 8px;
@@ -1591,24 +1739,56 @@ footer button {
     height: 27px;
     font-size: 7px;
   }
+  /* A bottom sheet would swallow a 320px-tall screen whole, so sideways the
+     panel goes back to being a rail down the right-hand edge — the same shape
+     it has on a desktop, scaled to the width available. */
   .detail-panel[data-slot='sheet-content'] {
-    top: 53px;
+    inset: calc(53px + var(--safe-t)) 0 0 auto;
+    width: calc(var(--inspect) + var(--safe-r));
+    max-width: none;
+    height: auto;
+    border-top: 0;
+    border-left: 1px solid #43464b;
+    border-radius: 0;
+    padding: 18px calc(20px + var(--safe-r)) calc(18px + var(--safe-b)) 20px;
+  }
+  .detail-panel [data-slot='sheet-title'] {
+    font-size: 20px;
+  }
+  .instance-label {
+    margin: 6px 0 12px;
   }
   .has-selection .viewport {
-    inset: 100px 290px 95px 230px;
+    inset: 100px calc(var(--inspect) + 10px) 95px 230px;
   }
   .has-selection .stage-tools {
-    right: 290px;
+    right: calc(var(--inspect) + 10px);
     bottom: 50px;
   }
   .has-selection .disassembly {
     display: none;
   }
   .has-selection footer {
-    right: 280px;
+    right: var(--inspect);
   }
   .has-selection .stage-heading {
-    right: 295px;
+    right: calc(var(--inspect) + 15px);
+  }
+}
+/* Below about 760px there is no room for both the title block and the panel:
+   the panel already names what you picked, so the heading stands down and the
+   stage takes the whole left-hand side. */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 760px) {
+  .has-selection .stage-heading,
+  .has-selection footer {
+    display: none;
+  }
+  .has-selection .viewport {
+    inset: 62px calc(var(--inspect) + 8px) 14px 10px;
+  }
+  .has-selection .stage-tools {
+    left: 12px;
+    bottom: 18px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1741,4 +1921,127 @@ footer button {
 .branch-scales button.active > i {
   background: #eab878;
   box-shadow: 0 0 7px #eab87899;
+}
+
+/* ---------------------------------------------------------------------------
+   Touch
+   A finger is about 9 mm across and has no hover state to aim with. Everything
+   below widens hit areas without moving anything on screen — padding paired
+   with an equal negative margin, or an invisible ::after — so the desktop
+   layout is untouched and only the target grows. Scoped to (pointer: coarse)
+   so a mouse keeps the tighter, denser controls.
+--------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  .mobile-layers,
+  .info-button,
+  .search-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .search-button {
+    justify-content: center;
+  }
+  .mobile-close {
+    padding: 10px;
+    margin: -10px;
+  }
+  .brand {
+    min-height: 44px;
+  }
+  .scale-navigation > button,
+  .branch-head {
+    min-height: 46px;
+  }
+  .layer-row {
+    min-height: 44px;
+  }
+  .sublayers > div {
+    min-height: 40px;
+  }
+  .category-name {
+    padding: 10px 0;
+    margin: -10px 0;
+  }
+  /* The switch itself stays 26x15 — it reads as a control, not as a button —
+     but it answers to a tap anywhere in a 50x44 box around it. */
+  .layer-row [data-slot='switch'],
+  .sublayers [data-slot='switch'] {
+    position: relative;
+  }
+  .layer-row [data-slot='switch']::after,
+  .sublayers [data-slot='switch']::after {
+    content: '';
+    position: absolute;
+    inset: -15px -12px;
+  }
+  .breadcrumbs button {
+    padding: 7px 3px;
+    margin: -7px -3px;
+  }
+  .phase-labels button {
+    padding: 9px 5px;
+    margin: -9px -5px;
+  }
+  .view-controls button,
+  .stage-tools .view-controls button {
+    min-height: 38px;
+    min-width: 46px;
+    justify-content: center;
+  }
+  .section-heading button {
+    min-height: 40px;
+    padding: 0 6px;
+    margin-right: -6px;
+  }
+  .has-selection .view-controls button {
+    min-height: 34px;
+    min-width: 40px;
+  }
+  .timeline [data-slot='slider-thumb'] {
+    width: 30px;
+    height: 34px;
+  }
+  .detail-top button {
+    padding: 11px;
+    margin: -11px;
+  }
+  .detail-actions button {
+    padding: 11px 0;
+    margin: -5px 0;
+  }
+  .parent-link button,
+  .source-links a {
+    padding: 8px 0;
+    margin: -8px 0;
+  }
+  .search-dialog [data-slot='command-item'] {
+    min-height: 52px;
+  }
+  /* iOS zooms the whole page in when a focused field is under 16px, and never
+     zooms back out. */
+  .search-dialog [data-slot='command-input'] {
+    font-size: 16px;
+  }
+  .search-dialog [data-slot='input-group'] {
+    height: 50px !important;
+  }
+  .empty-scene button,
+  .viewer-status button {
+    min-height: 44px;
+  }
+}
+/* A phone held sideways is barely 320 px tall. Let the stage use every one of
+   them rather than overflowing a page that can no longer scroll. */
+@media (orientation: landscape) and (max-height: 440px) {
+  .workbench {
+    min-height: 0;
+  }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  /* 38px of camera buttons is a ninth of a sideways phone. */
+  .stage-tools .view-controls button,
+  .has-selection .view-controls button {
+    min-height: 32px;
+    min-width: 42px;
+  }
 }

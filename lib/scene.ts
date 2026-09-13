@@ -21,12 +21,22 @@ export function createViewer(
   callbacks: SceneCallbacks,
 ) {
   const scene = new T.Scene();
+  // A phone runs the same geometry as a desktop — several hundred meshes and
+  // a third of a million triangles — on a fraction of the fill rate, with no
+  // fan and a battery. Drawing that at a phone's native 3x pixel ratio with a
+  // 2048-pixel shadow map costs roughly nine times the fragment work of a
+  // laptop and puts orbiting below the frame rate at which it still feels
+  // attached to your finger. Fewer pixels and a smaller shadow map cost
+  // almost nothing visible at arm's length, so quality follows the device.
+  const compact = matchMedia('(pointer: coarse)').matches || innerWidth < 900,
+    maxPixelRatio = compact ? 1.5 : 2,
+    shadowSize = compact ? 1024 : 2048;
   const renderer = new T.WebGLRenderer({
     antialias: true,
     alpha: true,
     powerPreference: 'high-performance',
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.setClearColor(0, 0);
@@ -46,7 +56,7 @@ export function createViewer(
   const key = new T.DirectionalLight(0xfff4e6, 2.6);
   key.position.set(-3, 10, 5);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(key.shadow.camera, {
     left: -8,
     right: 8,
@@ -56,7 +66,9 @@ export function createViewer(
     far: 35,
   });
   key.shadow.bias = -0.00015;
-  key.shadow.normalBias = 0.012;
+  // Halving the shadow map doubles the world size of a shadow texel, so the
+  // offset that keeps a surface from shadowing itself has to grow with it.
+  key.shadow.normalBias = compact ? 0.024 : 0.012;
   scene.add(key);
   const rim = new T.DirectionalLight(0xbed6e3, 2);
   rim.position.set(-5, 3, -4);

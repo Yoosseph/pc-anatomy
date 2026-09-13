@@ -61,7 +61,7 @@ export default function Viewer({ state, onSelect, onCount, onDived }: Props) {
       <div
         ref={host}
         className="viewport"
-        aria-label="Interactive 3D graphics card"
+        aria-label="Interactive 3D computer model"
       />
       {/* The stage carries its own "Loading components for you…" until the
           first frame reports in, so there is one message on screen rather than

@@ -49,11 +49,16 @@ export function createViewer(
   });
   renderer.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFSoftShadowMap;
+  // three.js now maps the retired soft constant to PCF internally and warns on
+  // every load. Naming the renderer's real mode keeps the console quiet.
+  renderer.shadowMap.type = T.PCFShadowMap;
   renderer.setClearColor(0, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
+  // Pointer interaction owns the canvas. The surrounding controls provide the
+  // keyboard path, so the drawing surface must not become an empty tab stop.
+  renderer.domElement.tabIndex = -1;
   host.appendChild(renderer.domElement);
   const pmrem = new T.PMREMGenerator(renderer),
     room = new RoomEnvironment(),
@@ -347,10 +352,15 @@ export function createViewer(
     const radius = Math.max(size.length() / 2, 0.35);
     const vertical = T.MathUtils.degToRad(camera.fov);
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * camera.aspect);
-    const d = (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 0.8;
+    // A selected part needs breathing room inside the smaller stage left by
+    // the detail panel. The old 0.8 multiplier cropped focused parts at every
+    // edge, even though the ordinary whole-model fit looked intentional.
+    const padding = focus ? 1.16 : 0.8;
+    const d =
+      (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * padding;
     targetPosition
       .copy(targetLook)
-      .addScaledVector(direction, Math.max(focus ? 2.8 : 6, d));
+      .addScaledVector(direction, Math.max(focus ? 3.2 : 6, d));
   }
   function boxFor(p: Piece, target: T.Box3) {
     if (p.batch) {

@@ -6,7 +6,11 @@
   color-scheme: dark;
   --background: #0f1011;
   --foreground: #eef0f1;
-  --primary: #eab878;
+  --primary: #79bfcc;
+  --accent: #79bfcc;
+  --accent-bright: #a1d9e2;
+  --accent-violet: #b497cf;
+  --accent-muted: #9dc5cc;
   --muted: #232427;
   --muted-foreground: #b3b5ba;
   --rail: 286px;
@@ -60,9 +64,15 @@ button:disabled {
   opacity: 0.3;
   cursor: default;
 }
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid #eab878;
+:where(
+  button,
+  a,
+  input,
+  [role='slider'],
+  [role='switch'],
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
+  outline: 2px solid var(--accent-bright);
   outline-offset: 4px;
 }
 button:hover {
@@ -91,16 +101,15 @@ a {
   /* An absolutely positioned child is laid out against its containing block's
      padding box, which padding does NOT move, but a border does. So a
      transparent border of exactly the safe-area size insets the whole stage
-     (topbar, rail, viewport, disassembly, footer) out of the notch and the
+     (topbar, rail, viewport, and disassembly controls) out of the notch and the
      home indicator in one move, instead of every rule having to know about
      them. The body gradient shows through it, so there is no seam. Panels
      that are position: fixed escape this and carry their own insets below. */
   border: 0 solid transparent;
   border-width: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
 }
-/* Paint the strip behind the status bar in the header's own colour, and the
-   strip under the home indicator in the footer's, so the inset above does not
-   read as a gap. */
+/* Paint the strips behind the status bar and home indicator in the adjacent
+   surface colours so the safe-area border above does not read as a gap. */
 .workbench::before,
 .workbench::after {
   content: '';
@@ -128,8 +137,7 @@ a {
 .explorer,
 .stage-heading,
 .stage-tools,
-.disassembly,
-footer {
+.disassembly {
   -webkit-user-select: none;
   user-select: none;
 }
@@ -159,7 +167,7 @@ footer {
   place-items: center;
   width: 36px;
   height: 36px;
-  background: #e8b776;
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent-violet));
   color: #191a1c;
   border-radius: 7px;
 }
@@ -187,7 +195,7 @@ footer {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #c8a16d;
+  background: var(--accent);
 }
 .header-actions {
   display: flex;
@@ -316,7 +324,7 @@ footer {
 }
 .scale-navigation > button.active {
   background: #34383e;
-  color: #f7e6cd;
+  color: #e8f7f9;
 }
 .scale-navigation > button.active:before {
   content: '';
@@ -325,11 +333,11 @@ footer {
   top: 14px;
   bottom: 14px;
   width: 2px;
-  background: #eab878;
+  background: var(--accent);
 }
 .scale-navigation > button.active > span,
 .scale-navigation > button.active > svg {
-  color: #d9ab70;
+  color: var(--accent-bright);
 }
 .scale-navigation > button.active > svg:last-child {
   opacity: 1;
@@ -339,51 +347,86 @@ footer {
 }
 .systems-section {
   padding: 22px 0 20px;
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 0;
+  flex-direction: column;
 }
 .layer-scroll {
-  max-height: 300px;
-  overflow: auto;
+  flex: none;
+  width: 100%;
+  height: clamp(112px, 24vh, 250px);
+  min-height: 0;
+  overflow-y: scroll;
   scrollbar-width: thin;
   scrollbar-color: #60636a transparent;
+  scrollbar-gutter: stable;
   overflow-x: hidden;
+  padding: 5px 8px 5px 0;
+  border-top: 1px solid #ffffff0a;
+  border-bottom: 1px solid #ffffff0a;
 }
 .layer-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 35px;
+  gap: 5px;
+  min-height: 32px;
 }
-.layer-row > i {
+.category-visibility {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 5px;
+  border-radius: 4px;
+  color: #c5c7cb;
+  text-align: left;
+}
+.category-visibility:hover,
+.category-expand:hover {
+  background: #2c2f34;
+}
+.category-visibility > i {
   width: 6px;
   height: 6px;
   border-radius: 1px;
   flex-shrink: 0;
 }
-.category-name {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.category-visibility > span {
+  min-width: 0;
   flex: 1;
   font-size: 12px;
-  text-align: left;
-  color: #c5c7cb;
 }
-.category-name svg {
-  color: #61646b;
+.category-visibility > small {
+  font: 8px monospace;
+  letter-spacing: 0.5px;
+  color: #8faeb3;
+  text-transform: uppercase;
 }
-.layer-row [data-slot='switch'] {
-  width: 26px;
-  height: 15px;
-  background: #3c4046;
+.category-visibility[aria-pressed='false'] {
+  color: #81858c;
 }
-.layer-row [data-slot='switch'][data-checked] {
-  background: #777b83;
+.category-visibility[aria-pressed='false'] > i {
+  opacity: 0.35;
 }
-.layer-row [data-slot='switch-thumb'] {
-  width: 11px;
-  height: 11px;
-  background: #f5f5f6;
-  margin-left: 1px;
+.category-visibility[aria-pressed='false'] > small {
+  color: #6f737a;
+}
+.category-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: #777b82;
+}
+.category-expand svg {
+  transition: transform 0.16s;
+}
+.category-expand[aria-expanded='true'] svg {
+  transform: rotate(180deg);
 }
 .sublayers {
   padding: 5px 0 8px 14px;
@@ -438,11 +481,18 @@ footer {
   gap: 24px;
   z-index: 3;
 }
-.stage-heading .eyebrow {
-  color: #c4a77f;
-  font-size: 10px;
+.stage-heading > div:first-child {
+  min-width: 0;
 }
-.stage-heading h2 {
+.stage-heading .eyebrow {
+  color: var(--accent-muted);
+  font-size: 10px;
+  margin: 0;
+  padding-right: 12px;
+  border-right: 1px solid #4b5055;
+  white-space: nowrap;
+}
+.stage-heading h1 {
   font-size: 28px;
   font-weight: 400;
   line-height: 1.25;
@@ -450,13 +500,20 @@ footer {
   color: #fcfcfc;
   letter-spacing: -0.6px;
 }
+.stage-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 12px;
+}
 .breadcrumbs {
   display: flex;
   align-items: center;
   gap: 8px;
   font: 11px monospace;
   color: #7f838c;
-  margin-top: 14px;
+  margin-top: 0;
   flex-wrap: wrap;
 }
 .breadcrumbs > span {
@@ -468,28 +525,32 @@ footer {
   color: #e6e7e8;
 }
 .crumb-selected {
-  color: #d5b485;
+  color: #c5aad8;
   max-width: 170px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .stage-counter {
-  text-align: right;
-  min-width: 128px;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
+  padding: 7px 10px;
+  color: #979ba2;
+  background: #17191b99;
+  border: 1px solid #393c41;
+  border-radius: 4px;
 }
 .stage-counter strong {
-  display: block;
-  font: 33px monospace;
-  letter-spacing: -1px;
-  color: #c6c8cc;
+  font: 13px monospace;
+  color: #d9dde0;
 }
 .stage-counter span {
-  display: block;
   font: 9px monospace;
-  letter-spacing: 1px;
-  color: #71757d;
-  margin-top: 7px;
+  letter-spacing: 0.7px;
+  color: #858991;
+  text-transform: uppercase;
 }
 .viewport {
   position: absolute;
@@ -548,21 +609,33 @@ footer {
   height: 112px;
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: 24px;
   padding: 20px 38px;
   background: #131415;
   border-top: 1px solid #3f4146;
   border-bottom: 1px solid #292a2d;
   z-index: 8;
 }
+.disassembly-intro,
+.disassembly-readout {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.disassembly-intro {
+  gap: 15px;
+}
+.disassembly-readout {
+  gap: 19px;
+}
 .disassembly-label {
   display: flex;
   gap: 12px;
   align-items: center;
-  min-width: 153px;
+  min-width: 112px;
 }
 .disassembly-label > svg {
-  color: #dfb37e;
+  color: var(--accent);
 }
 .disassembly-label strong {
   display: block;
@@ -589,7 +662,7 @@ footer {
   color: #777b84;
 }
 .phase-labels button.active {
-  color: #dcbd94;
+  color: var(--accent-bright);
 }
 .phase-labels button {
   padding: 0;
@@ -601,14 +674,14 @@ footer {
   cursor: pointer;
 }
 .timeline [data-slot='slider-range'] {
-  background: linear-gradient(90deg, #b98549, #f0c084);
+  background: linear-gradient(90deg, var(--accent), var(--accent-violet));
   border-radius: 3px;
 }
 .timeline [data-slot='slider-thumb'] {
   width: 26px;
   height: 30px;
   border-radius: 6px;
-  border: 1px solid #f2c78d;
+  border: 1px solid var(--accent-bright);
   background: linear-gradient(#3a3b3f, #202124);
   box-shadow:
     0 2px 7px #000000a6,
@@ -628,11 +701,11 @@ footer {
   height: 12px;
   background-image: linear-gradient(
     90deg,
-    #f0c084 0 1px,
+    var(--accent-bright) 0 1px,
     transparent 1px 4px,
-    #f0c084 4px 5px,
+    var(--accent-bright) 4px 5px,
     transparent 5px 8px,
-    #f0c084 8px 9px
+    var(--accent-bright) 8px 9px
   );
 }
 .timeline [data-slot='slider-thumb']:hover {
@@ -643,7 +716,7 @@ footer {
   transform: scale(1.04);
 }
 .timeline [data-slot='slider-thumb']:focus-visible {
-  outline: 2px solid #f2c78d;
+  outline: 2px solid var(--accent-bright);
   outline-offset: 3px;
 }
 
@@ -660,7 +733,7 @@ footer {
   border-radius: 9px;
   border: 1px solid #4a4c52;
   background: #202124;
-  color: #e7c496;
+  color: var(--accent-bright);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -676,11 +749,11 @@ footer {
   border-color: #6d7077;
 }
 .disassembly .play.running {
-  border-color: #d5a367;
-  background: #2b2418;
+  border-color: var(--accent);
+  background: #17282c;
 }
 .disassembly .play.running span {
-  color: #e7c496;
+  color: var(--accent-bright);
 }
 .ruler {
   display: flex;
@@ -698,16 +771,11 @@ footer {
   background: #6a6e75;
 }
 .disassembly output {
-  font: 27px monospace;
-  color: #d7b98d;
-  min-width: 65px;
+  font: 20px monospace;
+  color: var(--accent-bright);
+  min-width: 48px;
   text-align: right;
-  letter-spacing: -1px;
-}
-.disassembly output small {
-  font-size: 12px;
-  color: #878b93;
-  margin-left: 2px;
+  letter-spacing: -0.5px;
 }
 .reset {
   display: flex;
@@ -722,36 +790,6 @@ footer {
 }
 .reset svg {
   color: #d4d6d8;
-}
-footer {
-  position: absolute;
-  bottom: 0;
-  left: var(--rail);
-  right: 0;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  padding: 0 30px;
-  background: #111213;
-  z-index: 8;
-}
-footer > span {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font: 8px monospace;
-  letter-spacing: 0.55px;
-  color: #72767d;
-}
-footer button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-  font-size: 10px;
-  color: #acaeb4;
 }
 .empty-scene,
 .viewer-status {
@@ -793,8 +831,8 @@ footer button {
 .viewer-status button {
   display: block;
   margin: 15px auto;
-  border: 1px solid #9d7d56;
-  color: #d9b684;
+  border: 1px solid #568995;
+  color: var(--accent-bright);
   padding: 9px 14px;
   border-radius: 4px;
 }
@@ -810,7 +848,7 @@ footer button {
   pointer-events: none;
   padding: 10px 13px;
   background: #18191a;
-  border-left: 2px solid #d8ad78;
+  border-left: 2px solid var(--accent);
   box-shadow: 0 6px 30px #0004;
   font-size: 13px;
   color: #fcfcfc;
@@ -885,7 +923,7 @@ footer button {
 .instance-label {
   font: 9px monospace;
   letter-spacing: 1px;
-  color: #b69872;
+  color: var(--accent-muted);
   margin: 12px 0 25px;
 }
 .detail-panel [data-slot='sheet-description'] {
@@ -899,12 +937,12 @@ footer button {
   line-height: 1.65;
   color: #dbdcde;
   margin: 0 0 20px;
-  border-left: 2px solid #b99361;
+  border-left: 2px solid var(--accent);
   padding: 2px 0 2px 14px;
 }
 .purpose h3 {
   margin: 0 0 7px;
-  color: #deb987;
+  color: var(--accent-bright);
   font: 10px monospace;
   letter-spacing: 1.1px;
   text-transform: uppercase;
@@ -914,7 +952,7 @@ footer button {
 }
 .quantity {
   font: 12px monospace;
-  color: #d3b68d;
+  color: #b7dce1;
   padding: 18px 0;
   border-top: 1px solid #414348;
   border-bottom: 1px solid #414348;
@@ -960,14 +998,14 @@ footer button {
   width: 100%;
   padding: 13px 15px;
   font-size: 14px;
-  background: #d5ab76;
+  background: #83c6d2;
   color: #161719;
   border-radius: 4px;
   font-weight: 550;
 }
 .open-component:hover {
   color: #161719;
-  background: #eed2ad;
+  background: #afe1e8;
 }
 .detail-actions {
   display: flex;
@@ -999,7 +1037,7 @@ footer button {
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: #b09d83;
+  color: #9fc8cf;
 }
 .has-selection .viewport {
   right: calc(var(--inspect) + 18px);
@@ -1007,14 +1045,20 @@ footer button {
 .has-selection .stage-heading {
   right: calc(var(--inspect) + 30px);
 }
+.has-selection .stage-heading h1,
+.has-selection .stage-heading .eyebrow {
+  display: none;
+}
+.has-selection .stage-meta {
+  margin-top: 0;
+}
 .has-selection .stage-counter {
   display: none;
 }
 .has-selection .stage-tools {
   right: calc(var(--inspect) + 30px);
 }
-.has-selection .disassembly,
-.has-selection footer {
+.has-selection .disassembly {
   right: var(--inspect);
 }
 .has-selection .disassembly-label {
@@ -1023,10 +1067,11 @@ footer button {
 .search-dialog[data-slot='dialog-content'] {
   width: 560px;
   max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - var(--safe-t) - var(--safe-b) - 32px);
   padding: 26px;
   gap: 13px;
-  top: 21%;
-  transform: translate(-50%, 0);
+  top: 50%;
+  overflow: hidden;
   background: #191a1c;
   border: 1px solid #52555b;
   border-radius: 8px;
@@ -1045,6 +1090,7 @@ footer button {
 .search-dialog [data-slot='command'] {
   background: transparent;
   padding: 0;
+  min-height: 0;
 }
 .search-dialog [data-slot='input-group'] {
   height: 45px !important;
@@ -1057,6 +1103,7 @@ footer button {
 .search-dialog [data-slot='command-list'] {
   max-height: 340px;
   margin-top: 10px;
+  overflow-y: auto;
 }
 .search-dialog [data-slot='command-item'] {
   padding: 13px 9px;
@@ -1072,14 +1119,23 @@ footer button {
   margin-right: 6px;
 }
 .search-dialog [data-slot='command-item'] small {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 11px;
   color: #a9acb2;
   margin-top: 4px;
 }
+.search-dialog [data-slot='command-item'] small > span {
+  padding-right: 8px;
+  border-right: 1px solid #4d5157;
+  color: var(--accent-muted);
+  font-weight: 600;
+}
 .search-dialog [data-slot='command-item'] > svg {
   margin-left: auto;
-  color: #ae9675;
+  color: var(--accent-muted);
 }
 .search-dialog [data-slot='command-item'] > svg:last-child {
   display: none;
@@ -1139,7 +1195,7 @@ footer button {
     left: calc(var(--rail) + 58px);
     top: 124px;
   }
-  .stage-heading h2 {
+  .stage-heading h1 {
     font-size: 33px;
   }
   .viewport {
@@ -1184,9 +1240,6 @@ footer button {
   .viewport {
     top: 206px;
   }
-  .layer-scroll {
-    max-height: 210px;
-  }
 }
 @media (max-width: 1100px) {
   :root {
@@ -1203,14 +1256,8 @@ footer button {
     left: calc(var(--rail) + 26px);
     right: 26px;
   }
-  .stage-heading h2 {
+  .stage-heading h1 {
     font-size: 24px;
-  }
-  .stage-counter strong {
-    font-size: 27px;
-  }
-  .stage-counter {
-    min-width: 110px;
   }
   .scale-navigation small {
     font-size: 9px;
@@ -1336,9 +1383,6 @@ footer button {
   .has-selection .disassembly-label {
     display: none;
   }
-  .has-selection .stage-heading h2 {
-    font-size: 22px;
-  }
   .has-selection .viewport {
     left: 10px;
     right: calc(var(--inspect) + 15px);
@@ -1348,9 +1392,6 @@ footer button {
   }
   .has-selection .reset {
     padding-left: 14px;
-  }
-  footer {
-    left: 0;
   }
   .stage-counter {
     min-width: 0;
@@ -1390,27 +1431,19 @@ footer button {
   }
   .stage-heading .eyebrow {
     font-size: 9px;
-    margin-bottom: 9px;
   }
-  .stage-heading h2 {
+  .stage-heading h1 {
     font-size: 23px;
     max-width: 250px;
     line-height: 1.2;
   }
-  .stage-counter strong {
-    font-size: 24px;
-  }
   .stage-counter span {
     font-size: 7px;
-    max-width: 56px;
-    line-height: 1.5;
     letter-spacing: 0.5px;
-    margin-top: 3px;
   }
   .breadcrumbs {
     font-size: 10px;
     gap: 5px;
-    margin-top: 15px;
     max-width: calc(100vw - 45px);
   }
   .breadcrumbs > span {
@@ -1420,10 +1453,10 @@ footer button {
     max-width: 90px;
   }
   .viewport {
-    inset: 190px 6px 158px;
+    inset: 190px 6px 117px;
   }
   .stage-tools {
-    bottom: 201px;
+    bottom: 160px;
     left: 20px;
     right: 20px;
   }
@@ -1437,14 +1470,13 @@ footer button {
     min-height: 30px;
   }
   .disassembly {
-    bottom: 41px;
+    bottom: 0;
     height: 142px;
     padding: 17px 21px;
     display: grid;
-    /* Play, label, percentage and Reset share the top row and the timeline
-       spans underneath. With only three columns Reset wrapped to a third row
-       and hung out of the bar. */
-    grid-template-columns: auto 1fr auto auto;
+    /* Primary action and status are separate groups above the timeline, so the
+       slider remains the one full-width control in the second row. */
+    grid-template-columns: 1fr auto;
     gap: 11px 14px;
     align-items: center;
   }
@@ -1465,19 +1497,17 @@ footer button {
   }
   .reset {
     padding-left: 14px;
-    grid-row: 1;
-    grid-column: 4;
   }
   .reset span {
     display: none;
   }
-  .disassembly .play {
+  .disassembly-intro {
     grid-row: 1;
     grid-column: 1;
   }
-  .disassembly output {
+  .disassembly-readout {
     grid-row: 1;
-    grid-column: 3;
+    grid-column: 2;
   }
   .timeline {
     grid-column: 1/-1;
@@ -1493,20 +1523,6 @@ footer button {
   }
   .disassembly [data-slot='slider-thumb'] {
     height: 17px;
-  }
-  footer {
-    height: 41px;
-    padding: 0 20px;
-  }
-  footer > span {
-    font-size: 7px;
-    line-height: 1.6;
-    letter-spacing: 0.2px;
-    max-width: 190px;
-  }
-  footer button {
-    font-size: 9px;
-    gap: 4px;
   }
   .detail-panel[data-slot='sheet-content'] {
     inset: auto 0 0;
@@ -1540,16 +1556,12 @@ footer button {
   .has-selection .stage-heading {
     right: 22px;
   }
-  .has-selection .stage-heading h2 {
-    font-size: 23px;
-  }
   .has-selection .stage-tools {
     bottom: 44dvh;
     left: 20px;
     right: 20px;
   }
-  .has-selection .disassembly,
-  .has-selection footer {
+  .has-selection .disassembly {
     display: none;
   }
   .has-selection .view-controls {
@@ -1560,10 +1572,10 @@ footer button {
     min-height: 26px;
   }
   .search-dialog[data-slot='dialog-content'] {
-    top: max(12%, calc(var(--safe-t) + 10px));
+    top: 50%;
     padding: 23px 18px calc(23px + var(--safe-b));
-    max-height: 82dvh;
-    overflow: auto;
+    max-height: calc(100dvh - var(--safe-t) - var(--safe-b) - 24px);
+    overflow: hidden;
   }
   .search-dialog [data-slot='command-list'] {
     max-height: 47dvh;
@@ -1580,38 +1592,29 @@ footer button {
   .disassembly-label {
     display: none;
   }
-  .disassembly {
-    grid-template-columns: auto 1fr auto;
-  }
-  .disassembly output {
-    grid-column: 2;
-  }
-  .reset {
-    grid-column: 3;
-  }
 }
 @media (max-height: 650px) and (max-width: 600px) {
   .stage-heading {
     top: 82px;
   }
-  .stage-heading h2 {
+  .stage-heading h1 {
     font-size: 21px;
   }
   .breadcrumbs {
-    margin-top: 8px;
+    margin-top: 0;
   }
   .stage-heading .eyebrow {
-    margin-bottom: 6px;
+    margin-bottom: 0;
   }
   .viewport {
     top: 176px;
-    bottom: 199px;
-  }
-  .stage-tools {
     bottom: 168px;
   }
+  .stage-tools {
+    bottom: 137px;
+  }
   .disassembly {
-    bottom: 31px;
+    bottom: 0;
     height: 121px;
     padding: 13px 18px;
     gap: 9px 16px;
@@ -1625,22 +1628,9 @@ footer button {
   .ruler {
     height: 4px;
   }
-  footer {
-    height: 31px;
-  }
-  footer > span {
-    font-size: 6px;
-    max-width: 175px;
-  }
-  footer button {
-    font-size: 8px;
-  }
   .has-selection .viewport {
     top: 176px;
     bottom: 46dvh;
-  }
-  .has-selection .stage-heading h2 {
-    font-size: 21px;
   }
   .has-selection .stage-tools {
     bottom: 44dvh;
@@ -1692,26 +1682,25 @@ footer button {
     left: 25px;
     right: 25px;
   }
-  .stage-heading h2 {
+  .stage-heading h1 {
     font-size: 21px;
   }
   .stage-heading .eyebrow {
     font-size: 8px;
-    margin-bottom: 6px;
   }
   .stage-counter {
     display: none;
   }
   .breadcrumbs {
     font-size: 9px;
-    margin-top: 8px;
+    margin-top: 0;
     max-width: 260px;
   }
   .viewport {
-    inset: 66px 30px 118px 270px;
+    inset: 66px 30px 91px 270px;
   }
   .stage-tools {
-    bottom: 117px;
+    bottom: 90px;
     left: 25px;
     right: auto;
   }
@@ -1722,16 +1711,15 @@ footer button {
   }
   .disassembly {
     height: 82px;
-    bottom: 27px;
+    bottom: 0;
     padding: 13px 20px;
     gap: 16px;
     /* Back to a single row: the stacked phone layout does not fit in 82px. */
     display: flex;
     grid-template-columns: none;
   }
-  .disassembly .play,
-  .disassembly output,
-  .reset,
+  .disassembly-intro,
+  .disassembly-readout,
   .timeline {
     grid-row: auto;
     grid-column: auto;
@@ -1756,10 +1744,6 @@ footer button {
   }
   .ruler {
     margin-top: 8px;
-  }
-  footer {
-    height: 27px;
-    font-size: 7px;
   }
   /* A bottom sheet would swallow a 320px-tall screen whole, so sideways the
      panel goes back to being a rail down the right-hand edge, the same shape
@@ -1790,9 +1774,6 @@ footer button {
   .has-selection .disassembly {
     display: none;
   }
-  .has-selection footer {
-    right: var(--inspect);
-  }
   .has-selection .stage-heading {
     right: calc(var(--inspect) + 15px);
   }
@@ -1801,8 +1782,7 @@ footer button {
    the panel already names what you picked, so the heading stands down and the
    stage takes the whole left-hand side. */
 @media (max-height: 500px) and (orientation: landscape) and (max-width: 760px) {
-  .has-selection .stage-heading,
-  .has-selection footer {
+  .has-selection .stage-heading {
     display: none;
   }
   .has-selection .viewport {
@@ -1894,7 +1874,7 @@ footer button {
 }
 .branch.here .branch-head > span,
 .branch.here .branch-head > svg {
-  color: #d9ab70;
+  color: var(--accent-bright);
 }
 .branch-scales {
   display: flex;
@@ -1938,11 +1918,11 @@ footer button {
 }
 .branch-scales button.active {
   background: #3b3f45;
-  color: #f7e6cd;
+  color: #e8f7f9;
 }
 .branch-scales button.active > i {
-  background: #eab878;
-  box-shadow: 0 0 7px #eab87899;
+  background: var(--accent);
+  box-shadow: 0 0 7px #79bfcc99;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1980,18 +1960,15 @@ footer button {
   .sublayers > div {
     min-height: 40px;
   }
-  .category-name {
+  .category-visibility {
     padding: 10px 0;
     margin: -10px 0;
   }
-  /* The switch itself stays 26x15, since it reads as a control rather than a
-     button,
-     but it answers to a tap anywhere in a 50x44 box around it. */
-  .layer-row [data-slot='switch'],
+  /* Component switches keep their compact drawing but answer to a full finger
+     target around it. */
   .sublayers [data-slot='switch'] {
     position: relative;
   }
-  .layer-row [data-slot='switch']::after,
   .sublayers [data-slot='switch']::after {
     content: '';
     position: absolute;

@@ -2,7 +2,7 @@
 
 PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor.
 
-![PC Anatomy showing an assembled graphics card on the interactive workbench](docs/screenshots/workbench-assembled.png)
+![PC Anatomy showing an assembled desktop computer on the interactive workbench](docs/screenshots/workbench-assembled.png)
 
 Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 300 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
 

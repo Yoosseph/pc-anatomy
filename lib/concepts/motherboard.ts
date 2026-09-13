@@ -5,7 +5,7 @@ import { concept, standard, type Concept } from '../concept.ts';
  *
  * Slot positions, board outline and the rear aperture follow the ATX
  * specification. Controllers, regulator phase counts, header placement and
- * passive population are representative of the category — no vendor, chipset
+ * passive population are representative of the category. No vendor, chipset
  * or part number is claimed.
  */
 export const motherboardConcepts: Concept[] = [
@@ -57,7 +57,7 @@ export const motherboardConcepts: Concept[] = [
     category: 'Compute',
     parent: 'socket',
     level: 'motherboard',
-    open: 'cpu',
+    open: 'ryzen',
     description:
       'The general-purpose processor: a small number of very fast, very flexible cores.',
     purpose:
@@ -99,7 +99,7 @@ export const motherboardConcepts: Concept[] = [
     description:
       'DDR5 modules: rows of memory chips on a small board, with their own power management on board.',
     purpose:
-      'Holds the code and data the processor is working on right now — fast, plentiful and erased at power-off.',
+      'Holds the code and data the processor is working on right now. It is fast, plentiful and erased at power-off.',
     quantity: '2 modeled modules',
     specifications: {
       Standard: 'DDR5',
@@ -354,7 +354,7 @@ export const motherboardConcepts: Concept[] = [
     description:
       'The block of external connectors that shows through the back of the case.',
     purpose:
-      'Connects the machine to everything outside it — peripherals, network, audio and displays.',
+      'Connects the machine to everything outside it: peripherals, network, audio and displays.',
     quantity: '1 modeled stack',
     specifications: { Aperture: '158.75 × 44.45 mm' },
     representationType: 'physical',
@@ -445,82 +445,5 @@ export const motherboardConcepts: Concept[] = [
     representationType: 'physical',
     sources: ['atx'],
     searchTerms: ['header', 'front panel', 'usb', 'power button'],
-  }),
-
-  // ── Placeholder scale: inside the processor ──────────────────────────────
-  concept({
-    id: 'cpudie',
-    name: 'Processor architecture',
-    shortName: 'CPU die',
-    category: 'Compute',
-    parent: 'cpu',
-    level: 'cpu',
-    open: 'cpu',
-    description:
-      'The arrangement of cores, cache and memory interface on the processor’s silicon.',
-    purpose:
-      'Executes instruction streams and keeps them fed from a shared pool of cache and memory bandwidth.',
-    quantity: 'Representative layout',
-    specifications: { Status: 'Placeholder — not yet detailed' },
-    representationType: 'logical',
-    physicalAccuracy:
-      'Placeholder block diagram. Core count, cache sizes and arrangement are generic illustrations, not a specific processor.',
-    sources: ['pcie'],
-    searchTerms: ['cpu', 'die', 'architecture', 'cores'],
-  }),
-  concept({
-    id: 'cpucore',
-    name: 'Processor cores',
-    shortName: 'Core',
-    category: 'Compute',
-    parent: 'cpudie',
-    level: 'cpu',
-    description:
-      'Each core fetches, decodes and executes its own instruction stream, out of order and several at a time.',
-    purpose:
-      'Runs one or two threads as fast as possible, in contrast to a GPU’s many slow parallel lanes.',
-    quantity: '8 illustrative cores',
-    specifications: { Status: 'Placeholder geometry' },
-    representationType: 'logical',
-    physicalAccuracy:
-      'Placeholder block diagram. Not a floorplan and not a specific processor.',
-    searchTerms: ['core', 'cpu', 'thread', 'execution'],
-  }),
-  concept({
-    id: 'cpucache',
-    name: 'Shared cache',
-    shortName: 'Cache',
-    category: 'Memory',
-    parent: 'cpudie',
-    level: 'cpu',
-    description:
-      'Fast on-die memory in levels, the largest of which the cores share.',
-    purpose:
-      'Keeps recently used data close to the cores so most accesses never reach main memory.',
-    quantity: 'Illustrative shared block',
-    specifications: { Status: 'Placeholder geometry' },
-    representationType: 'logical',
-    physicalAccuracy:
-      'Placeholder block diagram. Capacities and organisation are generic.',
-    searchTerms: ['cache', 'l3', 'l2', 'memory'],
-  }),
-  concept({
-    id: 'imc',
-    name: 'Memory controller',
-    shortName: 'Memory controller',
-    category: 'Memory',
-    parent: 'cpudie',
-    level: 'cpu',
-    description:
-      'The on-die interface that drives the DDR5 channels going out to the DIMM slots.',
-    purpose:
-      'Schedules reads and writes across memory banks and enforces the timing the memory standard requires.',
-    quantity: '2 illustrative channels',
-    specifications: { Standard: 'DDR5', Status: 'Placeholder geometry' },
-    representationType: 'logical',
-    physicalAccuracy:
-      'Placeholder block diagram. Channel count and placement are generic.',
-    sources: ['ddr5'],
-    searchTerms: ['memory controller', 'imc', 'ddr5', 'channel'],
   }),
 ];

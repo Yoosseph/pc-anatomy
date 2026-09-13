@@ -7,8 +7,8 @@ import type { Vec3 } from './layout.ts';
  *
  * Everything is built around the origin and points, stacks or blows along +Y,
  * so callers place and rotate it. Geometry is authored from how these parts are
- * actually made — a fan really does have four motor struts and rubber corner
- * pads, a supply really does exhaust through a hex grille — but no dimension
+ * actually made. A fan really does have four motor struts and rubber corner
+ * pads, and a supply really does exhaust through a hex grille, but no dimension
  * here is taken from a specific product.
  */
 
@@ -20,7 +20,7 @@ export type MaterialFn = (
 
 /**
  * A surface that reads as its own light source: lit fan rings, strips and
- * logos. Emissive only — it glows at any camera angle but does not illuminate
+ * logos. Emissive only, so it glows at any camera angle but does not illuminate
  * anything, so pair it with a small point light where the colour should spill.
  */
 export function glowMaterial(color: string, intensity = 2.2, opacity = 1) {
@@ -332,7 +332,7 @@ export function buildFan(material: MaterialFn, options: FanOptions) {
 // ── Grilles ───────────────────────────────────────────────────────────────
 
 /**
- * A hexagonal exhaust grille — the punched pattern on the back of a power
+ * A hexagonal exhaust grille: the punched pattern on the back of a power
  * supply. Built as one extruded plate with real holes, so you see through it.
  */
 export function buildHoneycomb(
@@ -675,7 +675,7 @@ export function buildSlot(
   return group;
 }
 
-/** A rectangular port shell — USB, Ethernet, display and audio jacks. */
+/** A rectangular port shell: USB, Ethernet, display and audio jacks. */
 export function buildPort(
   material: MaterialFn,
   size: Vec3,

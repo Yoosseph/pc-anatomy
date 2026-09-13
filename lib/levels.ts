@@ -10,10 +10,12 @@
 export type LevelId =
   | 'pc'
   | 'motherboard'
-  | 'cpu'
+  | 'ryzen'
+  | 'corei9'
   | 'psu'
   | 'fan'
   | 'cooler'
+  | 'liquid'
   | 'disk'
   | 'card'
   | 'die'
@@ -39,7 +41,7 @@ export interface LevelDef {
    * leaves first. `logical` levels are diagrams and are lit flat.
    */
   kind: 'physical' | 'logical';
-  /** The concept whose `open` leads here — the thing you drilled into. */
+  /** The concept whose `open` leads here: the thing you drilled into. */
   concept: string;
   /** Labels along the disassembly timeline, with their slider positions. */
   phases: readonly (readonly [string, number])[];
@@ -57,6 +59,18 @@ export interface LevelDef {
    * bigger gaps than a card before its subsystems stop touching.
    */
   spread?: number;
+  /**
+   * An alternative that is not fitted to the machine as modelled.
+   *
+   * Only one processor cooler can be bolted to one socket, and only one
+   * processor sits in it, so the parts you can point at inside the case are
+   * whichever ones this build happens to use. The others are real scales with
+   * real content and they stay listed in their subsystem menu; they simply
+   * have nothing to click on at the scale above. Marking that here keeps the
+   * "every scale is reachable" check honest instead of forcing the machine to
+   * carry two coolers and two processors at once.
+   */
+  alternative?: boolean;
 }
 
 const physicalPhases = [
@@ -115,17 +129,32 @@ export const levels: Record<LevelId, LevelDef> = {
     ],
     detailed: true,
   },
-  cpu: {
-    id: 'cpu',
+  ryzen: {
+    id: 'ryzen',
     parent: 'motherboard',
-    name: 'CPU',
-    title: 'The processor package.',
-    caption: 'DESKTOP CPU · PLACEHOLDER SCALE',
-    summary: 'Cores, cache and the memory controller',
+    name: 'Ryzen 9 9950X',
+    title: 'Sixteen cores, on three dies.',
+    caption: 'AMD RYZEN 9 9950X · ZEN 5',
+    summary: 'Two core complex dies and an I/O die',
     kind: 'logical',
-    concept: 'cpu',
+    concept: 'ryzenpackage',
     phases: logicalPhases,
-    detailed: false,
+    detailed: true,
+  },
+  corei9: {
+    id: 'corei9',
+    parent: 'motherboard',
+    // The board is modelled with the AMD part seated, so the Intel package is
+    // the alternative: same socket position, different processor entirely.
+    alternative: true,
+    name: 'Core Ultra 9 285K',
+    title: 'Twenty four cores, on stacked tiles.',
+    caption: 'INTEL CORE ULTRA 9 285K · ARROW LAKE',
+    summary: 'Compute, SoC, graphics and I/O tiles on a base',
+    kind: 'logical',
+    concept: 'corepackage',
+    phases: logicalPhases,
+    detailed: true,
   },
   psu: {
     id: 'psu',
@@ -170,6 +199,7 @@ export const levels: Record<LevelId, LevelDef> = {
   cooler: {
     id: 'cooler',
     parent: 'pc',
+    alternative: true,
     name: 'CPU cooler',
     title: 'Inside the cooler.',
     caption: 'TOWER AIR COOLER',
@@ -183,6 +213,26 @@ export const levels: Record<LevelId, LevelDef> = {
       ['Fan', 25],
       ['Fins', 50],
       ['Mount', 75],
+      ['Inventory', 100],
+    ],
+    detailed: true,
+  },
+  liquid: {
+    id: 'liquid',
+    parent: 'pc',
+    name: 'Liquid cooling',
+    title: 'Inside the liquid loop.',
+    caption: '360 MM ALL-IN-ONE',
+    summary: 'Radiator, pump, coldplate and tubing',
+    kind: 'physical',
+    branchLabel: 'Cooling',
+    concept: 'aio',
+    spread: 1.9,
+    phases: [
+      ['Assembled', 0],
+      ['Fans', 25],
+      ['Loop', 50],
+      ['Block', 75],
       ['Inventory', 100],
     ],
     detailed: true,

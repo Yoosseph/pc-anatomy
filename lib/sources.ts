@@ -2,7 +2,7 @@
  * Every technical claim in the manifest points at one of these.
  *
  * Standards bodies and vendor documentation only. A source backs the operating
- * principle and the published specification of a component *family* — it is
+ * principle and the published specification of a component *family*. It is
  * never evidence that a particular modeled part is populated on a particular
  * machine.
  */
@@ -71,6 +71,26 @@ export const sources = {
   sata: {
     name: 'SATA-IO · Serial ATA standard',
     url: 'https://sata-io.org/',
+  },
+  aio: {
+    name: 'Intel · Thermal and mechanical design for processor cooling',
+    url: 'https://www.intel.com/content/www/us/en/support/articles/000007074/processors.html',
+  },
+  ryzen: {
+    name: 'AMD · Ryzen 9 9950X specifications',
+    url: 'https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html',
+  },
+  zen5: {
+    name: 'AMD · Zen 5 architecture',
+    url: 'https://www.amd.com/en/technologies/zen-core.html',
+  },
+  corei9: {
+    name: 'Intel · Core Ultra 9 285K specifications',
+    url: 'https://www.intel.com/content/www/us/en/products/sku/241060/intel-core-ultra-9-processor-285k-36m-cache-up-to-5-70-ghz/specifications.html',
+  },
+  arrowlake: {
+    name: 'Intel · Core Ultra 200S desktop platform',
+    url: 'https://www.intel.com/content/www/us/en/products/details/processors/core-ultra.html',
   },
 } as const;
 

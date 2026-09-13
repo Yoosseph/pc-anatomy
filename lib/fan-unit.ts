@@ -8,7 +8,7 @@ import { buildFan, buildScrew, glowMaterial } from './parts.ts';
  *
  * A fan is a brushless motor turned inside out: the magnet rides with the
  * impeller around a stator that never moves. The stack along +Y is the order
- * you meet the parts taking one apart — frame, impeller and its magnet, then
+ * you meet the parts taking one apart: frame, impeller and its magnet, then
  * the stator, bearing and driver board underneath.
  */
 

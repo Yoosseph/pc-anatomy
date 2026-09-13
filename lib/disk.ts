@@ -23,7 +23,7 @@ const SPINDLE: Vec3 = [0, 0, -mm(14)];
 const PIVOT: Vec3 = [mm(34), 0, mm(46)];
 
 export function buildDisk(tools: ModelTools, _root: T.Group) {
-  const { add, instances, box, material, label } = tools;
+  const { add, instances, box, pcb, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -217,7 +217,7 @@ export function buildDisk(tools: ModelTools, _root: T.Group) {
   // ── Controller board ────────────────────────────────────────────────────
   const boardY = -H / 2 - mm(2.6);
   const board = new T.Group();
-  place(board, box([W - mm(12), mm(1.6), L - mm(24)], '#1d3a2b', 0.05, 0.01), [0, 0, 0]);
+  place(board, pcb([W - mm(12), mm(1.6), L - mm(24)], 'storage'), [0, 0, 0]);
   place(board, buildChip(material, [mm(18), mm(2.4), mm(18)], 9, true, '#17191b'), [
     -mm(14),
     -mm(2),

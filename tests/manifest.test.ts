@@ -17,7 +17,7 @@ import {
   spatialInventory,
   type Vec3,
 } from '../lib/layout.ts';
-import { levelIds, levels, rootLevel } from '../lib/levels.ts';
+import { branchRoot, levelIds, levels, rootLevel } from '../lib/levels.ts';
 import { sources } from '../lib/sources.ts';
 
 await test('all concepts have unique identities, reciprocal parents, sources and no cycles', () => {
@@ -136,11 +136,26 @@ await test('every scale sits on a finite path back to the machine, and each has 
       manifest.some((c) => c.level === id),
       'no concept renders at ' + id,
     );
-    if (levels[id].parent)
+    // Every scale has to be reachable. Normally that means something on the
+    // parent scale opens it. A scale marked `alternative` is a build the
+    // machine does not use, so nothing in the case can open it and the
+    // subsystem menu is the way in: it must declare one, directly or through
+    // the branch it sits on.
+    if (levels[id].parent && !levels[id].alternative)
       assert.ok(
         manifest.some((c) => c.open === id && c.level === levels[id].parent),
         'nothing on ' + levels[id].parent + ' opens ' + id,
       );
+    if (levels[id].alternative) {
+      assert.ok(
+        branchRoot(id),
+        id + ' is an alternative but sits under no subsystem menu',
+      );
+      assert.ok(
+        !manifest.some((c) => c.open === id && c.level === levels[id].parent),
+        id + ' is marked alternative but the machine still opens it',
+      );
+    }
   }
 });
 
@@ -227,4 +242,53 @@ await test('scales that hold big assemblies push them further apart', () => {
   assert.ok((levels.pc.spread ?? 1) > (levels.card.spread ?? 1));
   assert.ok((levels.motherboard.spread ?? 1) > (levels.card.spread ?? 1));
   for (const id of levelIds) assert.ok((levels[id].spread ?? 1) >= 1);
+});
+
+await test('the inventory does not lose its smallest parts in empty space', () => {
+  // The shape that broke: a handful of large parts and a crowd of tiny ones,
+  // the way a real teardown ends up. A flat gap gave the tiny ones a moat
+  // several times their own width, so the shelf was almost entirely air and a
+  // part was a speck you had to hit exactly.
+  const items = [
+    ...Array.from({ length: 6 }, () => ({ extent: [7, 2, 5] as Vec3, size: 7 })),
+    ...Array.from({ length: 30 }, () => ({
+      extent: [1.4, 0.5, 1.1] as Vec3,
+      size: 1.4,
+    })),
+    ...Array.from({ length: 180 }, () => ({
+      extent: [0.1, 0.04, 0.08] as Vec3,
+      size: 0.1,
+    })),
+  ];
+  for (const aspect of [0.5, 1, 1.8, 2.6]) {
+    const laid = spatialInventory(items, aspect);
+    // How much of the space a part is given does the part actually fill?
+    const covered = items.map((item, i) => {
+      const drawn = item.extent[0] * laid[i].scale;
+      const neighbour = laid
+        .map((c, j) => ({ c, j }))
+        .filter(
+          ({ c, j }) =>
+            j !== i && Math.abs(c.position[1] - laid[i].position[1]) < 0.01,
+        )
+        .reduce(
+          (closest, { c }) =>
+            Math.min(
+              closest,
+              Math.hypot(
+                c.position[0] - laid[i].position[0],
+                c.position[2] - laid[i].position[2],
+              ),
+            ),
+          Infinity,
+        );
+      return drawn / neighbour;
+    });
+    const smallest = covered.slice(-180);
+    const median = smallest.sort((a, b) => a - b)[Math.floor(smallest.length / 2)];
+    assert.ok(
+      median > 0.45,
+      `small parts span only ${(median * 100).toFixed(0)}% of the distance to their nearest neighbour at aspect ${aspect}: they are lost in the gaps`,
+    );
+  }
 });

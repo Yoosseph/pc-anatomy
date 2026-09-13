@@ -1,9 +1,9 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import { buildModel } from '../lib/models.ts';
+import { buildModel, refreshBatches, type Piece } from '../lib/models.ts';
 import { byId, isLevelRoot, manifest } from '../lib/manifest.ts';
-import { resolvePick } from '../lib/picking.ts';
+import { resolvePick, resolvePickNear } from '../lib/picking.ts';
 import { levelIds } from '../lib/levels.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
 
@@ -198,4 +198,113 @@ await test('nothing on screen is anonymous: every rendered object belongs to a n
     for (const p of pieces)
       assert.ok(byId[p.concept]?.shortName, `${level}: ${p.concept} has no name`);
   }
+});
+
+await test('pointing has a margin for error, and it never reaches past what is in front', () => {
+  // The ring only matters where a part is surrounded by empty space, the
+  // exploded inventory, and that placement happens in the scene, not in the
+  // model. So this tests the contract directly, which is why resolvePickNear
+  // takes a cast callback instead of a camera.
+  const stub = (distance: number) => {
+    const mesh = new T.Mesh(
+      new T.BoxGeometry(1, 1, 1),
+      new T.MeshBasicMaterial(),
+    );
+    const piece = {
+      concept: 'p' + distance,
+      instance: 0,
+      visible: true,
+      object: mesh,
+    } as unknown as Piece;
+    mesh.userData.piece = piece;
+    const intersection = {
+      object: mesh,
+      distance,
+      point: new T.Vector3(),
+    } as T.Intersection;
+    return { intersection, piece };
+  };
+
+  const near = stub(4),
+    far = stub(9);
+
+  // A centre hit answers alone: the ring is never consulted.
+  let casts = 0;
+  const centreHits = (dx: number, dy: number) => {
+    casts++;
+    return dx === 0 && dy === 0 ? [near.intersection] : [far.intersection];
+  };
+  assert.equal(resolvePickNear(centreHits, 12), near.piece);
+  assert.equal(casts, 1, 'a direct hit should cost exactly one ray');
+
+  // A centre miss reaches out, but only when a radius is given.
+  const offCentre = (dx: number, dy: number) =>
+    dx === 0 && dy === 0 ? [] : [far.intersection];
+  assert.equal(resolvePickNear(offCentre, 0), null, 'no radius, no reaching');
+  assert.equal(resolvePickNear(offCentre, 12), far.piece);
+
+  // When several directions find something, the nearest to the camera wins, so
+  // widening the target never picks something behind a closer part.
+  const mixed = (dx: number) =>
+    dx === 0 ? [] : dx > 0 ? [far.intersection] : [near.intersection];
+  assert.equal(resolvePickNear((dx) => mixed(dx), 12), near.piece);
+
+  // Empty sky stays empty.
+  assert.equal(resolvePickNear(() => [], 30), null);
+});
+
+await test('parts drawn as instances stay pickable after the layout moves them', () => {
+  // Most of this machine is instanced (408 of the card's 459 parts) and the
+  // scene rewrites those matrices on every frame of an explode. three.js caches
+  // the bounding sphere it raycasts against on first use, so without an explicit
+  // invalidation the pickable region freezes wherever the parts happened to be
+  // the first time anyone pointed at them, and everything that moves out of it
+  // goes quietly dead. See refreshBatches.
+  const { pieces, root } = models.get('card')!;
+  const batched = pieces.filter((p) => p.batch);
+  assert.ok(batched.length > 50, 'expected the card to be mostly instanced');
+  const batches = new Set(batched.map((p) => p.batch!));
+
+  const matrix = new T.Matrix4(),
+    quat = new T.Quaternion(),
+    scale = new T.Vector3();
+  const sync = () => {
+    for (const p of pieces) {
+      if (!p.batch) continue;
+      matrix.compose(p.object.position, quat, scale.setScalar(1));
+      p.batch.setMatrixAt(p.index!, matrix);
+    }
+    refreshBatches(batches);
+    root.updateMatrixWorld(true);
+  };
+  // Straight down the +Z axis at the part, from outside everything.
+  const reachable = (p: (typeof pieces)[number]) => {
+    const at = p.object.getWorldPosition(new T.Vector3());
+    const from = at.clone().add(new T.Vector3(0, 0, 60));
+    const ray = new T.Raycaster(from, at.clone().sub(from).normalize());
+    return resolvePick(ray.intersectObject(root, true))?.key === p.key;
+  };
+
+  // Somewhere to put them where nothing occludes anything: one long row.
+  const sample = batched.filter((_, i) => i % 7 === 0).slice(0, 24);
+  const spread = (gap: number) =>
+    pieces.forEach((p, i) => p.object.position.set((i - pieces.length / 2) * gap, 0, 0));
+
+  spread(0.6);
+  sync();
+  const first = sample.filter(reachable).length;
+  assert.ok(first > sample.length * 0.7, `only ${first}/${sample.length} reachable to begin with`);
+
+  // Now move everything, exactly as sliding the explode control does.
+  spread(2.4);
+  sync();
+  const moved = sample.filter(reachable).length;
+  assert.ok(
+    moved > sample.length * 0.7,
+    `${moved}/${sample.length} instanced parts reachable after the layout moved them: the cached bounding sphere is stale`,
+  );
+
+  // Restore, so later tests see the model as they found it.
+  for (const p of pieces) p.object.position.copy(p.base);
+  sync();
 });

@@ -5,7 +5,7 @@ import { concept, standard, type Concept } from '../concept.ts';
  *
  * Geometry follows the published ATX form factor, so the board, the expansion
  * slots and the rear aperture are in the right places and at the right size.
- * Everything else — which controller, how many capacitors, what capacity — is a
+ * Everything else (which controller, how many capacitors, what capacity) is a
  * representative example of the component family, never a claim about a
  * specific product. Nothing here is a named part.
  */
@@ -21,7 +21,7 @@ export const pcConcepts: Concept[] = [
     description:
       'A complete machine: the parts that compute, remember, store and stay cool, held in one frame.',
     purpose:
-      'Turns wall power and stored instructions into work — running programs, rendering images and training models.',
+      'Turns wall power and stored instructions into work: running programs, rendering images and training models.',
     quantity: '1 reference machine',
     specifications: {
       'Form factor': 'ATX mid tower',
@@ -181,7 +181,7 @@ export const pcConcepts: Concept[] = [
     level: 'pc',
     open: 'motherboard',
     description:
-      'The board every other part plugs into — processor, memory, expansion cards and storage.',
+      'The board every other part plugs into: processor, memory, expansion cards and storage.',
     purpose:
       'Carries power and high-speed signals between the processor and everything else in the machine.',
     quantity: '1 ATX board',
@@ -204,7 +204,7 @@ export const pcConcepts: Concept[] = [
     level: 'pc',
     open: 'card',
     description:
-      'The expansion card in the primary PCI Express slot — a parallel computer of its own.',
+      'The expansion card in the primary PCI Express slot, and a parallel computer of its own.',
     purpose:
       'Renders images and runs the massively parallel work the processor is poorly suited to.',
     quantity: '1 installed card',
@@ -266,7 +266,10 @@ export const pcConcepts: Concept[] = [
     shortName: 'CPU cooler',
     category: 'Cooling',
     parent: 'pc',
-    level: 'pc',
+    // The machine is built with the liquid loop fitted, so the air tower is no
+    // longer a part you can point at inside the case. It stays a scale of its
+    // own under Cooling, which is what `level === open` marks.
+    level: 'cooler',
     open: 'cooler',
     description:
       'A finned tower on heat pipes, with a fan pushing air through it.',
@@ -280,6 +283,28 @@ export const pcConcepts: Concept[] = [
     representationType: 'physical',
     sources: ['coolermount'],
     searchTerms: ['heatsink', 'tower', 'fan', 'thermal', 'air cooler'],
+  }),
+  concept({
+    id: 'aio',
+    name: 'Liquid cooler',
+    shortName: 'Liquid cooler',
+    category: 'Cooling',
+    parent: 'pc',
+    level: 'pc',
+    open: 'liquid',
+    description:
+      'A sealed loop: a pump and water block on the processor, flexible tubing, and a three fan radiator in the roof of the case.',
+    purpose:
+      'Carries heat away from the processor as warm liquid instead of through metal, so the large finned area that sheds it can sit wherever the case has room rather than directly above the socket.',
+    quantity: '1 modeled 360 mm unit',
+    specifications: {
+      Type: 'Illustrative all-in-one',
+      Radiator: '360 mm, three fans',
+      Loop: 'Sealed, filled at manufacture',
+    },
+    representationType: 'physical',
+    sources: ['aio'],
+    searchTerms: ['liquid', 'aio', 'water', 'radiator', 'pump', 'loop', 'cooling'],
   }),
   concept({
     id: 'casefan',

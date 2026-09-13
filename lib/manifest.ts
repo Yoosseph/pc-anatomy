@@ -1,4 +1,6 @@
 import { coolerConcepts } from './concepts/cooler.ts';
+import { liquidConcepts } from './concepts/liquid.ts';
+import { processorConcepts } from './concepts/processors.ts';
 import { diskConcepts } from './concepts/disk.ts';
 import { fanConcepts } from './concepts/fan.ts';
 import { gpuConcepts } from './concepts/gpu.ts';
@@ -38,6 +40,8 @@ export const manifest: Concept[] = [
   ...psuConcepts,
   ...fanConcepts,
   ...coolerConcepts,
+  ...liquidConcepts,
+  ...processorConcepts,
   ...diskConcepts,
   ...gpuConcepts,
 ];
@@ -55,7 +59,7 @@ for (const c of manifest) {
 }
 
 /**
- * A concept that *is* a scale rather than a part rendered inside one — the
+ * A concept that *is* a scale rather than a part rendered inside one: the
  * machine, the card, the die. These have no piece of their own to highlight,
  * so selecting them navigates instead of selecting.
  */

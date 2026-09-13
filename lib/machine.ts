@@ -27,8 +27,8 @@ import {
  *   +Z → toward the viewer          −Z → the motherboard tray
  *
  * Board outline, the rear aperture and expansion-slot pitch follow the ATX
- * specification. Everything else — panel thicknesses, cooler size, drive
- * placement, cable routing — is an illustrative build, not a specific product.
+ * specification. Everything else (panel thicknesses, cooler size, drive
+ * placement, cable routing) is an illustrative build, not a specific product.
  */
 
 /** Millimetres to scene units. */
@@ -62,7 +62,7 @@ const SLOT1_Y = BOARD_Y0 + mm(120);
 /**
  * Lighting colours, swept front to back rather than scattered. Addressable
  * fans are usually run as one gradient across the build, and a gradient also
- * keeps the machine readable — a true rainbow flattens every surface it
+ * keeps the machine readable. A true rainbow flattens every surface it
  * touches into noise.
  */
 const RGB = ['#2f6bff', '#7a3cff', '#c62ce0', '#ff3aa0'] as const;
@@ -78,7 +78,7 @@ const ACCENT = '#37d6ff';
 const BOARD_ACCENT = '#37d6ff';
 
 export function buildMotherboardAssembly(tools: ModelTools) {
-  const { box, material, label } = tools;
+  const { box, pcb, material, label } = tools;
   const group = new T.Group();
   const put = (obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
@@ -86,7 +86,7 @@ export function buildMotherboardAssembly(tools: ModelTools) {
     return obj;
   };
 
-  put(box([BOARD_D, BOARD_H, 0.055], '#1d3a2b', 0.04, 0.004), [0, 0, 0]);
+  put(pcb([BOARD_D, BOARD_H, 0.055], 'motherboard'), [0, 0, 0]);
 
   // Rear I/O cover and the port stack showing through the case.
   put(box([0.5, APERTURE_W, APERTURE_H * 0.92], '#40474d', 0.66), [
@@ -194,7 +194,7 @@ export function buildMotherboardAssembly(tools: ModelTools) {
 }
 
 export function buildMachine(tools: ModelTools, _root: T.Group) {
-  const { add, instances, box, material, label } = tools;
+  const { add, instances, box, pcb, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -496,49 +496,125 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
   // ── Motherboard ─────────────────────────────────────────────────────────
   add('motherboard', buildMotherboardAssembly(tools), [BOARD_X, BOARD_Y, BOARD_Z], [0, 0, -3.2]);
 
-  // ── Processor cooler ────────────────────────────────────────────────────
-  const cooler = new T.Group();
-  const coolerX = BOARD_X - 0.55,
-    coolerY = BOARD_Y + 1.55;
-  // Machined base block, clamped to the socket.
-  place(cooler, box([mm(54), mm(54), mm(12)], '#b6bec2', 0.94), [0, 0, -mm(40)]);
-  place(cooler, box([mm(64), mm(10), mm(6)], '#8d9599', 0.9), [0, mm(30), -mm(40)]);
-  place(cooler, box([mm(64), mm(10), mm(6)], '#8d9599', 0.9), [0, -mm(30), -mm(40)]);
-  // Heat pipes leaving the base and turning up into the fin stack.
-  for (const sx of [-1.5, -0.5, 0.5, 1.5]) {
-    const pipe = new T.Mesh(
-      new T.CylinderGeometry(mm(3.1), mm(3.1), mm(112), 14),
-      material('#b8834e', 0.94, 0.24),
-    );
-    pipe.rotation.x = Math.PI / 2;
-    place(cooler, pipe, [sx * mm(13), 0, mm(16)]);
-  }
-  const stack = buildFinStack(material, 48, [mm(122), 0.022, mm(108)], mm(2.05), '#c3cace');
-  stack.rotation.x = Math.PI / 2;
-  place(cooler, stack, [0, 0, mm(20)]);
-  place(cooler, box([mm(126), mm(4), mm(112)], '#9aa2a6', 0.92), [0, mm(62), mm(20)]);
-  const coolerFan = buildFan(material, {
-    size: mm(120),
-    phase: 1.1,
-    pads: true,
-    cable: true,
-    frameColor: '#25292d',
-    rgb: RGB[1],
-  });
-  coolerFan.rotation.z = Math.PI / 2;
-  place(cooler, coolerFan, [mm(76), 0, mm(20)]);
-  // Lit top cap, which is where tower coolers carry their light.
-  place(cooler, box([mm(120), mm(2), mm(106)], '#14171a', 0.2), [0, mm(64), mm(20)]);
-  const capGlow = new T.Mesh(
-    new T.PlaneGeometry(mm(104), mm(92)),
-    glowMaterial(RGB[1], 1.15, 0.85),
+  // ── Liquid cooler ───────────────────────────────────────────────────────
+  // A 360 mm all-in-one in the roof. The loop is what makes this shape
+  // possible: the fins that actually shed the heat no longer have to sit on
+  // top of the socket, so the space above the processor is free and the core
+  // goes where the case is widest.
+  const blockX = BOARD_X - 0.55,
+    blockY = BOARD_Y + 1.55,
+    blockZ = BOARD_Z + 0.42;
+  const RAD_Y = ROOF - 0.62,
+    RAD_Z = 0.1,
+    RAD_HALF = mm(390) / 2;
+
+  const pump = new T.Group();
+  const housing = new T.Mesh(
+    new T.CylinderGeometry(mm(39), mm(42), mm(46), 30),
+    material('#282d32', 0.55, 0.44),
   );
-  capGlow.rotation.x = -Math.PI / 2;
-  place(cooler, capGlow, [0, mm(65.4), mm(20)]);
-  const coolerSpill = new T.PointLight(RGB[1], 5, 5.5, 2);
-  coolerSpill.position.set(0, mm(74), mm(20));
-  cooler.add(coolerSpill);
-  add('cpucooler', cooler, [coolerX, coolerY, BOARD_Z + 0.1], [0, 0, 3.4]);
+  housing.rotation.x = Math.PI / 2;
+  place(pump, housing, [0, 0, 0]);
+  const crown = new T.Mesh(
+    new T.CircleGeometry(mm(33), 30),
+    glowMaterial(RGB[1], 1.35, 0.9),
+  );
+  place(pump, crown, [0, 0, mm(24)]);
+  const pumpGlow = new T.PointLight(RGB[1], 6, 5.5, 2);
+  pumpGlow.position.set(0, 0, mm(40));
+  pump.add(pumpGlow);
+  for (const side of [-1, 1]) {
+    const outlet = new T.Mesh(
+      new T.CylinderGeometry(mm(10), mm(10), mm(20), 16),
+      material('#848d93', 0.92, 0.3),
+    );
+    outlet.rotation.z = Math.PI / 2;
+    place(pump, outlet, [side * mm(48), mm(16), 0]);
+  }
+  place(pump, box([mm(96), mm(10), mm(8)], '#8d9599', 0.9), [0, 0, -mm(26)]);
+
+  // Radiator and its three fans, one group so the roof reads as one unit.
+  const radiator = new T.Group();
+  for (const side of [-1, 1])
+    place(radiator, box([mm(17), mm(120), mm(27)], '#2f3438', 0.82, 0.004), [
+      side * (RAD_HALF - mm(8)),
+      0,
+      0,
+    ]);
+  const core = buildFinStack(
+    material,
+    54,
+    [mm(356), 0.02, mm(25)],
+    mm(120) / 54,
+    '#99a1a6',
+  );
+  core.rotation.x = Math.PI / 2;
+  place(radiator, core, [0, 0, 0]);
+  for (let i = 0; i < 11; i++)
+    place(
+      radiator,
+      box([mm(356), mm(2.2), mm(25)], '#a8b1b6', 0.9, 0.001),
+      [0, (i / 10 - 0.5) * mm(108), 0],
+    );
+  place(radiator, box([mm(384), mm(126), mm(1.4)], '#23282c', 0.8), [
+    0,
+    0,
+    -mm(15),
+  ]);
+  for (let i = 0; i < 3; i++) {
+    const fan = buildFan(material, {
+      size: mm(120),
+      phase: 0.6 + i * 0.8,
+      pads: true,
+      cable: i === 2,
+      frameColor: '#24282c',
+      rgb: RGB[1],
+    });
+    place(fan, new T.Object3D(), [0, 0, 0]);
+    fan.position.set((i - 1) * mm(122), 0, mm(26));
+    radiator.add(fan);
+    const spill = new T.PointLight(RGB[1], 5, 6, 2);
+    spill.position.set((i - 1) * mm(122), 0, mm(44));
+    radiator.add(spill);
+  }
+  radiator.rotation.x = Math.PI / 2; // lay it under the roof, blowing up
+  const loop = new T.Group();
+  loop.add(pump);
+  pump.position.set(0, 0, 0);
+
+  // Tubing from the block up to the tanks, sleeved, with the coolant showing
+  // as a lit column inside it.
+  const tubeGroup = new T.Group();
+  for (const side of [-1, 1]) {
+    const path = new T.CatmullRomCurve3([
+      new T.Vector3(blockX + side * mm(56), blockY + mm(16), blockZ),
+      new T.Vector3(blockX + side * 1.35, blockY + 0.85, blockZ + 0.35),
+      new T.Vector3(blockX + side * 2.1, blockY + 2.3, RAD_Z + 0.25),
+      new T.Vector3(
+        blockX + side * 2.35 + (side > 0 ? 1.1 : -0.35),
+        RAD_Y - 0.72,
+        RAD_Z,
+      ),
+    ]);
+    tubeGroup.add(
+      new T.Mesh(
+        new T.TubeGeometry(path, 36, mm(10), 14, false),
+        material('#1e2226', 0.2, 0.68),
+      ),
+    );
+    tubeGroup.add(
+      new T.Mesh(
+        new T.TubeGeometry(path, 36, mm(6.4), 12, false),
+        glowMaterial('#3f7fa8', 0.85, 0.7),
+      ),
+    );
+  }
+
+  const aio = new T.Group();
+  pump.position.set(blockX, blockY, blockZ);
+  radiator.position.set((FRONT + REAR) / 2 + 0.2, RAD_Y, RAD_Z);
+  aio.add(pump, radiator, tubeGroup);
+  add('aio', aio, [0, 0, 0], [0, 2.6, 1.6]);
 
   // ── Case fans ───────────────────────────────────────────────────────────
   for (let i = 0; i < 3; i++) {
@@ -575,7 +651,7 @@ export function buildMachine(tools: ModelTools, _root: T.Group) {
   const cardLen = mm(304),
     cardWide = mm(112);
   place(card, box([cardLen - 0.15, 0.05, cardWide - 0.1], '#4e565d', 0.88), [0, mm(20), 0]);
-  place(card, box([cardLen, 0.06, cardWide], '#1d3a2b', 0.05), [0, mm(13), 0]);
+  place(card, pcb([cardLen, 0.06, cardWide], 'graphics'), [0, mm(13), 0]);
   place(card, box([cardLen, mm(34), cardWide], '#414951', 0.72, 0.02), [0, -mm(6), 0]);
   for (let i = 0; i < 2; i++) {
     const fan = buildFan(material, {

@@ -7,7 +7,7 @@ import { buildFan, buildFinStack, buildScrew, glowMaterial } from './parts.ts';
  * Inside the processor cooler.
  *
  * Y is up through the tower, X across the fin stack, Z the direction air
- * travels — fan on the +Z face, exhaust out of −Z. The coldplate sits at the
+ * travels: fan on the +Z face, exhaust out of −Z. The coldplate sits at the
  * bottom with the pipes rising out of it into the stack, which is the actual
  * path the heat takes.
  */
@@ -30,7 +30,7 @@ export function buildCooler(tools: ModelTools, _root: T.Group) {
   // ── Coldplate ───────────────────────────────────────────────────────────
   const base = new T.Group();
   place(base, box([mm(56), mm(8), mm(56)], '#c9d0d4', 0.95, 0.004), [0, 0, 0]);
-  // The pipes are flattened where they cross the plate — direct-touch bases
+  // The pipes are flattened where they cross the plate, because direct-touch bases
   // show the copper, so the underside is striped rather than plain.
   for (const sx of PIPE_X)
     place(base, box([mm(9), mm(3), mm(56)], '#c07b3e', 0.95, 0.002), [

@@ -22,7 +22,7 @@ import {
  * switches → transformer → secondary rectification → output.
  *
  * Z is across the board, Y is up off it. The isolation gap down the middle of
- * the board — the one real safety feature you can see — runs along Z at the
+ * the board, the one real safety feature you can see, runs along Z at the
  * transformer.
  */
 

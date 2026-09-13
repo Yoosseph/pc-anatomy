@@ -6,9 +6,11 @@ import { buildMotherboard } from './mainboard.ts';
 import { buildPowerSupply } from './power-supply.ts';
 import { buildFanUnit } from './fan-unit.ts';
 import { buildCooler } from './cooler.ts';
+import { buildLiquid } from './liquid.ts';
 import { buildDisk } from './disk.ts';
-import { buildProcessor } from './processor.ts';
+import { buildCoreUltra, buildRyzen } from './processor.ts';
 import { packageTexture, surfaceTexture } from './surfaces.ts';
+import { pcbRoughness, pcbTexture, type BoardVariant } from './pcb.ts';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -31,6 +33,52 @@ export interface Piece {
   inventory: T.Vector3;
   inventoryScale?: number;
   visible: boolean;
+  /** Rotation to settle into once the parts are laid out. See `layFlat`. */
+  lie?: T.Quaternion;
+  /** The rotation this piece was built with, to turn away from. */
+  restQuat?: T.Quaternion;
+  /** `extent` and `center` as they are once `lie` has been applied. */
+  lieExtent?: T.Vector3;
+  lieCenter?: T.Vector3;
+}
+
+const UP = new T.Vector3(0, 1, 0);
+
+/**
+ * Turn a flat part face up for the inventory, the way it would end up on a
+ * bench.
+ *
+ * A motherboard is mounted on its edge inside a tower, and nothing told the
+ * inventory otherwise, so the fully separated machine presented the board as a
+ * vertical sliver seen from above: the side with every component on it faced
+ * sideways, away from the camera. The shelf packer had the same problem from
+ * the other direction, reading the board's footprint as its 55 mm edge rather
+ * than its 305 mm face.
+ *
+ * So the thinnest axis becomes up. Parts that are already flat keep the
+ * rotation they have, and anything roughly as thick as it is wide is left
+ * alone, since there is no meaningful face to present. Batched instances never
+ * get here: they are drawn from one axis-aligned matrix each and carry no
+ * rotation of their own.
+ */
+function layFlat(extent: T.Vector3) {
+  const axes = [
+    [extent.x, new T.Vector3(1, 0, 0)],
+    [extent.y, UP.clone()],
+    [extent.z, new T.Vector3(0, 0, 1)],
+  ] as [number, T.Vector3][];
+  axes.sort((a, b) => a[0] - b[0]);
+  const [thin, axis] = axes[0],
+    mid = axes[1][0];
+  // Already lying flat, or too chunky to have a face worth showing.
+  if (axis.y === 1 || thin >= mid * 0.8) return null;
+  return new T.Quaternion().setFromUnitVectors(axis, UP);
+}
+
+/** A box's extent under a rotation: rotate, then drop the signs. */
+function turnExtent(extent: T.Vector3, q: T.Quaternion) {
+  const v = extent.clone().applyQuaternion(q);
+  return v.set(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z));
 }
 
 /**
@@ -40,10 +88,12 @@ export interface Piece {
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   pc: buildMachine,
   motherboard: buildMotherboard,
-  cpu: buildProcessor,
+  ryzen: buildRyzen,
+  corei9: buildCoreUltra,
   psu: buildPowerSupply,
   fan: buildFanUnit,
   cooler: buildCooler,
+  liquid: buildLiquid,
   disk: buildDisk,
   card: (tools) => buildHardware(tools),
   die: (tools, root) => buildGpuArchitecture('die', tools, root),
@@ -72,7 +122,12 @@ export function buildModel(level: LevelId) {
           // aluminium rather than as a grey box, and it costs no brightness.
           roughness: metal > 0.7 ? rough * 0.72 : rough,
           bumpMap: surfaces.get(kind),
-          bumpScale: metal > 0.7 ? 0.0015 : 0.001,
+          bumpScale: metal > 0.7 ? 0.0026 : 0.0016,
+          // One roughness value across a whole face is exactly what reads as
+          // plastic: the highlight stays the same shape wherever you turn it.
+          // Reusing the surface noise as a roughness map costs nothing and
+          // breaks the highlight up the way a moulded or machined face does.
+          roughnessMap: surfaces.get(kind),
           envMapIntensity: metal > 0.7 ? 1.85 : 1.1,
         }),
       );
@@ -130,9 +185,39 @@ export function buildModel(level: LevelId) {
     });
     object.position.copy(p.base);
     object.userData.piece = p;
+    const lie = layFlat(v);
+    if (lie) {
+      p.lie = lie;
+      p.restQuat = object.quaternion.clone();
+      p.lieExtent = turnExtent(v, lie);
+      p.lieCenter = p.center.clone().applyQuaternion(lie);
+    }
     root.add(object);
     pieces.push(p);
     return p;
+  }
+  /**
+   * A printed circuit board. The two large faces get the routed artwork and
+   * the cut edges get bare laminate, which is how a board actually looks and
+   * why a plain green box never does.
+   */
+  function pcb(size: Vec3, variant: BoardVariant = 'motherboard') {
+    const face = new T.MeshStandardMaterial({
+      map: pcbTexture(variant),
+      roughnessMap: pcbRoughness(variant),
+      roughness: 0.82,
+      metalness: 0.12,
+      envMapIntensity: 1.0,
+    });
+    const edge = material('#2c3a2c', 0.05, 0.86);
+    // Whichever axis is thinnest is the board's thickness, so the faces are
+    // the two sides perpendicular to it. BoxGeometry takes its materials in
+    // +X, -X, +Y, -Y, +Z, -Z order.
+    const thin = size.indexOf(Math.min(...size));
+    const faces = [edge, edge, edge, edge, edge, edge];
+    faces[thin * 2] = face;
+    faces[thin * 2 + 1] = face;
+    return new T.Mesh(new T.BoxGeometry(...size), faces);
   }
   function instances(
     concept: string,
@@ -255,7 +340,7 @@ export function buildModel(level: LevelId) {
     plane.rotation.x = -Math.PI / 2;
     put(parent, plane, pos);
   }
-  builders[level]({ add, instances, box, material, label }, root);
+  builders[level]({ add, instances, box, pcb, material, label }, root);
   // Consolidate authored submeshes within each selectable assembly. Lead pins,
   // frame rails and socket contacts retain the assembly's picking identity.
   const retired = new Set<T.BufferGeometry>();
@@ -303,4 +388,35 @@ export function buildModel(level: LevelId) {
   });
   retired.forEach((g) => g.dispose());
   return { root, pieces };
+}
+
+/**
+ * Tell three.js that a batch's instances have moved.
+ *
+ * Most parts here are drawn as instances of a shared `InstancedMesh`, 408 of
+ * the graphics card's 459, and the scene rewrites their matrices on every
+ * frame of an explode. Flagging `instanceMatrix` keeps the picture right, but
+ * `InstancedMesh.raycast()` first tests the ray against `boundingSphere`,
+ * which three.js computes ONCE, lazily, on the first raycast and then keeps.
+ *
+ * Left cached, that sphere freezes the pickable region at whatever the layout
+ * happened to be the first time anyone hovered. Every instance that later
+ * moves outside it stops answering the cursor, silently, and with no visual
+ * sign, so an instanced part sits next to an identical non-instanced one and
+ * only the neighbour can be named. Measured on the card: after the inventory
+ * moved things, 0 of 30 sampled instances were reachable; clearing the sphere
+ * made it 29 of 30.
+ *
+ * Nulling both bounds hands the recompute back to three.js, which does it on
+ * the next raycast and not once per ray. Nothing else reads them: `fit()`
+ * derives its bounds from the pieces and `boxFor()` builds a batched piece's
+ * box from its own extent.
+ */
+export function refreshBatches(batches: Iterable<T.InstancedMesh>) {
+  for (const b of batches) {
+    b.instanceMatrix.needsUpdate = true;
+    if (b.instanceColor) b.instanceColor.needsUpdate = true;
+    b.boundingSphere = null;
+    b.boundingBox = null;
+  }
 }

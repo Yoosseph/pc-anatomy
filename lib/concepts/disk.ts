@@ -8,7 +8,7 @@ import { concept, type Concept } from '../concept.ts';
  * cushion of air a few nanometres thick.
  *
  * The interface is SATA and is cited. The mechanism below is drawn from the
- * general construction every drive shares — platter count, head count, ramp
+ * general construction every drive shares: platter count, head count, ramp
  * design and magnet shape vary between products, and none is claimed here.
  */
 const mechanism =
@@ -26,7 +26,7 @@ export const diskConcepts: Concept[] = [
     description:
       'A stamped aluminium lid screwed down onto a gasket, with a small filtered breather hole.',
     purpose:
-      'Seals the mechanism against dust. The breather equalises pressure with the outside air without letting particles in — the drive is filtered, not airtight.',
+      'Seals the mechanism against dust. The breather equalises pressure with the outside air without letting particles in, so the drive is filtered rather than airtight.',
     quantity: '1 modeled cover',
     specifications: { Seal: 'Gasket and filtered breather' },
     representationType: 'physical',

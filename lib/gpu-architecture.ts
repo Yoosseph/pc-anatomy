@@ -7,7 +7,7 @@ import { byId } from './manifest.ts';
  * The logical scales inside the graphics processor: die, GPC, TPC and SM.
  *
  * Moved out of the model builder unchanged when the project grew past a single
- * card — this is a block diagram of documented architecture, not a die
+ * card. This is a block diagram of documented architecture, not a die
  * floorplan. Sizes and positions are illustrative throughout.
  */
 export function buildGpuArchitecture(

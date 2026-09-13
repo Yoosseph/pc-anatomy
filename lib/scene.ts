@@ -1,11 +1,22 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildModel, type Piece } from './models';
-import { resolvePick } from './picking.ts';
+import { buildModel, refreshBatches, type Piece } from './models';
+import { resolvePickNear } from './picking.ts';
 import { byId, openLevel, type ExplorerState, type Selection } from './manifest';
 import { isPhysical, levels } from './levels.ts';
 import { inventoryLayout, smoothstep, spatialInventory } from './layout';
+/**
+ * How far off a part you may point and still mean it, in CSS pixels.
+ *
+ * A mouse gets a few pixels of slack, enough to catch a resistor without the
+ * cursor sticking to everything it passes. A finger gets more: the browser
+ * reports one contact point for a touch about 9 mm across, and it is rarely
+ * where the viewer thought they were aiming.
+ */
+const MOUSE_AIM = 8,
+  TOUCH_AIM = 14;
+
 export type SceneCallbacks = {
   select: (selection: Selection | null) => void;
   /** The isolate-and-close-in ramp has finished; open the deeper scale now. */
@@ -21,8 +32,8 @@ export function createViewer(
   callbacks: SceneCallbacks,
 ) {
   const scene = new T.Scene();
-  // A phone runs the same geometry as a desktop — several hundred meshes and
-  // a third of a million triangles — on a fraction of the fill rate, with no
+  // A phone runs the same geometry as a desktop, several hundred meshes and
+  // a third of a million triangles, on a fraction of the fill rate, with no
   // fan and a battery. Drawing that at a phone's native 3x pixel ratio with a
   // 2048-pixel shadow map costs roughly nine times the fragment work of a
   // laptop and puts orbiting below the frame rate at which it still feels
@@ -132,6 +143,10 @@ export function createViewer(
     color = new T.Color();
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
+  const turning = {
+    extent: new T.Vector3(),
+    centre: new T.Vector3(),
+  };
   const activeTouches = new Set<number>(),
     selectionBounds = new T.Box3();
   function matches(p: Piece, selection: Selection | null) {
@@ -193,7 +208,11 @@ export function createViewer(
       hardwareScale
         ? spatialInventory(
             visible.map((p) => ({
-              extent: p.extent.toArray() as [number, number, number],
+              extent: (p.lieExtent ?? p.extent).toArray() as [
+                number,
+                number,
+                number,
+              ],
               size: p.size,
             })),
             host.clientWidth / host.clientHeight,
@@ -217,6 +236,17 @@ export function createViewer(
     settle = 90;
     autoCamera = true;
   }
+  /** How far the parts have settled onto the shelves, 0 to 1. */
+  const laidOut = (value: number) => smoothstep(0.8, 1, value);
+  /** A piece's extent and box centre, part way through turning face up. */
+  function posture(p: Piece, grid: number) {
+    if (!p.lie || !p.lieExtent || !p.lieCenter)
+      return { extent: p.extent, centre: p.center };
+    return {
+      extent: turning.extent.copy(p.extent).lerp(p.lieExtent, grid),
+      centre: turning.centre.copy(p.center).lerp(p.lieCenter, grid),
+    };
+  }
   function destination(p: Piece, value: number) {
     const stage =
       byId[p.concept].category === 'Cooling'
@@ -229,10 +259,13 @@ export function createViewer(
         (isPhysical(state.level) ? stage : smoothstep(0, 0.75, value)) *
           (levels[state.level].spread ?? 1),
       );
-    const grid = smoothstep(0.8, 1, value);
+    const grid = laidOut(value);
     inventoryTarget
       .copy(p.inventory)
-      .addScaledVector(p.center, -(p.inventoryScale ?? 1));
+      .addScaledVector(
+        p.lieCenter ?? p.center,
+        -(p.inventoryScale ?? 1),
+      );
     layoutPosition.lerp(inventoryTarget, grid);
     return {
       position: layoutPosition,
@@ -249,14 +282,16 @@ export function createViewer(
       focus = false;
       candidates.push(...model.pieces.filter((p) => p.visible));
     }
+    const grid = laidOut(state.explode / 100);
     for (const p of candidates) {
       const dst = destination(p, state.explode / 100);
-      const half = p.extent.clone().multiplyScalar(dst.scale * 0.52);
+      const { extent, centre } = posture(p, grid);
+      const half = extent.clone().multiplyScalar(dst.scale * 0.52);
       bounds.expandByPoint(
-        v.copy(dst.position).addScaledVector(p.center, dst.scale).add(half),
+        v.copy(dst.position).addScaledVector(centre, dst.scale).add(half),
       );
       bounds.expandByPoint(
-        v.copy(dst.position).addScaledVector(p.center, dst.scale).sub(half),
+        v.copy(dst.position).addScaledVector(centre, dst.scale).sub(half),
       );
     }
     if (bounds.isEmpty()) {
@@ -357,6 +392,10 @@ export function createViewer(
       const s = p.visible ? dst.scale * reveal * ramp : 0;
       p.object.position.copy(dst.position);
       p.object.scale.setScalar(s);
+      if (p.lie && p.restQuat)
+        p.object.quaternion
+          .copy(p.restQuat)
+          .slerp(p.lie, laidOut(amount));
       if (p.batch) {
         matrix.compose(p.object.position, quat, scale.setScalar(s));
         p.batch.setMatrixAt(p.index!, matrix);
@@ -376,10 +415,7 @@ export function createViewer(
         selected = true;
       }
     }
-    for (const b of batches) {
-      b.instanceMatrix.needsUpdate = true;
-      if (b.instanceColor) b.instanceColor.needsUpdate = true;
-    }
+    refreshBatches(batches);
     selectedBox.visible = selected;
     hoverBox.visible = !!hovered && hovered.visible;
     if (hovered) boxFor(hovered, hoverBox.box);
@@ -425,14 +461,17 @@ export function createViewer(
   };
   const observer = new ResizeObserver(resize);
   observer.observe(host);
-  function hit(e: { clientX: number; clientY: number }) {
+  function hit(e: { clientX: number; clientY: number }, radius = 0) {
     const rect = renderer.domElement.getBoundingClientRect();
-    pointer.set(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      (-(e.clientY - rect.top) / rect.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(pointer, camera);
-    return resolvePick(raycaster.intersectObject(model.root, true));
+    const cast = (dx: number, dy: number) => {
+      pointer.set(
+        ((e.clientX + dx - rect.left) / rect.width) * 2 - 1,
+        (-(e.clientY + dy - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      return raycaster.intersectObject(model.root, true);
+    };
+    return resolvePickNear(cast, radius);
   }
   function down(e: PointerEvent) {
     if (e.pointerType === 'touch') activeTouches.add(e.pointerId);
@@ -457,7 +496,7 @@ export function createViewer(
       Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 5
     )
       return;
-    const p = hit(e);
+    const p = hit(e, e.pointerType === 'touch' ? TOUCH_AIM : MOUSE_AIM);
     callbacks.select(p ? { concept: p.concept, instance: p.instance } : null);
     wake();
   }
@@ -473,7 +512,7 @@ export function createViewer(
     wake();
   }
   function updateHover(e: { clientX: number; clientY: number }) {
-    const p = hit(e);
+    const p = hit(e, MOUSE_AIM);
     hovered = p;
     renderer.domElement.style.cursor = p ? 'pointer' : 'grab';
     callbacks.hover(

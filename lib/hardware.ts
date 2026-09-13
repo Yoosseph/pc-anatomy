@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Piece } from './models.ts';
 import type { Vec3 } from './layout.ts';
 import { boardTexture } from './surfaces.ts';
+import type { BoardVariant } from './pcb.ts';
 import { buildBoardDetails } from './board-details.ts';
 
 export type ModelTools = {
@@ -22,6 +23,8 @@ export type ModelTools = {
     geometry?: T.BufferGeometry,
   ) => Piece[];
   box: (size: Vec3, color: string, metal?: number, r?: number) => T.Mesh;
+  /** A printed circuit board: routed faces, bare laminate on the cut edges. */
+  pcb: (size: Vec3, variant?: BoardVariant) => T.Mesh;
   material: (
     color: string,
     metal?: number,
@@ -41,6 +44,7 @@ export function buildHardware({
   add,
   instances,
   box,
+  pcb,
   material,
   label,
 }: ModelTools) {
@@ -606,5 +610,5 @@ export function buildHardware({
     ]);
   place(power, box([0.26, 0.09, 0.2], '#2e3b43', 0.3), [0, 0.23, 0.3]);
   add('power', power, [1.22, 0.3, -1.63], [0, 0.6, -1.8]);
-  buildBoardDetails({ add, instances, box, material, label });
+  buildBoardDetails({ add, instances, box, pcb, material, label });
 }

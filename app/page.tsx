@@ -23,6 +23,7 @@ import {
   Zap,
   Fan,
   HardDrive,
+  Droplets,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -75,10 +76,12 @@ import {
 const levelIcon: Record<LevelId, typeof Box> = {
   pc: PcCase,
   motherboard: CircuitBoard,
-  cpu: Cpu,
+  ryzen: Cpu,
+  corei9: Cpu,
   psu: Zap,
   fan: Fan,
   cooler: Fan,
+  liquid: Droplets,
   disk: HardDrive,
   card: Box,
   die: Cpu,
@@ -99,7 +102,7 @@ export default function Home() {
     [count, setCount] = useState(0);
   // While a dive is in flight the selection exists only to aim the camera at
   // the part being opened. Showing its panel would flash the outer component's
-  // description — and its "Take apart" button — for a few hundred milliseconds
+  // description, and its "Take apart" button, for a few hundred milliseconds
   // before the deeper scale replaces it. The panel appears on arrival instead.
   const selected =
     state.selection && !state.diveInto ? byId[state.selection.concept] : null;
@@ -240,8 +243,8 @@ export default function Home() {
     let frame = 0,
       last = performance.now();
     const step = (now: number) => {
-      // Clamp the step so one stalled frame — a slow machine, a background
-      // tab, a heavy rebuild — cannot teleport the disassembly to the end.
+      // Clamp the step so one stalled frame (a slow machine, a background
+      // tab, a heavy rebuild) cannot teleport the disassembly to the end.
       // The run then takes a little longer on slow hardware but stays watchable.
       const delta = Math.min(0.1, (now - last) / 1000);
       last = now;
@@ -908,8 +911,8 @@ export default function Home() {
             <strong>Hardware</strong> is original, approximate mechanical
             geometry. The ATX board outline, the expansion-slot pitch and the
             rear I/O aperture follow the published form factor; everything else
-            — which controller sits where, how many regulator phases there are,
-            how cables run — is a representative example of the component
+            (which controller sits where, how many regulator phases there
+            are, how cables run) is a representative example of the component
             family, not a bill of materials for any real product. No part here
             is a named model except the graphics card.
           </p>

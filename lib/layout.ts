@@ -73,7 +73,7 @@ export function hardwareInventory(
  *
  * Parts keep their real size relationships (bounded magnification stops a
  * resistor vanishing), get generous air around them, and are grouped by
- * footprint so each layer holds parts of a similar size — the way a teardown
+ * footprint so each layer holds parts of a similar size, the way a teardown
  * actually ends up on a bench. Because it occupies real depth, the result is
  * something you orbit rather than something you read from directly above.
  */
@@ -81,14 +81,30 @@ export function spatialInventory(
   items: { extent: Vec3; size: number }[],
   aspect: number,
 ) {
-  const GAP = 1.15; // air between neighbours, in scene units
+  const GAP = 1.15; // air around the biggest parts, in scene units
+  // Air in proportion to the part, not a constant.
+  //
+  // A flat gap is right for a case panel and absurd for a resistor: drawn at
+  // 0.3 units, it was being given a moat three times its own width. Across a
+  // shelf of 180 such parts that left the field 97% empty, so a part was a
+  // two-pixel speck you had to hit exactly. Measured: one probe point in 48
+  // landed on anything. The empty space cost twice over, because it also
+  // inflated the bounding sphere the camera frames, pushing the whole
+  // inventory further away and shrinking every part again.
+  //
+  // Scaling the gap with the part keeps the roomy, laid-out-on-a-bench look
+  // where it reads as deliberate and closes it up where it only hid things.
+  // The floor stops neighbours touching; the cap preserves today's spacing for
+  // anything already large.
+  const gapFor = (drawn: number) => Math.min(GAP, Math.max(0.12, drawn * 0.45));
   const cells = items.map((item, index) => {
     const scale = Math.min(3.5, Math.max(0.58, 1 / Math.sqrt(item.size)));
+    const gap = gapFor(Math.max(item.extent[0], item.extent[2]) * scale);
     return {
       index,
       scale,
-      width: Math.max(0.2, item.extent[0] * scale) + GAP,
-      depth: Math.max(0.2, item.extent[2] * scale) + GAP,
+      width: Math.max(0.2, item.extent[0] * scale) + gap,
+      depth: Math.max(0.2, item.extent[2] * scale) + gap,
       height: Math.max(0.2, item.extent[1] * scale),
     };
   });
@@ -119,10 +135,21 @@ export function spatialInventory(
   }
   layers.push(current);
 
-  // One width for every layer, from the total area rather than each layer's
-  // own. Otherwise the shelf of screws comes out as a narrow thread while the
-  // shelf of panels sprawls, and the result reads as a column, not a cabinet.
-  const perLayer = totalArea / layerCount;
+  // One width for every layer, not each layer's own. Otherwise the shelf of
+  // screws comes out as a narrow thread while the shelf of panels sprawls, and
+  // the result reads as a column, not a cabinet.
+  //
+  // That width comes from the LARGEST layer rather than the average of them.
+  // Once small parts stop carrying a screw-sized moat, the crowded shelves
+  // contribute far less area, and an average dragged down by them narrows the
+  // whole cabinet, so the big-part shelves wrap onto extra rows and the
+  // inventory grows deeper than it started. Sizing to the widest demand keeps
+  // every shelf the shape it has today and lets the dense ones simply pack in.
+  const perLayer = Math.max(
+    ...layers.map((layer) =>
+      layer.reduce((sum, cell) => sum + cell.width * cell.depth, 0),
+    ),
+  );
   const width = Math.max(
     1,
     ...cells.map((c) => c.width),

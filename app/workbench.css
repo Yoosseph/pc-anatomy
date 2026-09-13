@@ -35,7 +35,7 @@ body {
 body {
   margin: 0;
   /* The stage gradient lives here rather than on .workbench so that it also
-     fills the safe-area margins — otherwise the rounded corners of a phone
+     fills the safe-area margins. Otherwise the rounded corners of a phone
      screen show a seam in landscape. */
   background: radial-gradient(
     ellipse at 62% 45%,
@@ -89,9 +89,9 @@ a {
   overflow: hidden;
   -webkit-touch-callout: none;
   /* An absolutely positioned child is laid out against its containing block's
-     padding box — which padding does NOT move, but a border does. So a
-     transparent border of exactly the safe-area size insets the whole stage —
-     topbar, rail, viewport, disassembly, footer — out of the notch and the
+     padding box, which padding does NOT move, but a border does. So a
+     transparent border of exactly the safe-area size insets the whole stage
+     (topbar, rail, viewport, disassembly, footer) out of the notch and the
      home indicator in one move, instead of every rule having to know about
      them. The body gradient shows through it, so there is no seam. Panels
      that are position: fixed escape this and carry their own insets below. */
@@ -123,7 +123,7 @@ a {
 }
 /* Chrome is furniture: dragging across it should orbit or do nothing, never
    start a text selection or pop the iOS callout menu. Prose keeps its
-   selection — see the detail panel and dialogs below. */
+   selection. See the detail panel and dialogs below. */
 .topbar,
 .explorer,
 .stage-heading,
@@ -236,8 +236,12 @@ footer {
   inset: 76px auto 0 0;
   width: var(--rail);
   z-index: 12;
-  background: #111213;
-  border-right: 1px solid #26282a;
+  /* Deliberately lighter than the stage and the header: the rail is a panel
+     you read, not part of the backdrop. Every hover, active row, divider and
+     switch inside it is keyed above this value. Drop it back towards the
+     stage colour and they invert into dark holes. */
+  background: #212327;
+  border-right: 1px solid #3a3d42;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #4c4f55 transparent;
@@ -269,7 +273,7 @@ footer {
 }
 .explore-section {
   padding: 24px 0 20px;
-  border-bottom: 1px solid #242527;
+  border-bottom: 1px solid #34373c;
 }
 .scale-navigation {
   display: flex;
@@ -311,8 +315,8 @@ footer {
   font-weight: 400;
 }
 .scale-navigation > button.active {
-  background: #202123;
-  color: #f2dec1;
+  background: #34383e;
+  color: #f7e6cd;
 }
 .scale-navigation > button.active:before {
   content: '';
@@ -331,7 +335,7 @@ footer {
   opacity: 1;
 }
 .scale-navigation > button:hover {
-  background: #1c1d1f;
+  background: #2c2f34;
 }
 .systems-section {
   padding: 22px 0 20px;
@@ -370,7 +374,7 @@ footer {
 .layer-row [data-slot='switch'] {
   width: 26px;
   height: 15px;
-  background: #2b2d30;
+  background: #3c4046;
 }
 .layer-row [data-slot='switch'][data-checked] {
   background: #777b83;
@@ -402,7 +406,7 @@ footer {
   gap: 20px 8px;
   margin-top: auto;
   padding-top: 20px;
-  border-top: 1px solid #242527;
+  border-top: 1px solid #34373c;
 }
 .reference-stats > div:last-child {
   display: none;
@@ -1740,7 +1744,7 @@ footer button {
     font-size: 7px;
   }
   /* A bottom sheet would swallow a 320px-tall screen whole, so sideways the
-     panel goes back to being a rail down the right-hand edge — the same shape
+     panel goes back to being a rail down the right-hand edge, the same shape
      it has on a desktop, scaled to the width available. */
   .detail-panel[data-slot='sheet-content'] {
     inset: calc(53px + var(--safe-t)) 0 0 auto;
@@ -1867,7 +1871,7 @@ footer button {
   transform: rotate(180deg);
 }
 .branch-head:hover {
-  background: #1d1e21;
+  background: #2c2f34;
   color: #eceef0;
 }
 .branch.here .branch-head > span,
@@ -1880,7 +1884,7 @@ footer button {
   gap: 1px;
   margin: 2px 0 6px 9px;
   padding-left: 13px;
-  border-left: 1px solid #303237;
+  border-left: 1px solid #43474e;
 }
 .branch-scales button {
   display: flex;
@@ -1911,12 +1915,12 @@ footer button {
   font-weight: 400;
 }
 .branch-scales button:hover {
-  background: #1d1e21;
+  background: #2c2f34;
   color: #eceef0;
 }
 .branch-scales button.active {
-  background: #2b2c30;
-  color: #f4dfc2;
+  background: #3b3f45;
+  color: #f7e6cd;
 }
 .branch-scales button.active > i {
   background: #eab878;
@@ -1926,8 +1930,8 @@ footer button {
 /* ---------------------------------------------------------------------------
    Touch
    A finger is about 9 mm across and has no hover state to aim with. Everything
-   below widens hit areas without moving anything on screen — padding paired
-   with an equal negative margin, or an invisible ::after — so the desktop
+   below widens hit areas without moving anything on screen, using padding
+   paired with an equal negative margin or an invisible ::after, so the desktop
    layout is untouched and only the target grows. Scoped to (pointer: coarse)
    so a mouse keeps the tighter, denser controls.
 --------------------------------------------------------------------------- */
@@ -1962,7 +1966,8 @@ footer button {
     padding: 10px 0;
     margin: -10px 0;
   }
-  /* The switch itself stays 26x15 — it reads as a control, not as a button —
+  /* The switch itself stays 26x15, since it reads as a control rather than a
+     button,
      but it answers to a tap anywhere in a 50x44 box around it. */
   .layer-row [data-slot='switch'],
   .sublayers [data-slot='switch'] {

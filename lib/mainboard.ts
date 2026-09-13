@@ -16,7 +16,7 @@ import {
 /**
  * The motherboard at its own scale.
  *
- * The board is laid flat here — X across, Z front-to-back, Y off the board —
+ * The board is laid flat here, X across, Z front-to-back, Y off the board,
  * because that is how you look at a board on a bench, and it matches how the
  * graphics card presents its own PCB one level down.
  *
@@ -33,7 +33,7 @@ const D = mm(244); // front to back
 const SLOT_PITCH = mm(20.32);
 
 export function buildMotherboard(tools: ModelTools, _root: T.Group) {
-  const { add, instances, box, material, label } = tools;
+  const { add, instances, box, pcb, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -42,7 +42,7 @@ export function buildMotherboard(tools: ModelTools, _root: T.Group) {
 
   // ── The board ───────────────────────────────────────────────────────────
   const board = new T.Group();
-  place(board, box([W, mm(1.6), D], '#1d3a2b', 0.04, 0.01), [0, 0, 0]);
+  place(board, pcb([W, mm(1.6), D], 'motherboard'), [0, 0, 0]);
   for (const x of [-mm(130), mm(8), mm(146)])
     for (const z of [-mm(100), 0, mm(104)]) {
       const ring = new T.Mesh(
@@ -115,7 +115,7 @@ export function buildMotherboard(tools: ModelTools, _root: T.Group) {
   }
   for (let i = 0; i < 2; i++) {
     const stick = new T.Group();
-    place(stick, box([mm(3), mm(31), mm(133)], '#1d3a2b', 0.05), [0, 0, 0]);
+    place(stick, pcb([mm(3), mm(31), mm(133)], 'memory'), [0, 0, 0]);
     for (const s of [-1, 1])
       for (let j = 0; j < 8; j++)
         place(stick, box([mm(1.2), mm(11), mm(12)], '#1d2124', 0.12), [
@@ -275,7 +275,7 @@ export function buildMotherboard(tools: ModelTools, _root: T.Group) {
     add('m2slot', socketM2, [-mm(6), mm(3), z], [0, 0.9, 0], 0.16);
 
     const drive = new T.Group();
-    place(drive, box([mm(80), mm(1.4), mm(22)], '#1d3a2b', 0.05), [0, 0, 0]);
+    place(drive, pcb([mm(80), mm(1.4), mm(22)], 'storage'), [0, 0, 0]);
     for (let j = 0; j < 2; j++)
       place(drive, box([mm(14), mm(1.4), mm(16)], '#1d2124', 0.12), [
         mm(-14 + j * 26),

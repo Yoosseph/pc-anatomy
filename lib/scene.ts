@@ -6,8 +6,14 @@ import { resolvePickNear } from './picking.ts';
 import { airflowShown, airflowStrength } from './airflow.ts';
 import { byId, openLevel } from './manifest';
 import type { ExplorerState, Selection } from './explorer-state.ts';
-import { isPhysical, levels } from './levels.ts';
+import { isPhysical } from './levels.ts';
 import { inventoryLayout, smoothstep, spatialInventory } from './layout';
+import {
+  disposeModelResources,
+  laidOutAmount,
+  pieceDestination,
+  piecePosture,
+} from './model-stage';
 /**
  * How far off a part you may point and still mean it, in CSS pixels.
  *
@@ -186,26 +192,7 @@ export function createViewer(
     );
   }
   function disposeModel() {
-    const gs = new Set<T.BufferGeometry>(),
-      ms = new Set<T.Material>();
-    model.root.traverse((o) => {
-      if (o instanceof T.Mesh) {
-        gs.add(o.geometry);
-        (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) =>
-          ms.add(m),
-        );
-      }
-    });
-    gs.forEach((g) => g.dispose());
-    ms.forEach((m) => {
-      if (
-        m instanceof T.MeshBasicMaterial ||
-        m instanceof T.MeshStandardMaterial
-      )
-        for (const value of Object.values(m))
-          if (value instanceof T.Texture) value.dispose();
-      m.dispose();
-    });
+    disposeModelResources(model);
     scene.remove(model.root);
   }
   /** Which set of pieces the shelves were last packed for. */
@@ -284,38 +271,16 @@ export function createViewer(
    * at all between 68% and 80% and then moving every part at once over the
    * last fifth, which is what read as a pause followed by a lurch.
    */
-  const laidOut = (value: number) => smoothstep(0.7, 1, value);
-  /** A piece's extent and box centre, part way through turning face up. */
-  function posture(p: Piece, grid: number) {
-    if (!p.lie || !p.lieExtent || !p.lieCenter)
-      return { extent: p.extent, centre: p.center };
-    return {
-      extent: turning.extent.copy(p.extent).lerp(p.lieExtent, grid),
-      centre: turning.centre.copy(p.center).lerp(p.lieCenter, grid),
-    };
-  }
-  function destination(p: Piece, value: number) {
-    const stage =
-      byId[p.concept].category === 'Cooling'
-        ? smoothstep(0, 0.48, value)
-        : smoothstep(0.22, 0.68, value);
-    layoutPosition
-      .copy(p.base)
-      .addScaledVector(
-        p.delta,
-        (isPhysical(state.level) ? stage : smoothstep(0, 0.75, value)) *
-          (levels[state.level].spread ?? 1),
-      );
-    const grid = laidOut(value);
-    inventoryTarget
-      .copy(p.inventory)
-      .addScaledVector(p.lieCenter ?? p.center, -(p.inventoryScale ?? 1));
-    layoutPosition.lerp(inventoryTarget, grid);
-    return {
-      position: layoutPosition,
-      scale: T.MathUtils.lerp(1, p.inventoryScale ?? 1, grid),
-    };
-  }
+  const destination = (piece: Piece, value: number) =>
+    pieceDestination(
+      piece,
+      state.level,
+      value,
+      layoutPosition,
+      inventoryTarget,
+    );
+  const posture = (piece: Piece, grid: number) =>
+    piecePosture(piece, grid, turning.extent, turning.centre);
   function fit() {
     bounds.makeEmpty();
     let focus = state.focusRevision > 0 && !!state.selection;
@@ -326,7 +291,7 @@ export function createViewer(
       focus = false;
       candidates.push(...model.pieces.filter((p) => p.visible));
     }
-    const grid = laidOut(state.explode / 100);
+    const grid = laidOutAmount(state.explode / 100);
     for (const p of candidates) {
       const dst = destination(p, state.explode / 100);
       const { extent, centre } = posture(p, grid);
@@ -394,7 +359,7 @@ export function createViewer(
     // each blade turns, which made the hover outline breathe in and out even
     // though the fan itself never changed size.
     const s = p.object.scale.x;
-    const { extent, centre } = posture(p, laidOut(amount));
+    const { extent, centre } = posture(p, laidOutAmount(amount));
     target.setFromCenterAndSize(
       boxCenter.copy(p.object.position).addScaledVector(centre, s),
       boxSize.copy(extent).multiplyScalar(s).addScalar(0.018),
@@ -489,7 +454,9 @@ export function createViewer(
       p.object.position.copy(dst.position);
       p.object.scale.setScalar(s);
       if (p.lie && p.restQuat)
-        p.object.quaternion.copy(p.restQuat).slerp(p.lie, laidOut(amount));
+        p.object.quaternion
+          .copy(p.restQuat)
+          .slerp(p.lie, laidOutAmount(amount));
       if (p.batch) {
         matrix.compose(p.object.position, quat, scale.setScalar(s));
         p.batch.setMatrixAt(p.index!, matrix);

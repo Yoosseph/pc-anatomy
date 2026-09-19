@@ -67,8 +67,9 @@ lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
       │
-lib/scene.ts         renderer, lights, camera, picking, the explode
-                     interpolation and the dive ramp
+lib/scene.ts         ordinary explorer renderer, lights, camera and dive ramp
+lib/model-stage.ts   shared posing, inventory, bounds and model disposal
+lib/comparison-*.ts  GPU comparison state/data and the scissored renderer
       │
 app/                 React: what the viewer is currently looking at
 ```
@@ -162,16 +163,20 @@ subsystems stop touching.
 | `lib/materials.ts` | The ten surface finishes and `temperedGlass`. |
 | `lib/surfaces.ts`, `pcb.ts`, `silicon-texture.ts` | Generated material maps. No downloaded textures. |
 | `lib/board-details.ts` | Representative support circuitry and mechanical subassemblies. |
-| `lib/scene.ts` | Renderer, lights, orbit, visibility, camera fitting, the dive ramp, disposal. Returns `{ update, dispose }`. |
+| `lib/scene.ts` | Ordinary explorer renderer, lights, orbit, visibility, camera fitting and the dive ramp. Returns `{ update, dispose }`. |
+| `lib/model-stage.ts` | Reusable model-stage primitives shared by both renderers: piece destinations and posture, inventory preparation, posed/common bounds, and resource disposal. |
+| `lib/comparison-state.ts` | The three supported GPU roots, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
+| `lib/comparison-scene.ts` | One-renderer comparison engine. Owns the shared camera and controls, renders isolated scissored panes on wide screens, and one active pane below 700 CSS pixels. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
-| `app/page.tsx` | Composition only. Which panels exist and in what order. |
+| `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
+| `app/comparison-workbench.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx` | Comparison composition and controls, the React-to-Three bridge, and the responsive specification sheet. |
 | `app/use-explorer.ts` | All explorer state and every named move: navigate, dive, arrive, choose, isolate, hide, and the rest. |
 | `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx` | One panel each. |
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 52 tests: catalogue integrity, layout, picking, geometry presence, airflow. |
+| `tests/*.test.ts` | 57 tests: catalogue integrity, layout, picking, geometry presence, airflow, and comparison state/data/pane/bounds behaviour. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 
@@ -256,8 +261,8 @@ zero, heaped at the origin.
 
 `app/page.tsx` is composition and nothing else: it renders the panels in order
 and wires them to `useExplorer`. It holds only the state no panel owns — whether
-the search palette and about dialog are open, and the part count the viewer
-reports.
+the app is in explorer or GPU comparison mode, whether the search palette and
+about dialog are open, and the part count the viewer reports.
 
 `app/use-explorer.ts` owns everything else about the current view and exposes it
 as named moves rather than state patches. A panel calls `navigate`, `dive`,
@@ -291,6 +296,35 @@ Three interaction decisions are settled, and re-opening them has been tried:
   until Reset, so returning to the tower having asked for air does not switch
   it off again. The switch is absent where there are no fans, and airflow
   follows the Cooling category — hide the fans and the arrows go with them.
+
+## GPU comparison mode
+
+Comparison is a separate workbench rather than nullable fields added to
+`ExplorerState`. `ComparisonState` admits only `card`, `rx9070`, and `arcb580`,
+and pure transitions reject a duplicate left/right pair at the state boundary.
+Its catalogue validator also fails if the set of physical GPU roots changes,
+so a future fourth card requires an explicit support decision.
+
+The comparison engine owns one `WebGLRenderer`, canvas, scene, camera and
+`OrbitControls` pair. Both card roots sit at the same origin. At 700 CSS pixels
+and wider, equal scissored render passes alternately reveal the left and right
+root; below that breakpoint only the selected A/B root is rendered. Raycasting
+first converts the pointer into coordinates local to its pane and then tests
+only that pane's root.
+
+Both models use the same disassembly amount and the same camera. Each model's
+posed bounds are computed through `lib/model-stage.ts`, unioned, and fitted once
+for the shared camera, so the cards keep their millimetre-derived relative
+scale. Inventory packing retains each card's physical sizes instead of
+normalizing either side. The comparison renderer builds each selected model
+once, disposes only a replaced side, swaps existing roots without rebuilding,
+and disposes both sides plus the shared renderer resources on exit.
+
+The specification sheet does not store product values. It projects the seven
+rows from the existing root concepts, normalizes the two existing power labels,
+and reads the RTX interface from its existing PCIe edge-connector concept. A
+root product name is the exterior/reference value only when that catalogue root
+does not carry an `Exterior reference` field.
 
 ## Adding a component
 
@@ -356,12 +390,12 @@ the model has. 229 concepts are physical, 98 are logical diagrams.
 
 ## Tests
 
-52 tests, all through Node's built-in runner.
+57 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
 
-- `tests/manifest.test.ts` (15) — unique ids, reciprocal parents, no cycles,
+- `tests/manifest.test.ts` (16) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
   packing without overlap at several aspect ratios, machine depth.
@@ -382,6 +416,10 @@ production build on every push and pull request with Node.js 22.
   and over by a tenth, that the chevrons march and stop on command, that no
   stream strays far from the hardware it describes, and that the tower's air
   enters at the front and leaves at the back.
+- `tests/comparison.test.ts` (5) — valid distinct state and transitions,
+  complete catalogue-backed spec rows for all three cards, pane-local pointer
+  coordinates at desktop and mobile widths, and common bounds that contain both
+  posed models at assembled, half-disassembled, and inventory positions.
 
 The suite builds every scale, so a geometry regression usually surfaces as a
 failing assertion rather than a silent visual change.

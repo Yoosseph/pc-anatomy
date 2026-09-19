@@ -512,6 +512,7 @@ export function createComparisonViewer(
       environment.dispose();
       key.shadow.map?.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       canvas.remove();
     },
   };

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ExplorerState, Selection } from '@/lib/explorer-state';
 import type { createViewer } from '@/lib/scene';
 type Props = {
@@ -25,7 +25,7 @@ export default function Viewer({ state, onSelect, onCount, onDived }: Props) {
     latest.current = { state, onSelect, onCount, onDived };
     engine.current?.update(state);
   }, [state, onSelect, onCount, onDived]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     let stopped = false;
     void import('@/lib/scene')
       .then(({ createViewer }) => {
@@ -52,8 +52,9 @@ export default function Viewer({ state, onSelect, onCount, onDived }: Props) {
       });
     return () => {
       stopped = true;
-      engine.current?.dispose();
+      const current = engine.current;
       engine.current = null;
+      current?.dispose();
     };
   }, []);
   return (

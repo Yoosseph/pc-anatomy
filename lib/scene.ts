@@ -728,6 +728,7 @@ export function createViewer(
       env.dispose();
       key.shadow.map?.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       canvas.remove();
     },
   };

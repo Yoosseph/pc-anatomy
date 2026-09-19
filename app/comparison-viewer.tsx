@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { comparisonCard, type ComparisonState } from '@/lib/comparison-state';
 import type { createComparisonViewer } from '@/lib/comparison-scene';
 
@@ -27,7 +27,7 @@ export default function ComparisonViewer({ state, onCount }: Props) {
     engine.current?.update(state);
   }, [state, onCount]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let stopped = false;
     void import('@/lib/comparison-scene')
       .then(({ createComparisonViewer }) => {
@@ -57,8 +57,9 @@ export default function ComparisonViewer({ state, onCount }: Props) {
       });
     return () => {
       stopped = true;
-      engine.current?.dispose();
+      const current = engine.current;
       engine.current = null;
+      current?.dispose();
     };
   }, []);
 

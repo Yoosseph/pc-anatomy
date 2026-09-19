@@ -14,6 +14,7 @@ import Disassembly from './disassembly';
 import SearchDialog from './search-dialog';
 import DetailPanel from './detail-panel';
 import AboutDialog from './about-dialog';
+import ComparisonWorkbench from './comparison-workbench';
 
 export default function Home() {
   const explorer = useExplorer();
@@ -22,6 +23,7 @@ export default function Home() {
   const [search, setSearch] = useState(false),
     [query, setQuery] = useState(''),
     [about, setAbout] = useState(false),
+    [mode, setMode] = useState<'explorer' | 'comparison'>('explorer'),
     // `null` until the viewer has reported for the first time. Zero means the
     // viewer is running and nothing is switched on, which is a different thing
     // to say to the reader, and saying the wrong one was what put "No
@@ -67,6 +69,20 @@ export default function Home() {
     return () => window.removeEventListener('keydown', key);
   }, [about, choose, navigate, search, state.level]);
 
+  if (mode === 'comparison')
+    return (
+      <ComparisonWorkbench
+        onExit={() => {
+          setMode('explorer');
+          requestAnimationFrame(() =>
+            document
+              .querySelector<HTMLButtonElement>('.compare-button')
+              ?.focus(),
+          );
+        }}
+      />
+    );
+
   return (
     <main
       className={
@@ -81,6 +97,7 @@ export default function Home() {
         onToggleLayers={() => explorer.setLayers(!layers)}
         onSearch={() => setSearch(true)}
         onAbout={() => setAbout(true)}
+        onCompare={() => setMode('comparison')}
       />
       <PerformanceTip ready={count !== null && count > 0} />
       {layers && (

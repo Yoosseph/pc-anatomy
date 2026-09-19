@@ -11,6 +11,10 @@ type Props = {
   onToggleAuto: () => void;
   onSetExplode: (value: number) => void;
   onReset: () => void;
+  sectionLabel?: string;
+  title?: string;
+  sliderLabel?: string;
+  valueText?: string;
 };
 
 export default function Disassembly({
@@ -21,11 +25,15 @@ export default function Disassembly({
   onToggleAuto,
   onSetExplode,
   onReset,
+  sectionLabel = 'Explosion control',
+  title,
+  sliderLabel = 'Disassemble the specimen',
+  valueText,
 }: Props) {
   const phases = levels[level].phases,
     explodePercent = Math.round(explode);
   return (
-    <section className="disassembly" aria-label="Explosion control">
+    <section className="disassembly" aria-label={sectionLabel}>
       <div className="disassembly-intro">
         <button
           className={
@@ -45,7 +53,7 @@ export default function Disassembly({
         </button>
         <div className="disassembly-label">
           <div>
-            <strong>{logical ? 'Expand' : 'Disassemble'}</strong>
+            <strong>{title ?? (logical ? 'Expand' : 'Disassemble')}</strong>
             <span>DRAG OR PLAY</span>
           </div>
         </div>
@@ -67,8 +75,8 @@ export default function Disassembly({
           onValueChange={(value) =>
             onSetExplode(Array.isArray(value) ? value[0] : value)
           }
-          aria-label="Disassemble the specimen"
-          aria-valuetext={`${explodePercent} percent`}
+          aria-label={sliderLabel}
+          aria-valuetext={valueText ?? `${explodePercent} percent`}
         />
         <div className="ruler" aria-hidden="true">
           {Array.from({ length: 41 }, (_, i) => (

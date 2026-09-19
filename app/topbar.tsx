@@ -1,5 +1,12 @@
 'use client';
-import { Code2, Cpu, Info, Layers3, Search } from 'lucide-react';
+import {
+  Code2,
+  Cpu,
+  GitCompareArrows,
+  Info,
+  Layers3,
+  Search,
+} from 'lucide-react';
 import { GUIDE, REPOSITORY } from './links';
 
 type Props = {
@@ -8,6 +15,7 @@ type Props = {
   onToggleLayers: () => void;
   onSearch: () => void;
   onAbout: () => void;
+  onCompare: () => void;
 };
 
 export default function Topbar({
@@ -16,6 +24,7 @@ export default function Topbar({
   onToggleLayers,
   onSearch,
   onAbout,
+  onCompare,
 }: Props) {
   return (
     <header className="topbar">
@@ -38,6 +47,14 @@ export default function Topbar({
         </span>
       </a>
       <div className="header-actions">
+        <button
+          className="compare-button"
+          aria-label="Compare GPUs"
+          onClick={onCompare}
+        >
+          <GitCompareArrows size={16} />
+          <span>Compare GPUs</span>
+        </button>
         <a
           className="guide-link"
           href={GUIDE}

@@ -97,7 +97,6 @@ export default function Home() {
         onToggleLayers={() => explorer.setLayers(!layers)}
         onSearch={() => setSearch(true)}
         onAbout={() => setAbout(true)}
-        onCompare={() => setMode('comparison')}
       />
       <PerformanceTip ready={count !== null && count > 0} />
       {layers && (
@@ -120,6 +119,7 @@ export default function Home() {
           onOpenMenu={explorer.showMenu}
           onOpenSubmenu={explorer.showSubmenu}
           onNavigate={navigate}
+          onCompare={() => setMode('comparison')}
           onClose={() => explorer.setLayers(false)}
         />
         <SystemsList

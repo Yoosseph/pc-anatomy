@@ -1,107 +1,111 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ArrowLeftRight, BarChart3, ChevronLeft, Cpu } from 'lucide-react';
 import {
-  comparisonCard,
-  gpuComparisonLevels,
+  comparisonGroupIds,
+  comparisonGroups,
+  comparisonItem,
+  comparisonLevels,
   initialComparisonState,
-  selectComparisonGpu,
+  selectComparisonGroup,
+  selectComparisonItem,
   setComparisonActiveSide,
   setComparisonExplode,
-  setComparisonPlaying,
   setComparisonSpecsOpen,
   swapComparisonSides,
+  type ComparisonGroupId,
+  type ComparisonItem,
+  type ComparisonLevel,
   type ComparisonSide,
-  type GpuComparisonLevel,
+  type ComparisonViewState,
 } from '@/lib/comparison-state';
+import { isPhysical } from '@/lib/levels';
 import ComparisonViewer from './comparison-viewer';
 import ComparisonSpecs from './comparison-specs';
 import Disassembly from './disassembly';
+import { useDisassemblyPlayback } from './use-disassembly-playback';
 
 type Props = { onExit: () => void };
 
 export default function ComparisonWorkbench({ onExit }: Props) {
-  const [state, setState] = useState(initialComparisonState),
-    [count, setCount] = useState<number | null>(null),
-    [viewerRevision, setViewerRevision] = useState(0);
-  const cards = useMemo(
+  const [state, setState] = useState(initialComparisonState);
+  const [count, setCount] = useState<number | null>(null);
+  const [viewerRevision, setViewerRevision] = useState(0);
+  const group = comparisonGroups[state.group];
+  const items = useMemo(
     () =>
       Object.fromEntries(
-        gpuComparisonLevels.map((level) => [level, comparisonCard(level)]),
-      ),
+        comparisonLevels(state.group).map((level) => [
+          level,
+          comparisonItem(state.group, level),
+        ]),
+      ) as Partial<Record<ComparisonLevel, ComparisonItem>>,
+    [state.group],
+  );
+  const updateExplode = useCallback(
+    (explode: number) =>
+      setState((current) => setComparisonExplode(current, explode)),
     [],
-  ) as Record<GpuComparisonLevel, ReturnType<typeof comparisonCard>>;
+  );
+  const {
+    playing,
+    setExplode,
+    stop: stopDisassembly,
+    toggleAuto,
+  } = useDisassemblyPlayback(state.explode, updateExplode);
+  const viewerState = useMemo<ComparisonViewState>(
+    () => ({
+      group: state.group,
+      left: state.left,
+      right: state.right,
+      activeSide: state.activeSide,
+      explode: state.explode,
+    }),
+    [state.activeSide, state.explode, state.group, state.left, state.right],
+  );
 
-  useEffect(() => {
-    if (!state.playing) return;
-    let frame = 0,
-      last = performance.now();
-    const step = (now: number) => {
-      const delta = Math.min(0.1, (now - last) / 1000);
-      last = now;
-      setState((current) => {
-        const explode = Math.min(100, current.explode + delta * 11);
-        return {
-          ...current,
-          explode,
-          playing: explode < 100,
-        };
-      });
-      frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [state.playing]);
+  const choose = (side: ComparisonSide, level: ComparisonLevel) =>
+    setState((current) => selectComparisonItem(current, side, level));
 
-  const choose = (side: ComparisonSide, level: GpuComparisonLevel) =>
-    setState((current) => selectComparisonGpu(current, side, level));
-
-  const toggleAuto = () => {
-    if (state.playing) {
-      setState((current) => setComparisonPlaying(current, false));
-      return;
-    }
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setState((current) => setComparisonExplode(current, 100));
-      return;
-    }
-    setState((current) =>
-      setComparisonPlaying(
-        current.explode >= 99 ? { ...current, explode: 0 } : current,
-        true,
-      ),
-    );
+  const chooseGroup = (nextGroup: ComparisonGroupId) => {
+    stopDisassembly();
+    setState((current) => selectComparisonGroup(current, nextGroup));
   };
 
   const reset = () => {
-    setState((current) => ({ ...current, explode: 0, playing: false }));
+    stopDisassembly();
+    setState((current) => ({ ...current, explode: 0 }));
     setViewerRevision((revision) => revision + 1);
   };
 
   const selector = (side: ComparisonSide) => {
-    const level = state[side],
-      other = state[side === 'left' ? 'right' : 'left'],
-      card = cards[level];
+    const level = state[side];
+    const other = state[side === 'left' ? 'right' : 'left'];
+    const item = items[level]!;
     return (
       <label className={`comparison-selector ${side}`}>
         <span>{side === 'left' ? 'A' : 'B'}</span>
         <select
           value={level}
-          aria-label={`${side === 'left' ? 'Left' : 'Right'} graphics card`}
+          aria-label={`${side === 'left' ? 'Left' : 'Right'} ${group.itemLabel}`}
           onChange={(event) =>
-            choose(side, event.target.value as GpuComparisonLevel)
+            choose(side, event.target.value as ComparisonLevel)
           }
         >
-          {gpuComparisonLevels.map((option) => (
+          {comparisonLevels(state.group).map((option) => (
             <option key={option} value={option} disabled={option === other}>
-              {cards[option].shortName}
+              {items[option]!.shortName}
             </option>
           ))}
         </select>
-        <small>{card.note}</small>
+        <small>{item.note}</small>
       </label>
     );
   };
+
+  const leftItem = items[state.left]!;
+  const rightItem = items[state.right]!;
+  const logical = !isPhysical(state.left);
 
   return (
     <main
@@ -112,8 +116,8 @@ export default function ComparisonWorkbench({ onExit }: Props) {
         <div className="comparison-brand">
           <Cpu size={19} />
           <div>
-            <strong>GPU comparison</strong>
-            <span>PC Anatomy</span>
+            <strong>Component comparison</strong>
+            <span>{group.label}</span>
           </div>
         </div>
         <div className="comparison-top-actions">
@@ -133,17 +137,31 @@ export default function ComparisonWorkbench({ onExit }: Props) {
         </div>
       </header>
 
-      <section className="comparison-setup" aria-label="Graphics card pair">
-        {selector('left')}
-        <button
-          className="comparison-swap"
-          onClick={() => setState((current) => swapComparisonSides(current))}
-          aria-label="Swap comparison sides"
-        >
-          <ArrowLeftRight size={18} />
-          <span>Swap sides</span>
-        </button>
-        {selector('right')}
+      <section className="comparison-setup" aria-label="Comparison pair">
+        <fieldset className="comparison-groups">
+          <legend className="sr-only">Component category</legend>
+          {comparisonGroupIds.map((groupId) => (
+            <button
+              key={groupId}
+              aria-pressed={state.group === groupId}
+              onClick={() => chooseGroup(groupId)}
+            >
+              {comparisonGroups[groupId].label}
+            </button>
+          ))}
+        </fieldset>
+        <div className="comparison-pair">
+          {selector('left')}
+          <button
+            className="comparison-swap"
+            onClick={() => setState((current) => swapComparisonSides(current))}
+            aria-label="Swap comparison sides"
+          >
+            <ArrowLeftRight size={18} />
+            <span>Swap sides</span>
+          </button>
+          {selector('right')}
+        </div>
       </section>
 
       <fieldset className="comparison-mobile-switch">
@@ -163,17 +181,21 @@ export default function ComparisonWorkbench({ onExit }: Props) {
 
       <div className="comparison-pane-label left" aria-hidden="true">
         <span>A</span>
-        <strong>{cards[state.left].shortName}</strong>
+        <strong>{leftItem.shortName}</strong>
       </div>
       <div className="comparison-pane-label right" aria-hidden="true">
         <span>B</span>
-        <strong>{cards[state.right].shortName}</strong>
+        <strong>{rightItem.shortName}</strong>
       </div>
       <div className="comparison-divider" aria-hidden="true" />
-      <ComparisonViewer key={viewerRevision} state={state} onCount={setCount} />
+      <ComparisonViewer
+        key={viewerRevision}
+        state={viewerState}
+        onCount={setCount}
+      />
       <div className="sr-only" aria-live="polite">
-        Comparing {cards[state.left].shortName} on the left with{' '}
-        {cards[state.right].shortName} on the right.
+        Comparing {leftItem.shortName} on the left with {rightItem.shortName} on
+        the right.
       </div>
       {count !== null && (
         <div className="comparison-count" aria-hidden="true">
@@ -182,21 +204,20 @@ export default function ComparisonWorkbench({ onExit }: Props) {
       )}
 
       <Disassembly
-        level="card"
+        level={state.left}
         explode={state.explode}
-        logical={false}
-        playing={state.playing}
+        logical={logical}
+        playing={playing}
         onToggleAuto={toggleAuto}
-        onSetExplode={(explode) =>
-          setState((current) => setComparisonExplode(current, explode))
-        }
+        onSetExplode={setExplode}
         onReset={reset}
         sectionLabel="Shared disassembly control"
-        title="Disassemble both"
-        sliderLabel="Disassemble both graphics cards"
-        valueText={`${Math.round(state.explode)} percent for both graphics cards`}
+        title={logical ? 'Expand both' : 'Disassemble both'}
+        sliderLabel={`${logical ? 'Expand' : 'Disassemble'} both ${group.label.toLowerCase()}`}
+        valueText={`${Math.round(state.explode)} percent for both ${group.label.toLowerCase()}`}
       />
       <ComparisonSpecs
+        group={state.group}
         left={state.left}
         right={state.right}
         open={state.specsOpen}

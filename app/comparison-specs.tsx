@@ -7,25 +7,30 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  comparisonCard,
-  type GpuComparisonLevel,
+  comparisonGroups,
+  comparisonItem,
+  type ComparisonGroupId,
+  type ComparisonLevel,
 } from '@/lib/comparison-state';
 
 type Props = {
-  left: GpuComparisonLevel;
-  right: GpuComparisonLevel;
+  group: ComparisonGroupId;
+  left: ComparisonLevel;
+  right: ComparisonLevel;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export default function ComparisonSpecs({
+  group,
   left,
   right,
   open,
   onOpenChange,
 }: Props) {
-  const leftCard = comparisonCard(left),
-    rightCard = comparisonCard(right);
+  const leftItem = comparisonItem(group, left),
+    rightItem = comparisonItem(group, right),
+    definition = comparisonGroups[group];
   return (
     <Sheet open={open} modal={false} onOpenChange={onOpenChange}>
       <SheetContent
@@ -38,7 +43,8 @@ export default function ComparisonSpecs({
           <div>
             <SheetTitle>Specification comparison</SheetTitle>
             <SheetDescription>
-              Published catalogue values, shown without ranking either card.
+              Published {definition.shortLabel} catalogue values, shown without
+              ranking either model.
             </SheetDescription>
           </div>
           <button
@@ -52,13 +58,13 @@ export default function ComparisonSpecs({
           <thead>
             <tr className="spec-row spec-head">
               <th scope="col">Specification</th>
-              <th scope="col">{leftCard.shortName}</th>
-              <th scope="col">{rightCard.shortName}</th>
+              <th scope="col">{leftItem.shortName}</th>
+              <th scope="col">{rightItem.shortName}</th>
             </tr>
           </thead>
           <tbody>
-            {leftCard.specs.map((leftSpec, index) => {
-              const rightSpec = rightCard.specs[index],
+            {leftItem.specs.map((leftSpec, index) => {
+              const rightSpec = rightItem.specs[index],
                 different = leftSpec.value !== rightSpec.value;
               return (
                 <tr
@@ -75,7 +81,7 @@ export default function ComparisonSpecs({
           </tbody>
         </table>
         <p className="comparison-specs-note">
-          Sources and modeling accuracy remain available with each card in the
+          Sources and modeling accuracy remain available with each model in the
           explorer.
         </p>
       </SheetContent>

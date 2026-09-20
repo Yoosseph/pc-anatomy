@@ -2558,7 +2558,7 @@ a {
   }
 }
 
-/* GPU comparison workbench ------------------------------------------------ */
+/* Component comparison workbench ------------------------------------------ */
 .compare-button,
 .comparison-specs-button,
 .comparison-exit,
@@ -2568,18 +2568,47 @@ a {
   justify-content: center;
 }
 .compare-button {
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 11px;
-  color: #d6e9ec;
-  background: #193036;
-  border: 1px solid #477984;
-  border-radius: 5px;
-  font-size: 12px;
+  width: 100%;
+  min-height: 58px;
+  justify-content: flex-start;
+  gap: 11px;
+  margin: 0 0 14px;
+  padding: 9px 10px;
+  color: #d8edf0;
+  background: #1b3339;
+  border: 1px solid #4d7f89;
+  border-radius: 6px;
+  text-align: left;
 }
 .compare-button:hover {
   background: #203c43;
   border-color: #68a7b4;
+}
+.compare-button > svg:first-child {
+  color: var(--accent-bright);
+}
+.compare-button > svg:last-child {
+  margin-left: auto;
+  color: #7faab2;
+}
+.compare-button > span {
+  min-width: 0;
+}
+.compare-button strong,
+.compare-button small {
+  display: block;
+}
+.compare-button strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.compare-button small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #91aeb4;
+  font-size: 9px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .comparison-workbench {
   background: radial-gradient(
@@ -2665,12 +2694,38 @@ a {
   position: absolute;
   inset: 76px 0 auto;
   z-index: 10;
+  height: 132px;
+  background: #17191b;
+  border-bottom: 1px solid #34373b;
+}
+.comparison-groups {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-bottom: 1px solid #303338;
+}
+.comparison-groups button {
+  min-height: 28px;
+  padding: 0 13px;
+  color: #8e939a;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.comparison-groups button:hover {
+  color: #d9dde0;
+  background: #25282b;
+}
+.comparison-groups button[aria-pressed='true'] {
+  color: #eef8f9;
+  background: #304247;
+}
+.comparison-pair {
   height: 94px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: stretch;
-  background: #17191b;
-  border-bottom: 1px solid #34373b;
 }
 .comparison-selector {
   position: relative;
@@ -2747,7 +2802,7 @@ a {
 }
 .comparison-viewport {
   position: absolute;
-  inset: 170px 0 112px;
+  inset: 208px 0 112px;
   touch-action: none;
 }
 .comparison-viewport canvas {
@@ -2771,7 +2826,7 @@ a {
 .comparison-divider {
   position: absolute;
   z-index: 4;
-  top: 170px;
+  top: 208px;
   bottom: 112px;
   left: 50%;
   width: 1px;
@@ -2791,7 +2846,7 @@ a {
 .comparison-pane-label {
   position: absolute;
   z-index: 5;
-  top: 190px;
+  top: 228px;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -2956,16 +3011,6 @@ a {
   line-height: 1.55;
 }
 
-@media (max-width: 1100px) {
-  .compare-button > span {
-    display: none;
-  }
-  .compare-button {
-    width: 36px;
-    padding: 0;
-  }
-}
-
 @media (max-width: 699px) {
   .comparison-topbar {
     height: 64px;
@@ -2998,6 +3043,17 @@ a {
   }
   .comparison-setup {
     inset-block-start: 64px;
+    height: 136px;
+  }
+  .comparison-groups {
+    height: 38px;
+    gap: 2px;
+  }
+  .comparison-groups button {
+    padding-inline: 9px;
+    font-size: 9px;
+  }
+  .comparison-pair {
     height: 98px;
   }
   .comparison-selector {
@@ -3029,7 +3085,7 @@ a {
   .comparison-mobile-switch {
     position: absolute;
     z-index: 9;
-    top: 162px;
+    top: 200px;
     left: 50%;
     display: flex;
     width: min(280px, calc(100vw - 36px));
@@ -3051,7 +3107,7 @@ a {
     background: #3a4b4f;
   }
   .comparison-viewport {
-    inset: 200px 0 142px;
+    inset: 238px 0 142px;
   }
   .comparison-pane-a11y {
     inset: 0;
@@ -3070,7 +3126,7 @@ a {
     display: none;
   }
   .comparison-pane-label {
-    top: 214px;
+    top: 252px;
   }
   .comparison-pane-label.left,
   .comparison-pane-label.right {
@@ -3133,6 +3189,12 @@ a {
   }
   .comparison-setup {
     inset-block-start: 52px;
+    height: 108px;
+  }
+  .comparison-groups {
+    height: 36px;
+  }
+  .comparison-pair {
     height: 72px;
   }
   .comparison-selector {
@@ -3145,14 +3207,14 @@ a {
     height: 42px;
   }
   .comparison-mobile-switch {
-    top: 124px;
+    top: 160px;
     height: 34px;
   }
   .comparison-viewport {
-    inset: 158px 0 88px;
+    inset: 194px 0 88px;
   }
   .comparison-pane-label {
-    top: 166px;
+    top: 202px;
   }
   .comparison-count {
     bottom: 96px;

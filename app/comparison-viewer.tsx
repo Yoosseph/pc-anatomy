@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { comparisonCard, type ComparisonState } from '@/lib/comparison-state';
+import {
+  comparisonItem,
+  type ComparisonViewState,
+} from '@/lib/comparison-state';
 import type { createComparisonViewer } from '@/lib/comparison-scene';
 
 type Props = {
-  state: ComparisonState;
+  state: ComparisonViewState;
   onCount: (count: number) => void;
 };
 
@@ -19,8 +22,8 @@ export default function ComparisonViewer({ state, onCount }: Props) {
       y: number;
     } | null>(null),
     [ready, setReady] = useState(false);
-  const left = comparisonCard(state.left),
-    right = comparisonCard(state.right);
+  const left = comparisonItem(state.group, state.left),
+    right = comparisonItem(state.group, state.right);
 
   useEffect(() => {
     latest.current = { state, onCount };
@@ -81,9 +84,7 @@ export default function ComparisonViewer({ state, onCount }: Props) {
         />
       </div>
       {!ready && !error && (
-        <output className="comparison-loading">
-          Loading both graphics cards…
-        </output>
+        <output className="comparison-loading">Loading both models…</output>
       )}
       {error && (
         <div className="comparison-error" role="alert">

@@ -1,19 +1,26 @@
 import * as T from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildModel, refreshBatches, type Piece } from './models';
 import { resolvePickNear } from './picking.ts';
 import { airflowShown, airflowStrength } from './airflow.ts';
 import { byId, openLevel } from './manifest';
 import type { ExplorerState, Selection } from './explorer-state.ts';
 import { isPhysical } from './levels.ts';
-import { inventoryLayout, smoothstep, spatialInventory } from './layout';
+import { smoothstep } from './layout';
 import {
+  applyPiecePose,
   disposeModelResources,
   laidOutAmount,
   pieceDestination,
   piecePosture,
+  prepareModelInventory,
 } from './model-stage';
+import {
+  animateObjects,
+  collectAnimatedObjects,
+  configureStageLighting,
+  createStageRuntime,
+  fitCameraToBounds,
+} from './stage-runtime.ts';
 /**
  * How far off a part you may point and still mean it, in CSS pixels.
  *
@@ -39,93 +46,8 @@ export function createViewer(
   initial: ExplorerState,
   callbacks: SceneCallbacks,
 ) {
-  const scene = new T.Scene();
-  // A phone runs the same geometry as a desktop, several hundred meshes and
-  // a third of a million triangles, on a fraction of the fill rate, with no
-  // fan and a battery. Drawing that at a phone's native 3x pixel ratio with a
-  // 2048-pixel shadow map costs roughly nine times the fragment work of a
-  // laptop and puts orbiting below the frame rate at which it still feels
-  // attached to your finger. Fewer pixels and a smaller shadow map cost
-  // almost nothing visible at arm's length, so quality follows the device.
-  const compact = matchMedia('(pointer: coarse)').matches || innerWidth < 900,
-    maxPixelRatio = compact ? 1.5 : 2,
-    shadowSize = compact ? 1024 : 2048;
-  const renderer = new T.WebGLRenderer({
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance',
-  });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
-  renderer.shadowMap.enabled = true;
-  // three.js now maps the retired soft constant to PCF internally and warns on
-  // every load. Naming the renderer's real mode keeps the console quiet.
-  renderer.shadowMap.type = T.PCFShadowMap;
-  renderer.setClearColor(0, 0);
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.02;
-  // Pointer interaction owns the canvas. The surrounding controls provide the
-  // keyboard path, so the drawing surface must not become an empty tab stop.
-  renderer.domElement.tabIndex = -1;
-  host.appendChild(renderer.domElement);
-  const pmrem = new T.PMREMGenerator(renderer),
-    room = new RoomEnvironment(),
-    env = pmrem.fromScene(room, 0.04);
-  scene.environment = env.texture;
-  scene.environmentIntensity = 1.0;
-  room.dispose();
-  pmrem.dispose();
-  // A near-overhead key with a bright sky behind it flattens every upward face
-  // in the machine to the same pale grey, whatever it is made of: the shroud,
-  // the backplate and the lid all came out the same colour as each other and
-  // none of them came out black. Raking the key across the build instead, and
-  // leaving the ambient to the environment map, keeps a dark panel dark and
-  // puts the brightness back where it belongs, in the highlight along an edge.
-  const fill = new T.HemisphereLight(0xccd9e2, 0x23211f, 0.3);
-  scene.add(fill);
-  const key = new T.DirectionalLight(0xfff2e2, 2.05);
-  key.position.set(-5, 7.5, 9);
-  key.castShadow = true;
-  key.shadow.mapSize.set(shadowSize, shadowSize);
-  // The frustum has to hold the machine *and* the shadow it throws, not just
-  // the machine: at thirteen units across and lit from one side, the cast
-  // shadow reaches well past the case, and a frustum sized to the case alone
-  // ends that shadow in a straight line across open floor.
-  Object.assign(key.shadow.camera, {
-    left: -19,
-    right: 19,
-    top: 19,
-    bottom: -19,
-    near: 0.1,
-    far: 60,
-  });
-  key.shadow.bias = -0.0002;
-  // Halving the shadow map doubles the world size of a shadow texel, so the
-  // offset that keeps a surface from shadowing itself has to grow with it.
-  key.shadow.normalBias = compact ? 0.03 : 0.017;
-  scene.add(key);
-  const rim = new T.DirectionalLight(0xb6d0e0, 1.75);
-  rim.position.set(-6, 3.5, -5);
-  scene.add(rim);
-  // A dim light from below and in front. Without it every downward face goes
-  // flat black and the parts read as silhouettes rather than as objects.
-  const kick = new T.DirectionalLight(0xa2bdcf, 0.5);
-  kick.position.set(7, -4, 8);
-  scene.add(kick);
-  const camera = new T.PerspectiveCamera(32, 1, 0.1, 200);
-  camera.position.set(9, 11, 14);
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.09;
-  controls.minDistance = 1;
-  controls.maxDistance = 100;
-  controls.enablePan = true;
-  controls.mouseButtons = {
-    LEFT: T.MOUSE.ROTATE,
-    MIDDLE: T.MOUSE.DOLLY,
-    RIGHT: T.MOUSE.PAN,
-  };
-  controls.touches = { ONE: T.TOUCH.ROTATE, TWO: T.TOUCH.DOLLY_PAN };
+  const runtime = createStageRuntime(host);
+  const { scene, renderer, key, camera, controls } = runtime;
   let state = initial,
     model = buildModel(state.level),
     amount = state.explode / 100,
@@ -165,9 +87,17 @@ export function createViewer(
     quat = new T.Quaternion(),
     bounds = new T.Box3(),
     v = new T.Vector3(),
+    cameraDirection = new T.Vector3(),
     color = new T.Color();
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
+  const poseScratch = {
+    position: layoutPosition,
+    inventoryTarget,
+    matrix,
+    quaternion: quat,
+    scale,
+  };
   const turning = {
     extent: new T.Vector3(),
     centre: new T.Vector3(),
@@ -198,21 +128,7 @@ export function createViewer(
   /** Which set of pieces the shelves were last packed for. */
   let layoutSignature = '';
   function refresh() {
-    // Hardware is lit like hardware; diagrams are lit flat so the blocks read
-    // as a drawing rather than as objects sitting on a table.
-    const hardwareScale = isPhysical(state.level);
-    // Shine comes from specular contrast, not from turning everything up:
-    // a strong environment for highlights, a restrained key so the diffuse
-    // surfaces keep their tone instead of blowing out to chalk.
-    // Dark hardware needs its contrast from specular, not from diffuse. A
-    // strong environment lights the edges, the columns and every machined face
-    // while leaving the coated panels as dark as they really are; turning the
-    // key up instead would only wash those panels back to grey.
-    scene.environmentIntensity =
-      state.level === 'pc' ? 0.82 : hardwareScale ? 1.05 : 0.48;
-    key.intensity = state.level === 'pc' ? 1.85 : hardwareScale ? 2.2 : 0.85;
-    rim.intensity = hardwareScale ? 1.6 : 0.7;
-    kick.intensity = hardwareScale ? 0.55 : 0.28;
+    configureStageLighting(runtime, state.level);
     const visible = model.pieces.filter(shown);
     // Packing the shelves is the one expensive thing in here, and `refresh`
     // runs on every state change, which includes every step of the explode
@@ -228,24 +144,7 @@ export function createViewer(
       visible.map((p) => p.key).join(',');
     if (signature !== layoutSignature) {
       layoutSignature = signature;
-      const positions = inventoryLayout(visible.length, Math.max(0.6, aspect));
-      const hardware = hardwareScale
-        ? spatialInventory(
-            visible.map((p) => ({
-              extent: (p.lieExtent ?? p.extent).toArray() as [
-                number,
-                number,
-                number,
-              ],
-              size: p.size,
-            })),
-            aspect,
-          )
-        : null;
-      visible.forEach((p, i) => {
-        p.inventory.set(...(hardware?.[i].position ?? positions[i]));
-        p.inventoryScale = hardware?.[i].scale ?? 1.12 / p.size;
-      });
+      prepareModelInventory(model, state.level, aspect, visible);
     }
     for (const p of model.pieces) p.visible = shown(p);
     for (const child of model.root.children)
@@ -306,25 +205,24 @@ export function createViewer(
     if (bounds.isEmpty()) {
       bounds.set(new T.Vector3(-4, -1, -2), new T.Vector3(4, 1, 2));
     }
-    bounds.getCenter(targetLook);
     const size = bounds.getSize(v);
     const direction =
       // Diagrams read from directly above once they are fully separated.
       // Hardware does not: it is laid out in depth, so stay on the orbit.
       state.explode > 85 && !isPhysical(state.level)
-        ? new T.Vector3(0, 1, 0.001)
+        ? cameraDirection.set(0, 1, 0.001)
         : state.view === 'top'
-          ? new T.Vector3(0, 1, 0.001)
+          ? cameraDirection.set(0, 1, 0.001)
           : state.view === 'front'
-            ? new T.Vector3(0, 0.05, 1)
+            ? cameraDirection.set(0, 0.05, 1)
             : state.view === 'back'
-              ? new T.Vector3(0, 0.05, -1)
+              ? cameraDirection.set(0, 0.05, -1)
               : state.level === 'motherboard' && state.explode < 15 && !focus
-                ? new T.Vector3(0.18, 1.9, 0.55)
+                ? cameraDirection.set(0.18, 1.9, 0.55)
                 : // Look down on something flat like a card; stand nearer eye
                   // level for something tall like a tower, or the lid is all
                   // you see.
-                  new T.Vector3(
+                  cameraDirection.set(
                     0.7,
                     T.MathUtils.lerp(
                       1,
@@ -333,12 +231,6 @@ export function createViewer(
                     ),
                     1.2,
                   );
-    direction.normalize();
-    // Fit the bounding sphere rather than guessing from width and height: a
-    // flat card and a tall tower then frame the same way, at any aspect ratio.
-    const radius = Math.max(size.length() / 2, 0.35);
-    const vertical = T.MathUtils.degToRad(camera.fov);
-    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * camera.aspect);
     // A selected part needs breathing room inside the smaller stage left by
     // the detail panel. The old 0.8 multiplier cropped focused parts at every
     // edge, even though the ordinary whole-model fit looked intentional.
@@ -348,10 +240,16 @@ export function createViewer(
           camera.aspect < 1
         ? 1.05
         : 0.8;
-    const d = (radius / Math.sin(Math.min(vertical, horizontal) / 2)) * padding;
-    targetPosition
-      .copy(targetLook)
-      .addScaledVector(direction, Math.max(focus ? 3.2 : 6, d));
+    fitCameraToBounds(
+      bounds,
+      camera,
+      targetPosition,
+      targetLook,
+      direction,
+      v,
+      padding,
+      focus ? 3.2 : 6,
+    );
   }
   function boxFor(p: Piece, target: T.Box3) {
     // Use the part's authored bounds instead of measuring its descendants on
@@ -375,7 +273,7 @@ export function createViewer(
    */
   let flows: ((seconds: number, strength: number) => void)[] = [];
   const collectAnimations = () => {
-    animated = [];
+    animated = collectAnimatedObjects(model.root);
     flows = [];
     model.root.traverse((object) => {
       if (object.userData.airflowTick)
@@ -385,10 +283,6 @@ export function createViewer(
             strength: number,
           ) => void,
         );
-      if (object.userData.spinRate || object.userData.seekAmplitude) {
-        object.userData.restRotationY ??= object.rotation.y;
-        animated.push(object);
-      }
     });
   };
   collectAnimations();
@@ -436,10 +330,6 @@ export function createViewer(
     let selected = false;
     selectedBox.box.makeEmpty();
     for (const p of model.pieces) {
-      const dst = destination(p, amount);
-      const reveal = p.reveal
-        ? smoothstep(p.reveal, p.reveal + 0.07, amount)
-        : 1;
       // Everything but the part being opened clears away, then the new scale
       // grows back in. Multiplying the scale keeps explode and reveal intact.
       let ramp = 1;
@@ -450,16 +340,8 @@ export function createViewer(
               ? 1
               : 1 - ease(dive.t)
             : ease(dive.t);
-      const s = p.visible ? dst.scale * reveal * ramp : 0;
-      p.object.position.copy(dst.position);
-      p.object.scale.setScalar(s);
-      if (p.lie && p.restQuat)
-        p.object.quaternion
-          .copy(p.restQuat)
-          .slerp(p.lie, laidOutAmount(amount));
+      applyPiecePose(p, state.level, amount, poseScratch, ramp);
       if (p.batch) {
-        matrix.compose(p.object.position, quat, scale.setScalar(s));
-        p.batch.setMatrixAt(p.index!, matrix);
         color.set(
           matches(p, state.selection)
             ? '#ffd790'
@@ -469,7 +351,7 @@ export function createViewer(
         );
         p.batch.setColorAt(p.index!, color);
         batches.add(p.batch);
-      } else p.object.visible = p.visible;
+      }
       if (matches(p, state.selection) && p.visible) {
         boxFor(p, selectionBounds);
         selectedBox.box.union(selectionBounds);
@@ -478,18 +360,7 @@ export function createViewer(
     }
     refreshBatches(batches);
     if (!reducedMotion && animated.length) {
-      const seconds = now / 1000;
-      for (const object of animated) {
-        const rest = object.userData.restRotationY as number;
-        if (object.userData.spinRate)
-          object.rotation.y =
-            rest + seconds * (object.userData.spinRate as number);
-        else
-          object.rotation.y =
-            rest +
-            Math.sin(seconds * 1.35) *
-              (object.userData.seekAmplitude as number);
-      }
+      animateObjects(animated, now / 1000);
       // Operating parts keep the scene alive. requestAnimationFrame pauses in
       // background tabs, and reduced-motion users receive the static model.
       changed = true;
@@ -712,7 +583,6 @@ export function createViewer(
       disposed = true;
       cancelAnimationFrame(frameId);
       observer.disconnect();
-      controls.dispose();
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointermove', move);
@@ -725,11 +595,7 @@ export function createViewer(
       (selectedBox.material as T.Material).dispose();
       hoverBox.geometry.dispose();
       (hoverBox.material as T.Material).dispose();
-      env.dispose();
-      key.shadow.map?.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
-      canvas.remove();
+      runtime.dispose();
     },
   };
 }

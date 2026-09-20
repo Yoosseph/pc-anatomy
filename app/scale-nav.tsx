@@ -7,6 +7,7 @@ import {
   Cpu,
   Droplets,
   Fan,
+  GitCompareArrows,
   HardDrive,
   Layers3,
   Microscope,
@@ -62,6 +63,7 @@ type Props = {
   onOpenMenu: (menu: LevelId | null) => void;
   onOpenSubmenu: (submenu: LevelId | 'none' | null) => void;
   onNavigate: (level: LevelId) => void;
+  onCompare: () => void;
   onClose: () => void;
 };
 
@@ -72,6 +74,7 @@ export default function ScaleNav({
   onOpenMenu,
   onOpenSubmenu,
   onNavigate,
+  onCompare,
   onClose,
 }: Props) {
   return (
@@ -86,6 +89,14 @@ export default function ScaleNav({
           <X size={17} />
         </button>
       </div>
+      <button className="compare-button" onClick={onCompare}>
+        <GitCompareArrows size={17} />
+        <span>
+          <strong>Compare components</strong>
+          <small>GPUs, power supplies, and processors</small>
+        </span>
+        <ChevronRight size={15} />
+      </button>
       <nav className="scale-navigation" aria-label="Exploration scale">
         <button
           className={level === rootLevel ? 'active' : ''}

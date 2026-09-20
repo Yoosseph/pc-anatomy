@@ -1,24 +1,29 @@
 import * as T from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
   comparisonPanePoint,
+  type ComparisonLevel,
   type ComparisonSide,
-  type ComparisonState,
-  type GpuComparisonLevel,
+  type ComparisonViewState,
 } from './comparison-state.ts';
 import { byId } from './manifest.ts';
+import { isPhysical } from './levels.ts';
 import {
+  applyPiecePose,
   commonModelBounds,
   disposeModelResources,
-  laidOutAmount,
-  pieceDestination,
   posedModelBounds,
   prepareModelInventory,
   type BuiltModel,
 } from './model-stage.ts';
 import { buildModel, refreshBatches } from './models.ts';
 import { resolvePickNear } from './picking.ts';
+import {
+  animateObjects,
+  collectAnimatedObjects,
+  configureStageLighting,
+  createStageRuntime,
+  fitCameraToBounds,
+} from './stage-runtime.ts';
 
 const BREAKPOINT = 700,
   MOUSE_AIM = 8;
@@ -30,87 +35,25 @@ export type ComparisonSceneCallbacks = {
 };
 
 type PaneModel = {
-  level: GpuComparisonLevel;
+  level: ComparisonLevel;
   model: BuiltModel;
   layoutSignature: string;
 };
 
 export function createComparisonViewer(
   host: HTMLDivElement,
-  initial: ComparisonState,
+  initial: ComparisonViewState,
   callbacks: ComparisonSceneCallbacks,
 ) {
-  const scene = new T.Scene();
-  const compact = matchMedia('(pointer: coarse)').matches || innerWidth < 900,
-    maxPixelRatio = compact ? 1.5 : 2,
-    shadowSize = compact ? 1024 : 2048;
-  const renderer = new T.WebGLRenderer({
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance',
-  });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFShadowMap;
-  renderer.setClearColor(0, 0);
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.02;
+  const runtime = createStageRuntime(host);
+  const { scene, renderer, key, camera, controls } = runtime;
   renderer.autoClear = false;
   renderer.info.autoReset = false;
-  renderer.domElement.tabIndex = -1;
-  host.appendChild(renderer.domElement);
 
-  const pmrem = new T.PMREMGenerator(renderer),
-    room = new RoomEnvironment(),
-    environment = pmrem.fromScene(room, 0.04);
-  scene.environment = environment.texture;
-  scene.environmentIntensity = 1.05;
-  room.dispose();
-  pmrem.dispose();
-
-  scene.add(new T.HemisphereLight(0xccd9e2, 0x23211f, 0.3));
-  const key = new T.DirectionalLight(0xfff2e2, 2.2);
-  key.position.set(-5, 7.5, 9);
-  key.castShadow = true;
-  key.shadow.mapSize.set(shadowSize, shadowSize);
-  Object.assign(key.shadow.camera, {
-    left: -19,
-    right: 19,
-    top: 19,
-    bottom: -19,
-    near: 0.1,
-    far: 60,
-  });
-  key.shadow.bias = -0.0002;
-  key.shadow.normalBias = compact ? 0.03 : 0.017;
-  scene.add(key);
-  const rim = new T.DirectionalLight(0xb6d0e0, 1.6);
-  rim.position.set(-6, 3.5, -5);
-  scene.add(rim);
-  const kick = new T.DirectionalLight(0xa2bdcf, 0.55);
-  kick.position.set(7, -4, 8);
-  scene.add(kick);
-
-  const camera = new T.PerspectiveCamera(32, 1, 0.1, 200);
-  camera.position.set(9, 11, 14);
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.09;
-  controls.minDistance = 1;
-  controls.maxDistance = 100;
-  controls.enablePan = true;
-  controls.mouseButtons = {
-    LEFT: T.MOUSE.ROTATE,
-    MIDDLE: T.MOUSE.DOLLY,
-    RIGHT: T.MOUSE.PAN,
-  };
-  controls.touches = { ONE: T.TOUCH.ROTATE, TWO: T.TOUCH.DOLLY_PAN };
-
-  const makePane = (level: GpuComparisonLevel): PaneModel => {
+  const makePane = (level: ComparisonLevel): PaneModel => {
     const model = buildModel(level);
     model.root.traverse((object) => {
-      if (object.userData.contextFrame) object.visible = false;
+      if (object.userData.airflowTick) object.visible = false;
     });
     scene.add(model.root);
     return { level, model, layoutSignature: '' };
@@ -130,6 +73,7 @@ export function createComparisonViewer(
     activePointer: number | null = null,
     dragStart: [number, number] = [0, 0],
     gestureMoved = false;
+  configureStageLighting(runtime, initial.left);
 
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
@@ -142,21 +86,19 @@ export function createComparisonViewer(
     leftBounds = new T.Box3(),
     rightBounds = new T.Box3(),
     commonBounds = new T.Box3(),
+    cameraDirection = new T.Vector3(),
     raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
+  const poseScratch = { position, inventoryTarget, matrix, quaternion, scale };
   const activeTouches = new Set<number>();
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animated: T.Object3D[] = [];
 
   function collectAnimations() {
-    animated = [];
-    for (const { model } of Object.values(panes))
-      model.root.traverse((object) => {
-        if (object.userData.spinRate || object.userData.seekAmplitude) {
-          object.userData.restRotationY ??= object.rotation.y;
-          animated.push(object);
-        }
-      });
+    animated = collectAnimatedObjects(
+      panes.left.model.root,
+      panes.right.model.root,
+    );
   }
   collectAnimations();
 
@@ -195,6 +137,7 @@ export function createComparisonViewer(
     ).length;
     callbacks.stats(visible + visibleRight);
     host.dataset.pair = `${state.left}:${state.right}`;
+    host.dataset.group = state.group;
     host.dataset.visible = String(visible + visibleRight);
     settle = 90;
   }
@@ -202,32 +145,8 @@ export function createComparisonViewer(
   function posePane(pane: PaneModel) {
     const batches = new Set<T.InstancedMesh>();
     for (const piece of pane.model.pieces) {
-      const destination = pieceDestination(
-        piece,
-        pane.level,
-        amount,
-        position,
-        inventoryTarget,
-      );
-      const reveal = piece.reveal
-        ? T.MathUtils.smoothstep(amount, piece.reveal, piece.reveal + 0.07)
-        : 1;
-      const pieceScale = piece.visible ? destination.scale * reveal : 0;
-      piece.object.position.copy(destination.position);
-      piece.object.scale.setScalar(pieceScale);
-      if (piece.lie && piece.restQuat)
-        piece.object.quaternion
-          .copy(piece.restQuat)
-          .slerp(piece.lie, laidOutAmount(amount));
-      if (piece.batch) {
-        matrix.compose(
-          piece.object.position,
-          quaternion.identity(),
-          scale.setScalar(pieceScale),
-        );
-        piece.batch.setMatrixAt(piece.index!, matrix);
-        batches.add(piece.batch);
-      } else piece.object.visible = piece.visible;
+      applyPiecePose(piece, pane.level, amount, poseScratch);
+      if (piece.batch) batches.add(piece.batch);
     }
     refreshBatches(batches);
     pane.model.root.updateMatrixWorld(true);
@@ -237,26 +156,28 @@ export function createComparisonViewer(
     posedModelBounds(panes.left.model, panes.left.level, amount, leftBounds);
     posedModelBounds(panes.right.model, panes.right.level, amount, rightBounds);
     commonModelBounds(leftBounds, rightBounds, commonBounds);
-    commonBounds.getCenter(targetLook);
     commonBounds.getSize(size);
-    const direction = new T.Vector3(
-      0.7,
-      T.MathUtils.lerp(
-        1,
-        0.44,
-        Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
-      ),
-      1.2,
-    ).normalize();
-    const radius = Math.max(size.length() / 2, 0.35);
-    const vertical = T.MathUtils.degToRad(camera.fov);
-    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * camera.aspect);
-    const distance =
-      (radius / Math.sin(Math.min(vertical, horizontal) / 2)) *
-      (camera.aspect < 1 ? 1.08 : 1);
-    targetPosition
-      .copy(targetLook)
-      .addScaledVector(direction, Math.max(6, distance));
+    const direction =
+      !isPhysical(state.left) && amount > 0.85
+        ? cameraDirection.set(0, 1, 0.001)
+        : cameraDirection.set(
+            0.7,
+            T.MathUtils.lerp(
+              1,
+              0.44,
+              Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
+            ),
+            1.2,
+          );
+    fitCameraToBounds(
+      commonBounds,
+      camera,
+      targetPosition,
+      targetLook,
+      direction,
+      size,
+      camera.aspect < 1 ? 1.08 : 1,
+    );
   }
 
   function renderPane(side: ComparisonSide, x: number, width: number) {
@@ -281,21 +202,15 @@ export function createComparisonViewer(
       ? state.explode / 100
       : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
-    key.shadow.intensity = 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9);
+    key.shadow.intensity = isPhysical(state.left)
+      ? 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9)
+      : 0;
     renderer.shadowMap.autoUpdate = key.shadow.intensity > 0.002;
     posePane(panes.left);
     posePane(panes.right);
 
     if (!reducedMotion && animated.length) {
-      const seconds = now / 1000;
-      for (const object of animated) {
-        const rest = object.userData.restRotationY as number;
-        object.rotation.y = object.userData.spinRate
-          ? rest + seconds * (object.userData.spinRate as number)
-          : rest +
-            Math.sin(seconds * 1.35) *
-              (object.userData.seekAmplitude as number);
-      }
+      animateObjects(animated, now / 1000);
       changed = true;
     }
 
@@ -463,7 +378,7 @@ export function createComparisonViewer(
   refresh();
   resize();
 
-  function replacePane(side: ComparisonSide, level: GpuComparisonLevel) {
+  function replacePane(side: ComparisonSide, level: ComparisonLevel) {
     const previous = panes[side];
     scene.remove(previous.model.root);
     disposeModelResources(previous.model);
@@ -471,7 +386,7 @@ export function createComparisonViewer(
   }
 
   return {
-    update(next: ComparisonState) {
+    update(next: ComparisonViewState) {
       callbacks.hover(null, 0, 0);
       pointerPosition = null;
       const swapped = next.left === state.right && next.right === state.left;
@@ -489,6 +404,7 @@ export function createComparisonViewer(
         panes.left.level = next.left;
       if (swapped || next.right !== panes.right.level)
         panes.right.level = next.right;
+      configureStageLighting(runtime, next.left);
       collectAnimations();
       refresh();
       autoCamera = cameraChange || autoCamera;
@@ -498,7 +414,6 @@ export function createComparisonViewer(
       disposed = true;
       cancelAnimationFrame(frameId);
       observer.disconnect();
-      controls.dispose();
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointermove', move);
@@ -509,11 +424,7 @@ export function createComparisonViewer(
         scene.remove(pane.model.root);
         disposeModelResources(pane.model);
       }
-      environment.dispose();
-      key.shadow.map?.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
-      canvas.remove();
+      runtime.dispose();
     },
   };
 }

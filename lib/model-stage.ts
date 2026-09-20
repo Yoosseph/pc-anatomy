@@ -54,6 +54,52 @@ export function pieceDestination(
   };
 }
 
+export type PiecePoseScratch = {
+  position: T.Vector3;
+  inventoryTarget: T.Vector3;
+  matrix: T.Matrix4;
+  quaternion: T.Quaternion;
+  scale: T.Vector3;
+};
+
+/** Apply the shared explode, reveal, inventory, and lay-flat pose to one piece. */
+export function applyPiecePose(
+  piece: Piece,
+  level: LevelId,
+  value: number,
+  scratch: PiecePoseScratch,
+  scaleMultiplier = 1,
+) {
+  const destination = pieceDestination(
+    piece,
+    level,
+    value,
+    scratch.position,
+    scratch.inventoryTarget,
+  );
+  const reveal = piece.reveal
+    ? smoothstep(piece.reveal, piece.reveal + 0.07, value)
+    : 1;
+  const pieceScale = piece.visible
+    ? destination.scale * reveal * scaleMultiplier
+    : 0;
+  piece.object.position.copy(destination.position);
+  piece.object.scale.setScalar(pieceScale);
+  if (piece.lie && piece.restQuat)
+    piece.object.quaternion
+      .copy(piece.restQuat)
+      .slerp(piece.lie, laidOutAmount(value));
+  if (piece.batch) {
+    scratch.matrix.compose(
+      piece.object.position,
+      scratch.quaternion.identity(),
+      scratch.scale.setScalar(pieceScale),
+    );
+    piece.batch.setMatrixAt(piece.index!, scratch.matrix);
+  } else piece.object.visible = piece.visible;
+  return pieceScale;
+}
+
 /** Pack the visible model pieces once for the current pane aspect. */
 export function prepareModelInventory(
   model: BuiltModel,

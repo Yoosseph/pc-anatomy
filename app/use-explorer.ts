@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { byId, categories, openLevel, type Category } from '@/lib/manifest';
 import { airflowShown } from '@/lib/airflow';
 import {
@@ -16,6 +16,7 @@ import {
   submenuRoot,
   type LevelId,
 } from '@/lib/levels';
+import { useDisassemblyPlayback } from './use-disassembly-playback';
 
 /** Graphics cards whose chip diagrams open directly, without a dive. */
 const gpuRoots = new Set<LevelId>(['card', 'rx9070', 'arcb580']);
@@ -29,7 +30,6 @@ const gpuRoots = new Set<LevelId>(['card', 'rx9070', 'arcb580']);
  */
 export function useExplorer() {
   const [state, setState] = useState<ExplorerState>(initialState);
-  const [playing, setPlaying] = useState(false);
   const [layers, setLayers] = useState(false);
   const [hiddenMenuOpen, setHiddenMenuOpen] = useState(false);
   // The subsystem whose menu is open. Follows wherever you are unless you
@@ -48,10 +48,21 @@ export function useExplorer() {
   const selected =
     state.selection && !state.diveInto ? byId[state.selection.concept] : null;
   const logical = !isPhysical(state.level);
+  const updateExplode = useCallback(
+    (explode: number) =>
+      setState((current) => ({ ...current, explode, focusRevision: 0 })),
+    [],
+  );
+  const {
+    playing,
+    setExplode,
+    stop: stopDisassembly,
+    toggleAuto,
+  } = useDisassemblyPlayback(state.explode, updateExplode);
 
   const navigate = useCallback(
     (level: LevelId, selection: Selection | null = null) => {
-      setPlaying(false);
+      stopDisassembly();
       setHiddenMenuOpen(false);
       setOpenMenu(menuRoot(level));
       setOpenSubmenu(null);
@@ -70,11 +81,11 @@ export function useExplorer() {
       }));
       setLayers(false);
     },
-    [],
+    [stopDisassembly],
   );
 
   const reset = useCallback(() => {
-    setPlaying(false);
+    stopDisassembly();
     setHiddenMenuOpen(false);
     setOpenMenu(null);
     setOpenSubmenu(null);
@@ -83,7 +94,7 @@ export function useExplorer() {
       cameraRevision: s.cameraRevision + 1,
     }));
     setLayers(false);
-  }, []);
+  }, [stopDisassembly]);
 
   // Physical disassembly is one continuous move owned by the scene: the stage clears
   // around the part you clicked while the camera closes in on it, and when the
@@ -104,7 +115,7 @@ export function useExplorer() {
         navigate(target, { concept: levels[target].concept });
         return true;
       }
-      setPlaying(false);
+      stopDisassembly();
       setLayers(false);
       setState((s) =>
         s.diveInto
@@ -121,7 +132,7 @@ export function useExplorer() {
       );
       return true;
     },
-    [navigate],
+    [navigate, stopDisassembly],
   );
 
   const arrive = useCallback(() => {
@@ -171,53 +182,6 @@ export function useExplorer() {
     setState((s) => selectSearch(s, id));
     setLayers(false);
   }, []);
-
-  // Runs the disassembly slowly enough to follow, and hands control straight
-  // back the moment the viewer touches the slider or changes scale.
-  useEffect(() => {
-    if (!playing) return;
-    let frame = 0,
-      last = performance.now();
-    const step = (now: number) => {
-      // Clamp the step so one stalled frame (a slow machine, a background
-      // tab, a heavy rebuild) cannot teleport the disassembly to the end.
-      // The run then takes a little longer on slow hardware but stays watchable.
-      const delta = Math.min(0.1, (now - last) / 1000);
-      last = now;
-      setState((s) => {
-        const next = Math.min(100, s.explode + delta * 11);
-        if (next >= 100) setPlaying(false);
-        return { ...s, explode: next, focusRevision: 0 };
-      });
-      frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [playing]);
-
-  const setExplode = useCallback((value: number) => {
-    setPlaying(false);
-    setState((s) => ({ ...s, explode: value, focusRevision: 0 }));
-  }, []);
-
-  const toggleAuto = () => {
-    if (playing) {
-      setPlaying(false);
-      return;
-    }
-    // Someone who has asked for less motion gets the end state, not a
-    // nine-second animation they did not want.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setState((s) => ({ ...s, explode: 100, focusRevision: 0 }));
-      return;
-    }
-    setState((s) => ({
-      ...s,
-      explode: s.explode >= 99 ? 0 : s.explode,
-      focusRevision: 0,
-    }));
-    setPlaying(true);
-  };
 
   const toggleCategory = (category: Category) =>
     setState((s) => ({

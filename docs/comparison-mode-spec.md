@@ -1,339 +1,184 @@
-# GPU comparison mode
+# Same-category comparison mode
 
-Status: Draft for maintainer review  
-Issue: [#8 Interactive comparison mode](https://github.com/Yoosseph/pc-anatomy/issues/8)  
-Proposed owner: `@rheos`
+Status: Implemented in pull request #17; awaiting maintainer review
+
+Issue: [#8 Interactive comparison mode](https://github.com/Yoosseph/pc-anatomy/issues/8)
+
+Owner: `@rheos`
 
 ## Summary
 
-Add a comparison workbench for the three existing physical GPU models. A user
-chooses two different cards, sees them at true relative scale in a split view,
-orbits both with one camera, and drives both through the same disassembly
-timeline. A comparison panel presents the cards' key published specifications.
+Add one reusable comparison workbench for existing models that are meaningfully
+comparable within the same category. A reader selects a category, chooses two
+different models, sees them in synchronized panes, drives both through one
+disassembly timeline, and opens a category-specific specification table.
 
-The first release is intentionally GPU-only. It establishes a reusable
-comparison architecture without making every scale and component family part of
-the initial change.
+Version 1 supports the catalogue pairs the maintainer identified:
 
-## Why this belongs in PC Anatomy
+- Graphics cards: RTX 5090, RX 9070 XT, and Arc B580.
+- Power supplies: TUF Gaming 850W Gold and 750W Bronze.
+- Processors: Ryzen 9 9950X and Core Ultra 9 285K.
 
-The project already has three complete graphics-card models drawn at the same
-millimetre scale. They can currently be explored only one at a time. Comparison
-mode makes the existing work more useful by exposing differences in physical
-size, cooler construction, interfaces, power, memory, and architecture without
-requiring the reader to remember one card while navigating another.
+The motherboard category has only one model and therefore cannot form a pair.
+Cross-category comparison remains a separate product decision.
 
 ## Goals
 
-- Compare any two different cards from `card`, `rx9070`, and `arcb580`.
-- Preserve the cards' real relative size. A smaller card must look smaller.
+- Compare any two different configured models within one supported category.
+- Use one workbench and renderer for every category, not category-specific
+  copies.
+- Preserve true relative scale where the source models share physical units.
+- Preserve the deliberately shared diagram scale of the two processor models.
 - Keep camera orientation, zoom, and disassembly progress synchronized.
-- Use one WebGL renderer and one canvas.
-- Reuse the current model builders, catalogue data, lighting, motion language,
-  reduced-motion behaviour, and visual design.
-- Remain usable on desktop, tablet, and phone.
-- Keep ordinary exploration behaviour unchanged when comparison mode is off.
+- Reuse current model builders, catalogue data, disassembly controls, stage
+  runtime, motion, picking, reduced-motion behavior, and visual design.
+- Keep ordinary exploration unchanged when comparison mode is off.
 
-## Non-goals for version 1
+## Non-goals
 
-- Comparing arbitrary components or logical chip diagrams.
-- Comparing more than two cards.
-- Comparing a card with itself.
-- Independent cameras or independent disassembly timelines.
-- Diving from a compared card into its GPU architecture.
-- Per-part hiding, isolation, airflow, or detailed part inspection inside the
-  comparison workbench.
-- Adding new card models or new technical claims.
-- URL persistence, sharing, ecommerce, pricing, or PC compatibility checks.
+- Comparing models from different categories.
+- Comparing categories whose existing builders use unrelated presentation
+  scales, such as a case fan against a liquid cooler.
+- Comparing more than two models or a model with itself.
+- Independent cameras or disassembly timelines.
+- Diving, hiding, isolation, airflow, or part inspection in comparison mode.
+- Adding models, technical claims, pricing, or compatibility checking.
 - Introducing React Three Fiber, imported models, or runtime asset downloads.
 
 ## User experience
 
 ### Entry and exit
 
-- Add a labelled `Compare GPUs` action to the application chrome.
-- Entering comparison mode opens with RTX 5090 on the left and RX 9070 XT on
-  the right.
-- A clear `Back to explorer` action restores the normal workbench. Leaving and
-  returning may reset comparison state in version 1.
+- A labelled `Compare components` action sits with `Explore by scale`, where
+  readers choose models. Its supporting copy names the supported categories.
+- Entering opens Graphics cards with RTX 5090 on the left and RX 9070 XT on the
+  right.
+- `Back to explorer` restores normal exploration and focus returns to the entry
+  action.
 
-### Card selection
+### Category and model selection
 
-- Each pane has a native or Base UI select control listing the three cards.
-- The card selected in the opposite pane is disabled.
-- A central `Swap sides` action exchanges the two selections without changing
-  camera position or explosion progress.
-- Each pane is visibly labelled with product name and vendor/architecture.
+- A three-option category control switches among Graphics cards, Power
+  supplies, and Processors.
+- Switching categories selects that category's first valid pair, resets the
+  shared disassembly value, and closes the specification sheet.
+- Each pane has a native select listing only models in the active category.
+- The model selected in the opposite pane is disabled.
+- `Swap sides` exchanges the two models without rebuilding them or changing
+  camera position.
 
 ### 3D interaction
 
-- On screens at least 700 CSS pixels wide, the stage is divided into equal left
-  and right viewports with a visible divider.
-- Dragging, zooming, or panning in either viewport changes one shared camera, so
-  both cards remain at the same angle and zoom.
-- A single Auto button and slider drives both cards from assembled through
-  dissection to inventory.
-- Camera fitting uses the larger of the two posed bounds. Both panes therefore
-  use the same camera distance and preserve relative physical scale.
-- Hover labels identify pieces under the pointer within the correct pane.
-- Reduced-motion users receive immediate slider changes and no automatic
-  interpolation, matching the existing explorer.
+- At 700 CSS pixels and wider, two isolated scissored panes share one camera
+  and one `OrbitControls` pair.
+- Below 700 pixels, one A/B pane is rendered at a time while camera and
+  disassembly state are retained.
+- A single Auto button and slider drives both models.
+- Camera fitting uses the union of both posed bounds, so neither pane is
+  normalized independently.
+- Logical processor diagrams move to a top view as they reach inventory,
+  matching normal exploration.
+- Hover labels resolve only against the model in the pointer's pane.
 
 ### Specifications
 
-- A `Specs` action opens a two-column comparison sheet.
-- Rows in version 1: architecture, GPU, memory, board power, interface, physical
-  dimensions, and exterior/reference design.
-- Values come from the existing concept catalogue. Presentation aliases may
-  normalize labels such as `Graphics power` and `Total board power`, but the
-  values themselves must not be duplicated or rewritten.
-- A differing value is emphasized visually without declaring a winner.
-- Source and accuracy language remains available through the existing card
-  catalogue rather than being copied into comparison-only content.
+Values are projected from existing catalogue concepts; comparison state does
+not duplicate product facts.
 
-### Small screens
+- GPU: architecture, GPU, memory, board power, interface, dimensions, exterior.
+- PSU: format, output, efficiency, cabling, dimensions.
+- CPU: cores/threads, clocks, cache, process, socket, power.
 
-- Below 700 CSS pixels, render one card at a time and provide an accessible
-  `Left` / `Right` segmented control. This is the version 1 mobile fallback.
-- Camera orientation, zoom, and explosion progress remain shared when switching
-  cards.
-- The specifications sheet becomes a bottom sheet and remains independently
-  scrollable.
-- Do not create two WebGL contexts or render two full card models simultaneously
-  on a phone merely to preserve the desktop layout.
+Differing values are emphasized without ranking either model. Sources and
+accuracy language remain available in the explorer.
 
-## Rendering architecture
+## Architecture
 
-### Decision
+### Category registry
 
-Use one `WebGLRenderer`, one canvas, one `Scene`, and one shared
-`PerspectiveCamera`/`OrbitControls` pair.
+`lib/comparison-state.ts` owns a typed registry. Each group declares its label,
+eligible levels, root catalogue concepts, and specification rows. State
+transitions validate category membership and prevent identical pairs. Adding a
+future category should be a registry change plus tests, not a new workbench.
 
-Both card models are attached to the scene at the same origin. On wide screens,
-the renderer uses `setViewport` and `setScissor` to draw the left and right
-halves. Only the model belonging to the active pane is visible during that
-pane's render pass. On small screens, only the selected pane is rendered.
+### Shared stage runtime
 
-This design provides:
+`lib/stage-runtime.ts` owns renderer, environment, lighting, camera,
+`OrbitControls`, animated-object helpers, camera fitting, and base disposal.
+Both the ordinary explorer and comparison renderer compose this runtime.
 
-- one WebGL context and one environment map;
-- a naturally synchronized camera;
-- strict separation between panes even at full inventory spread;
-- a common camera distance, preserving true relative scale;
-- pane-aware raycasting without duplicating the application renderer.
+`lib/model-stage.ts` owns model posing, inventory placement, posed bounds, and
+model-resource disposal. Both renderers call these primitives. React uses one
+`useDisassemblyPlayback` hook for automatic 0–100 playback in both modes.
 
-Two independent canvases/renderers are explicitly rejected because they would
-duplicate GPU contexts, environment setup, resize handling, animation loops,
-and mobile fill-rate cost.
+### Comparison renderer
 
-### Shared model-stage logic
+The comparison engine owns one `WebGLRenderer`, one canvas, one scene, and one
+camera/control pair. Both roots sit at the same origin. Wide screens alternate
+root visibility during left and right scissored render passes; compact screens
+render only the active root.
 
-The existing scene owns model posing, inventory placement, camera fitting,
-animation collection, disposal, and pointer picking inside one large closure.
-Comparison mode must not copy those algorithms into a second permanent
-implementation.
+Models are built through the existing `buildModel(level)` registry. A changed
+side is disposed and rebuilt; swapping reuses both existing roots. Stage and
+model resources are released synchronously when comparison mode exits.
 
-Extract the smallest stable, testable primitives needed by both renderers, for
-example:
+### Scale policy
 
-- explosion/inventory pose calculation;
-- model bounds at a given explosion value;
-- animation collection and batch refresh;
-- model resource disposal;
-- pointer-to-pane normalized coordinates.
+- The three graphics cards use the same millimetre conversion in
+  `card-kit.ts`.
+- Both power supplies use the same builder and millimetre conversion.
+- Both processor floorplans are explicitly authored at the same diagram scale.
 
-The ordinary `createViewer` public interface should remain unchanged unless a
-small additive change is required. The comparison renderer should have its own
-focused interface rather than extending `ExplorerState` with nullable fields
-that ordinary exploration does not use.
-
-### Proposed state
-
-```ts
-export type GpuComparisonLevel = 'card' | 'rx9070' | 'arcb580';
-
-export type ComparisonSide = 'left' | 'right';
-
-export type ComparisonState = {
-  left: GpuComparisonLevel;
-  right: GpuComparisonLevel;
-  activeSide: ComparisonSide;
-  explode: number;
-  playing: boolean;
-  specsOpen: boolean;
-};
-```
-
-State transitions such as selection, swapping, and mobile-side switching should
-be pure functions where practical and covered by unit tests. Invalid identical
-card pairs must be rejected or automatically resolved at the state boundary,
-not patched in the UI after render.
-
-### Pane-aware picking
-
-- Determine the pane from the pointer's CSS-pixel X coordinate.
-- Convert the pointer into normalized device coordinates relative to that
-  pane, not the full canvas.
-- Raycast only against that pane's model root.
-- Keep the existing mouse/touch aim tolerances and transparent-surface policy.
-- Clear hover state when a selector changes, the layout switches between split
-  and mobile modes, or the pointer crosses the divider.
-
-### Resource lifetime
-
-- Build each selected card once and rebuild only the side whose selection
-  changes.
-- Dispose a replaced model's geometries, materials, and generated textures.
-- Dispose the second model and comparison-only controls when leaving comparison
-  mode.
-- Do not dispose shared environment resources until the comparison renderer is
-  destroyed.
-
-## Data mapping
-
-Add a small comparison projection that maps a card level to its root concept
-and the existing catalogue values used by the specs sheet. It may normalize
-field names but should reference existing values.
-
-The projection should fail tests if:
-
-- a configured card level or root concept is missing;
-- either selected level is not a physical GPU root;
-- a required comparison row resolves to an empty value;
-- a fourth GPU is later added without an explicit decision about comparison
-  support.
+These guarantees make within-group visual comparisons meaningful. They do not
+extend to arbitrary cross-category pairs because many other builders are
+independently scaled to fill the ordinary explorer stage.
 
 ## Accessibility
 
-- `Compare GPUs`, `Back to explorer`, `Swap sides`, selectors, pane switcher,
-  `Specs`, Auto, and the slider must all be keyboard reachable.
-- Each viewport has an accessible name containing the selected card name.
-- The visual divider is ignored by assistive technology.
-- Selector changes and swaps announce the resulting pair through a polite live
-  region.
-- The shared slider's accessible value describes both cards.
-- Respect `prefers-reduced-motion` exactly as the ordinary explorer does.
-- Focus returns to `Compare GPUs` when the comparison workbench closes.
+- Entry, exit, categories, selectors, swap, A/B switch, specs, Auto, slider,
+  phase stops, and reset are keyboard reachable.
+- Each viewport's accessible name includes its selected model.
+- Pair changes are announced through a polite live region.
+- The shared slider describes both models and the active category.
+- Reduced-motion users jump to the requested state without auto-animation.
+- Focus returns to `Compare components` on exit.
 
-## Performance requirements
+## Performance and resource requirements
 
-- One renderer, one canvas, one animation loop, and one WebGL context.
-- Retain the current pixel-ratio caps: 2 on desktop and 1.5 on compact/coarse
-  devices.
-- Render two passes only in split mode. Render one pass in mobile switch mode.
-- Preserve demand-driven rendering: do not run continuously when the camera,
-  models, and authored animations are settled.
-- Record comparison draw calls, triangles, current pair, and explosion amount
-  on the host dataset for manual QA, following the existing viewer diagnostics.
-- No new runtime network requests or asset files.
-
-## Proposed file changes
-
-Names may change during implementation, but responsibilities should remain
-separated.
-
-- `app/page.tsx`: lift application mode and switch between explorer and
-  comparison workbenches.
-- `app/explorer-workbench.tsx`: optional extraction of the current explorer
-  composition so hooks are not called conditionally.
-- `app/comparison-workbench.tsx`: comparison composition and responsive mode.
-- `app/comparison-controls.tsx`: card selectors, labels, swap, specs, and exit.
-- `app/comparison-viewer.tsx`: React bridge for the comparison engine.
-- `app/comparison-specs.tsx`: two-column specification sheet.
-- `app/workbench.css`: split stage, divider, selector chrome, sheet, and mobile
-  switch layout.
-- `lib/comparison-state.ts`: typed GPU list, pure transitions, and catalogue
-  projection.
-- `lib/comparison-scene.ts`: one-renderer scissored comparison engine.
-- `lib/model-stage.ts`: only the shared scene/model primitives that can be
-  extracted without weakening the existing viewer.
-- `lib/scene.ts`: consume extracted primitives while preserving behaviour.
-- `tests/comparison.test.ts`: state, projection, pane math, and bounds tests.
-- `ARCHITECTURE.md`: document comparison mode, renderer ownership, and new
-  module responsibilities.
+- One renderer, canvas, scene, animation loop, and WebGL context.
+- Pixel-ratio caps remain 2 on desktop and 1.5 on compact/coarse devices.
+- Two render passes only in split mode; one pass in compact mode.
+- Demand-driven rendering stops after camera and authored animations settle.
+- Dataset diagnostics record group, pair, mode, draw calls, triangles, visible
+  parts, and disassembly amount.
+- Replaced models and all stage resources are disposed without retained viewer
+  trees or active WebGL contexts.
 
 ## Acceptance criteria
 
-1. A user can enter and exit GPU comparison mode without reloading.
-2. The initial pair is RTX 5090 versus RX 9070 XT.
-3. Any two different existing GPUs can be selected.
-4. Selecting the same card on both sides is impossible.
-5. Both cards respond to one shared camera and one shared disassembly value.
-6. Physical size differences remain visually truthful at every disassembly
-   position.
-7. Wide screens show two isolated panes rendered by one canvas and renderer.
-8. Screens below 700 CSS pixels show one switchable pane and retain state when
-   switching sides.
-9. The specs sheet shows all required rows using existing catalogue values.
-10. Hover picking resolves against the correct pane.
-11. Reduced-motion behaviour, context-loss handling, and cleanup work in both
-    modes.
-12. Normal exploration, diving, selection, airflow, hiding, and disassembly are
-    unchanged outside comparison mode.
-13. `npm run check`, `npm run lint`, `npm test`, and `npm run build` pass.
-14. `ARCHITECTURE.md` describes the final implementation and any settled
-    decisions that differ from this draft.
+1. Comparison opens and closes without reloading.
+2. GPU, PSU, and CPU groups each present every configured valid pair.
+3. Models cannot be selected outside the active group or duplicated across
+   both sides.
+4. Category changes reset to a valid distinct pair.
+5. Both panes share camera and disassembly state.
+6. Physical or deliberately shared diagram scale remains truthful.
+7. Desktop uses isolated scissored panes in one canvas.
+8. Compact layouts use an accessible A/B switch and retain state.
+9. Category-specific specs resolve entirely from the catalogue.
+10. Pane-local hover picking, touch controls, reduced motion, context loss, and
+    cleanup work in both modes.
+11. Ordinary exploration behavior remains unchanged.
+12. Type checking, linting, tests, and production build pass.
 
-## Test plan
+## Verification plan
 
-### Automated
+Automated coverage validates group membership, distinct-pair transitions,
+catalogue-backed rows for every configured model, pane coordinate conversion,
+and common bounds for every group at assembled, dissection, and inventory
+positions.
 
-- Comparison state initializes with a valid distinct pair.
-- Selecting, swapping, and mobile-side switching preserve unrelated state.
-- All three pair combinations resolve complete comparison rows.
-- Card dimensions remain sourced from the existing catalogue.
-- Pane coordinate conversion maps left/right edges and divider boundaries
-  correctly.
-- Common camera-fit bounds contain both posed models at 0, 50, and 100 percent.
-- Existing model and GPU tests continue to pass after shared logic extraction.
-- Type checking, lint, full tests, and production build pass in CI.
-
-### Manual
-
-- Desktop Chrome, Firefox, Safari, and Edge at common laptop dimensions.
-- Tablet portrait and landscape.
-- Phone portrait and short landscape, including coarse-pointer behaviour.
-- Mouse orbit, wheel zoom, right-drag pan, touch rotate, and pinch zoom.
-- Divider-boundary hovering and selection changes while a card is exploded.
-- Repeatedly enter/exit comparison mode and change both cards while monitoring
-  console errors and WebGL resource behaviour.
-- Reduced motion and forced WebGL context loss.
-- Compare dataset draw calls and triangle counts across all three pairs.
-
-## Delivery sequence
-
-1. Confirm this scope and UX with the maintainer.
-2. Add pure comparison state/data projection and tests.
-3. Extract the minimum shared model-stage primitives with all existing tests
-   green.
-4. Build the scissored comparison renderer and shared controls.
-5. Add specification sheet and responsive/mobile behaviour.
-6. Run cross-browser and performance QA, then update architecture docs.
-7. Capture a short comparison demo for the pull request.
-
-## Risks and mitigations
-
-- **Regression in the existing viewer.** Keep extraction small, retain the
-  current `createViewer` API, and run existing tests after each extraction.
-- **False visual size comparison.** Use one camera projection and a common fit
-  distance, never independently auto-fit each pane.
-- **Full-inventory clipping.** Compute common bounds from both posed models at
-  the current explosion value.
-- **Pointer errors around the divider.** Keep pane coordinate conversion pure
-  and unit tested.
-- **Mobile GPU load.** Render only the active side below the breakpoint.
-- **Resource leaks when changing cards.** Centralize model disposal and include
-  repeated selector changes in manual QA.
-- **Scope expansion into arbitrary comparison.** Keep the public type limited
-  to the three physical GPU root levels in version 1.
-
-## Maintainer decisions requested
-
-1. Confirm GPU-only comparison for version 1.
-2. Confirm one shared camera and shared disassembly timeline.
-3. Confirm the mobile switcher instead of simultaneously rendering two panes.
-4. Confirm that part inspection and dives remain in the normal explorer for
-   version 1.
-5. Confirm placement of the `Compare GPUs` entry action in the application
-   chrome.
-
+Manual QA covers desktop split view, compact A/B switching, category changes,
+model selectors, swap, shared disassembly, category-specific specs, divider
+picking, touch controls, reduced motion, repeated model replacement, and
+repeated entry/exit resource cleanup.

@@ -164,9 +164,9 @@ subsystems stop touching.
 | `lib/materials.ts` | The ten surface finishes and `temperedGlass`. |
 | `lib/surfaces.ts`, `pcb.ts`, `silicon-texture.ts` | Generated material maps. No downloaded textures. |
 | `lib/board-details.ts` | Representative support circuitry and mechanical subassemblies. |
-| `lib/stage-runtime.ts` | Shared Three.js stage foundation: renderer, environment, lighting, camera, controls, animation ticking, camera fitting, and base disposal. |
+| `lib/stage-runtime.ts` | Shared Three.js stage foundation: renderer, environment, lighting, camera, controls, demand-driven frame scheduling, animation ticking, camera fitting, context-loss reporting, and base disposal. |
 | `lib/scene.ts` | Ordinary explorer visibility, picking, camera targets, and dive ramp composed over the shared stage runtime. Returns `{ update, dispose }`. |
-| `lib/model-stage.ts` | Reusable model-stage primitives shared by both renderers: piece destinations and posture, posed transforms, inventory preparation, posed/common bounds, and resource disposal. |
+| `lib/model-stage.ts` | Reusable model-stage primitives shared by both renderers: scratch-backed piece posing and bounds, inventory preparation, common bounds, and resource disposal. |
 | `lib/comparison-state.ts` | Typed GPU, PSU, and CPU group registry, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |

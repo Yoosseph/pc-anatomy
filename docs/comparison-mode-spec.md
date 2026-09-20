@@ -104,12 +104,14 @@ future category should be a registry change plus tests, not a new workbench.
 ### Shared stage runtime
 
 `lib/stage-runtime.ts` owns renderer, environment, lighting, camera,
-`OrbitControls`, animated-object helpers, camera fitting, and base disposal.
-Both the ordinary explorer and comparison renderer compose this runtime.
+`OrbitControls`, demand-driven frame scheduling, animated-object helpers,
+camera fitting, context-loss reporting, and base disposal. Both the ordinary
+explorer and comparison renderer compose this runtime.
 
-`lib/model-stage.ts` owns model posing, inventory placement, posed bounds, and
-model-resource disposal. Both renderers call these primitives. React uses one
-`useDisassemblyPlayback` hook for automatic 0–100 playback in both modes.
+`lib/model-stage.ts` owns scratch-backed model posing, inventory placement,
+posed bounds, and model-resource disposal. Both renderers call these
+primitives. React uses one `useDisassemblyPlayback` hook for automatic 0–100
+playback in both modes.
 
 ### Comparison renderer
 

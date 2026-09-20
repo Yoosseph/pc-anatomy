@@ -10,15 +10,18 @@ import {
   applyPiecePose,
   disposeModelResources,
   laidOutAmount,
-  pieceDestination,
   piecePosture,
+  posedModelBounds,
   prepareModelInventory,
+  ModelStageScratch,
 } from './model-stage';
 import {
   animateObjects,
   collectAnimatedObjects,
   configureStageLighting,
+  createStageLoop,
   createStageRuntime,
+  defaultCameraDirection,
   fitCameraToBounds,
 } from './stage-runtime.ts';
 /**
@@ -46,15 +49,12 @@ export function createViewer(
   initial: ExplorerState,
   callbacks: SceneCallbacks,
 ) {
-  const runtime = createStageRuntime(host);
+  const runtime = createStageRuntime(host, callbacks.error);
   const { scene, renderer, key, camera, controls } = runtime;
   let state = initial,
     model = buildModel(state.level),
     amount = state.explode / 100,
-    frameId = 0,
-    settle = 80,
     autoCamera = true,
-    disposed = false,
     dragStart: [number, number] = [0, 0],
     rightDragStart: [number, number] = [0, 0],
     rightGestureMoved = false,
@@ -80,30 +80,16 @@ export function createViewer(
   scene.add(selectedBox, hoverBox);
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
-    layoutPosition = new T.Vector3(),
-    inventoryTarget = new T.Vector3(),
-    matrix = new T.Matrix4(),
-    scale = new T.Vector3(),
-    quat = new T.Quaternion(),
     bounds = new T.Box3(),
     v = new T.Vector3(),
     cameraDirection = new T.Vector3(),
     color = new T.Color();
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
-  const poseScratch = {
-    position: layoutPosition,
-    inventoryTarget,
-    matrix,
-    quaternion: quat,
-    scale,
-  };
-  const turning = {
-    extent: new T.Vector3(),
-    centre: new T.Vector3(),
-  };
+  const stageScratch = new ModelStageScratch();
   const activeTouches = new Set<number>(),
     selectionBounds = new T.Box3();
+  const boundsPieces: Piece[] = [];
   const boxCenter = new T.Vector3(),
     boxSize = new T.Vector3();
   function matches(p: Piece, selection: Selection | null) {
@@ -159,7 +145,7 @@ export function createViewer(
     host.dataset.componentTypes = String(
       new Set(visible.map((p) => p.concept)).size,
     );
-    settle = 90;
+    loop.wake(90);
     autoCamera = true;
   }
   /**
@@ -170,41 +156,27 @@ export function createViewer(
    * at all between 68% and 80% and then moving every part at once over the
    * last fifth, which is what read as a pause followed by a lurch.
    */
-  const destination = (piece: Piece, value: number) =>
-    pieceDestination(
-      piece,
-      state.level,
-      value,
-      layoutPosition,
-      inventoryTarget,
-    );
   const posture = (piece: Piece, grid: number) =>
-    piecePosture(piece, grid, turning.extent, turning.centre);
+    piecePosture(piece, grid, stageScratch.extent, stageScratch.centre);
   function fit() {
-    bounds.makeEmpty();
     let focus = state.focusRevision > 0 && !!state.selection;
-    const candidates = model.pieces.filter(
-      (p) => p.visible && (!focus || matches(p, state.selection)),
-    );
-    if (!candidates.length) {
+    boundsPieces.length = 0;
+    for (const piece of model.pieces)
+      if (piece.visible && (!focus || matches(piece, state.selection)))
+        boundsPieces.push(piece);
+    if (!boundsPieces.length) {
       focus = false;
-      candidates.push(...model.pieces.filter((p) => p.visible));
+      for (const piece of model.pieces)
+        if (piece.visible) boundsPieces.push(piece);
     }
-    const grid = laidOutAmount(state.explode / 100);
-    for (const p of candidates) {
-      const dst = destination(p, state.explode / 100);
-      const { extent, centre } = posture(p, grid);
-      const half = extent.clone().multiplyScalar(dst.scale * 0.52);
-      bounds.expandByPoint(
-        v.copy(dst.position).addScaledVector(centre, dst.scale).add(half),
-      );
-      bounds.expandByPoint(
-        v.copy(dst.position).addScaledVector(centre, dst.scale).sub(half),
-      );
-    }
-    if (bounds.isEmpty()) {
-      bounds.set(new T.Vector3(-4, -1, -2), new T.Vector3(4, 1, 2));
-    }
+    posedModelBounds(
+      model,
+      state.level,
+      state.explode / 100,
+      bounds,
+      stageScratch,
+      boundsPieces,
+    );
     const size = bounds.getSize(v);
     const direction =
       // Diagrams read from directly above once they are fully separated.
@@ -222,15 +194,7 @@ export function createViewer(
                 : // Look down on something flat like a card; stand nearer eye
                   // level for something tall like a tower, or the lid is all
                   // you see.
-                  cameraDirection.set(
-                    0.7,
-                    T.MathUtils.lerp(
-                      1,
-                      0.44,
-                      Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
-                    ),
-                    1.2,
-                  );
+                  defaultCameraDirection(size, cameraDirection);
     // A selected part needs breathing room inside the smaller stage left by
     // the detail panel. The old 0.8 multiplier cropped focused parts at every
     // edge, even though the ordinary whole-model fit looked intentional.
@@ -263,8 +227,6 @@ export function createViewer(
       boxSize.copy(extent).multiplyScalar(s).addScalar(0.018),
     );
   }
-  let lastTime = performance.now();
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animated: T.Object3D[] = [];
   /**
    * The airflow groups' own tick functions. Gathered with the rotors because
@@ -286,11 +248,7 @@ export function createViewer(
     });
   };
   collectAnimations();
-  function render() {
-    if (disposed) return;
-    const now = performance.now(),
-      dt = Math.min(1, (now - lastTime) / 1000);
-    lastTime = now;
+  function render(seconds: number, dt: number, reducedMotion: boolean) {
     amount = reducedMotion
       ? state.explode / 100
       : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
@@ -340,7 +298,7 @@ export function createViewer(
               ? 1
               : 1 - ease(dive.t)
             : ease(dive.t);
-      applyPiecePose(p, state.level, amount, poseScratch, ramp);
+      applyPiecePose(p, state.level, amount, stageScratch, ramp);
       if (p.batch) {
         color.set(
           matches(p, state.selection)
@@ -360,7 +318,7 @@ export function createViewer(
     }
     refreshBatches(batches);
     if (!reducedMotion && animated.length) {
-      animateObjects(animated, now / 1000);
+      animateObjects(animated, seconds);
       // Operating parts keep the scene alive. requestAnimationFrame pauses in
       // background tabs, and reduced-motion users receive the static model.
       changed = true;
@@ -376,7 +334,7 @@ export function createViewer(
           ? airflowStrength(amount)
           : 0;
       // Reduced motion gets the chevrons, standing still.
-      for (const tick of flows) tick(reducedMotion ? 0 : now / 1000, strength);
+      for (const tick of flows) tick(reducedMotion ? 0 : seconds, strength);
       if (strength > 0.002 && !reducedMotion) changed = true;
     }
     selectedBox.visible = selected;
@@ -400,18 +358,16 @@ export function createViewer(
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
     host.dataset.explode = String(Math.round(amount * 100));
-    if (changed || settle-- > 0) frameId = requestAnimationFrame(render);
-    else frameId = 0;
+    return changed;
   }
-  function wake() {
-    settle = 35;
-    if (!frameId) frameId = requestAnimationFrame(render);
-  }
-  controls.addEventListener('start', () => {
-    autoCamera = false;
-    wake();
-  });
-  controls.addEventListener('change', wake);
+  const loop = createStageLoop(
+    controls,
+    () => {
+      autoCamera = false;
+    },
+    render,
+  );
+  const wake = loop.wake;
   const resize = () => {
     const w = host.clientWidth,
       h = host.clientHeight;
@@ -527,12 +483,6 @@ export function createViewer(
     callbacks.hover(null, 0, 0, false);
     wake();
   }
-  function lost(e: Event) {
-    e.preventDefault();
-    callbacks.error(
-      'The 3D context was interrupted. Reload the viewer to continue.',
-    );
-  }
   const canvas = renderer.domElement;
   canvas.addEventListener('pointerdown', down);
   canvas.addEventListener('pointerup', up);
@@ -540,7 +490,6 @@ export function createViewer(
   canvas.addEventListener('pointerleave', leave);
   canvas.addEventListener('pointercancel', leave);
   canvas.addEventListener('contextmenu', inspect);
-  canvas.addEventListener('webglcontextlost', lost);
   refresh();
   resize();
   return {
@@ -580,8 +529,7 @@ export function createViewer(
       wake();
     },
     dispose() {
-      disposed = true;
-      cancelAnimationFrame(frameId);
+      loop.dispose();
       observer.disconnect();
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointerup', up);
@@ -589,7 +537,6 @@ export function createViewer(
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('pointercancel', leave);
       canvas.removeEventListener('contextmenu', inspect);
-      canvas.removeEventListener('webglcontextlost', lost);
       disposeModel();
       selectedBox.geometry.dispose();
       (selectedBox.material as T.Material).dispose();

@@ -4,7 +4,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { isPhysical, type LevelId } from './levels.ts';
 
 /** Shared WebGL, lighting, camera, and controls owned by every model stage. */
-export function createStageRuntime(host: HTMLDivElement) {
+export function createStageRuntime(
+  host: HTMLDivElement,
+  onError: (message: string) => void,
+) {
   const scene = new T.Scene();
   const compact = matchMedia('(pointer: coarse)').matches || innerWidth < 900;
   const renderer = new T.WebGLRenderer({
@@ -69,6 +72,12 @@ export function createStageRuntime(host: HTMLDivElement) {
   };
   controls.touches = { ONE: T.TOUCH.ROTATE, TWO: T.TOUCH.DOLLY_PAN };
 
+  const contextLost = (event: Event) => {
+    event.preventDefault();
+    onError('The 3D context was interrupted. Reload the viewer to continue.');
+  };
+  renderer.domElement.addEventListener('webglcontextlost', contextLost);
+
   return {
     scene,
     renderer,
@@ -80,6 +89,7 @@ export function createStageRuntime(host: HTMLDivElement) {
     controls,
     canvas: renderer.domElement,
     dispose() {
+      renderer.domElement.removeEventListener('webglcontextlost', contextLost);
       controls.dispose();
       environment.dispose();
       key.shadow.map?.dispose();
@@ -91,6 +101,49 @@ export function createStageRuntime(host: HTMLDivElement) {
 }
 
 export type StageRuntime = ReturnType<typeof createStageRuntime>;
+
+/** Shared demand-driven frame scheduler and OrbitControls wake-up policy. */
+export function createStageLoop(
+  controls: OrbitControls,
+  onControlStart: () => void,
+  draw: (seconds: number, delta: number, reducedMotion: boolean) => boolean,
+) {
+  let frameId = 0,
+    remaining = 0,
+    lastTime = performance.now();
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function render(now: number) {
+    const delta = Math.min(1, (now - lastTime) / 1000);
+    lastTime = now;
+    if (draw(now / 1000, delta, reducedMotion) || remaining) {
+      remaining = Math.max(0, remaining - 1);
+      frameId = requestAnimationFrame(render);
+    } else frameId = 0;
+  }
+
+  function wake(frames = 35) {
+    remaining = Math.max(remaining, frames);
+    if (!frameId) frameId = requestAnimationFrame(render);
+  }
+
+  const start = () => {
+    onControlStart();
+    wake();
+  };
+  const change = () => wake();
+  controls.addEventListener('start', start);
+  controls.addEventListener('change', change);
+
+  return {
+    wake,
+    dispose() {
+      cancelAnimationFrame(frameId);
+      controls.removeEventListener('start', start);
+      controls.removeEventListener('change', change);
+    },
+  };
+}
 
 export function configureStageLighting(runtime: StageRuntime, level: LevelId) {
   const hardware = isPhysical(level);
@@ -120,6 +173,18 @@ export function animateObjects(objects: T.Object3D[], seconds: number) {
       : rest +
         Math.sin(seconds * 1.35) * (object.userData.seekAmplitude as number);
   }
+}
+
+export function defaultCameraDirection(size: T.Vector3, target: T.Vector3) {
+  return target.set(
+    0.7,
+    T.MathUtils.lerp(
+      1,
+      0.44,
+      Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
+    ),
+    1.2,
+  );
 }
 
 export function fitCameraToBounds(

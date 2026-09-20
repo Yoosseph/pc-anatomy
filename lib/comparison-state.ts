@@ -47,7 +47,6 @@ type ComparisonOptionDefinition = {
 };
 
 export type ComparisonGroupDefinition = {
-  id: ComparisonGroupId;
   label: string;
   shortLabel: string;
   itemLabel: string;
@@ -60,7 +59,6 @@ export const comparisonGroups: Record<
   ComparisonGroupDefinition
 > = {
   gpu: {
-    id: 'gpu',
     label: 'Graphics cards',
     shortLabel: 'GPU',
     itemLabel: 'graphics card',
@@ -94,7 +92,6 @@ export const comparisonGroups: Record<
     ],
   },
   psu: {
-    id: 'psu',
     label: 'Power supplies',
     shortLabel: 'PSU',
     itemLabel: 'power supply',
@@ -111,7 +108,6 @@ export const comparisonGroups: Record<
     ],
   },
   cpu: {
-    id: 'cpu',
     label: 'Processors',
     shortLabel: 'CPU',
     itemLabel: 'processor',

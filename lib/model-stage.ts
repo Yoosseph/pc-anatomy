@@ -6,6 +6,18 @@ import type { Piece } from './models.ts';
 
 export type BuiltModel = { root: T.Group; pieces: Piece[] };
 
+export class ModelStageScratch {
+  position = new T.Vector3();
+  inventoryTarget = new T.Vector3();
+  matrix = new T.Matrix4();
+  quaternion = new T.Quaternion();
+  scale = new T.Vector3();
+  extent = new T.Vector3();
+  centre = new T.Vector3();
+  point = new T.Vector3();
+  half = new T.Vector3();
+}
+
 export const laidOutAmount = (value: number) => smoothstep(0.7, 1, value);
 
 export function piecePosture(
@@ -54,20 +66,12 @@ export function pieceDestination(
   };
 }
 
-export type PiecePoseScratch = {
-  position: T.Vector3;
-  inventoryTarget: T.Vector3;
-  matrix: T.Matrix4;
-  quaternion: T.Quaternion;
-  scale: T.Vector3;
-};
-
 /** Apply the shared explode, reveal, inventory, and lay-flat pose to one piece. */
 export function applyPiecePose(
   piece: Piece,
   level: LevelId,
   value: number,
-  scratch: PiecePoseScratch,
+  scratch: ModelStageScratch,
   scaleMultiplier = 1,
 ) {
   const destination = pieceDestination(
@@ -133,40 +137,39 @@ export function posedModelBounds(
   level: LevelId,
   value: number,
   target = new T.Box3(),
+  scratch = new ModelStageScratch(),
+  pieces: readonly Piece[] = model.pieces,
 ) {
-  const position = new T.Vector3(),
-    inventory = new T.Vector3(),
-    extent = new T.Vector3(),
-    centre = new T.Vector3(),
-    point = new T.Vector3(),
-    half = new T.Vector3(),
-    grid = laidOutAmount(value);
+  const grid = laidOutAmount(value);
   target.makeEmpty();
-  for (const piece of model.pieces.filter((candidate) => candidate.visible)) {
+  for (const piece of pieces) {
+    if (!piece.visible) continue;
     const destination = pieceDestination(
       piece,
       level,
       value,
-      position,
-      inventory,
+      scratch.position,
+      scratch.inventoryTarget,
     );
-    const posture = piecePosture(piece, grid, extent, centre);
-    half.copy(posture.extent).multiplyScalar(destination.scale * 0.52);
+    const posture = piecePosture(piece, grid, scratch.extent, scratch.centre);
+    scratch.half.copy(posture.extent).multiplyScalar(destination.scale * 0.52);
     target.expandByPoint(
-      point
+      scratch.point
         .copy(destination.position)
         .addScaledVector(posture.centre, destination.scale)
-        .add(half),
+        .add(scratch.half),
     );
     target.expandByPoint(
-      point
+      scratch.point
         .copy(destination.position)
         .addScaledVector(posture.centre, destination.scale)
-        .sub(half),
+        .sub(scratch.half),
     );
   }
-  if (target.isEmpty())
-    target.set(new T.Vector3(-4, -1, -2), new T.Vector3(4, 1, 2));
+  if (target.isEmpty()) {
+    target.min.set(-4, -1, -2);
+    target.max.set(4, 1, 2);
+  }
   return target;
 }
 

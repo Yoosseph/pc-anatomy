@@ -14,14 +14,17 @@ import {
   posedModelBounds,
   prepareModelInventory,
   type BuiltModel,
+  ModelStageScratch,
 } from './model-stage.ts';
-import { buildModel, refreshBatches } from './models.ts';
+import { buildModel, refreshBatches, type Piece } from './models.ts';
 import { resolvePickNear } from './picking.ts';
 import {
   animateObjects,
   collectAnimatedObjects,
   configureStageLighting,
+  createStageLoop,
   createStageRuntime,
+  defaultCameraDirection,
   fitCameraToBounds,
 } from './stage-runtime.ts';
 
@@ -45,7 +48,7 @@ export function createComparisonViewer(
   initial: ComparisonViewState,
   callbacks: ComparisonSceneCallbacks,
 ) {
-  const runtime = createStageRuntime(host);
+  const runtime = createStageRuntime(host, callbacks.error);
   const { scene, renderer, key, camera, controls } = runtime;
   renderer.autoClear = false;
   renderer.info.autoReset = false;
@@ -65,10 +68,7 @@ export function createComparisonViewer(
     },
     amount = initial.explode / 100,
     split = host.clientWidth >= BREAKPOINT,
-    frameId = 0,
-    settle = 80,
     autoCamera = true,
-    disposed = false,
     pointerPosition: { clientX: number; clientY: number } | null = null,
     activePointer: number | null = null,
     dragStart: [number, number] = [0, 0],
@@ -78,20 +78,15 @@ export function createComparisonViewer(
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
     size = new T.Vector3(),
-    position = new T.Vector3(),
-    inventoryTarget = new T.Vector3(),
-    matrix = new T.Matrix4(),
-    scale = new T.Vector3(),
-    quaternion = new T.Quaternion(),
     leftBounds = new T.Box3(),
     rightBounds = new T.Box3(),
     commonBounds = new T.Box3(),
     cameraDirection = new T.Vector3(),
     raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
-  const poseScratch = { position, inventoryTarget, matrix, quaternion, scale };
-  const activeTouches = new Set<number>();
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const activeTouches = new Set<number>(),
+    batches = new Set<T.InstancedMesh>(),
+    stageScratch = new ModelStageScratch();
   let animated: T.Object3D[] = [];
 
   function collectAnimations() {
@@ -108,44 +103,38 @@ export function createComparisonViewer(
   }
 
   function refreshPane(pane: PaneModel) {
-    const visible = pane.model.pieces.filter(
-      (piece) => piece.reveal === 0 || state.explode / 100 > piece.reveal,
-    );
-    pane.model.pieces.forEach((piece) => {
-      piece.visible = visible.includes(piece);
-    });
+    const visible: Piece[] = [];
+    for (const piece of pane.model.pieces) {
+      piece.visible = piece.reveal === 0 || state.explode / 100 > piece.reveal;
+      if (piece.visible) visible.push(piece);
+    }
+    const aspect = paneAspect();
     const signature =
       pane.level +
       '|' +
-      paneAspect().toFixed(3) +
+      aspect.toFixed(3) +
       '|' +
       visible.map((piece) => piece.key).join(',');
     if (signature !== pane.layoutSignature) {
       pane.layoutSignature = signature;
-      prepareModelInventory(pane.model, pane.level, paneAspect(), visible);
+      prepareModelInventory(pane.model, pane.level, aspect, visible);
     }
+    return visible.length;
   }
 
   function refresh() {
-    refreshPane(panes.left);
-    refreshPane(panes.right);
-    const visible = panes.left.model.pieces.filter(
-      (piece) => piece.visible,
-    ).length;
-    const visibleRight = panes.right.model.pieces.filter(
-      (piece) => piece.visible,
-    ).length;
-    callbacks.stats(visible + visibleRight);
+    const visible = refreshPane(panes.left) + refreshPane(panes.right);
+    callbacks.stats(visible);
     host.dataset.pair = `${state.left}:${state.right}`;
     host.dataset.group = state.group;
-    host.dataset.visible = String(visible + visibleRight);
-    settle = 90;
+    host.dataset.visible = String(visible);
+    loop.wake(90);
   }
 
   function posePane(pane: PaneModel) {
-    const batches = new Set<T.InstancedMesh>();
+    batches.clear();
     for (const piece of pane.model.pieces) {
-      applyPiecePose(piece, pane.level, amount, poseScratch);
+      applyPiecePose(piece, pane.level, amount, stageScratch);
       if (piece.batch) batches.add(piece.batch);
     }
     refreshBatches(batches);
@@ -153,22 +142,26 @@ export function createComparisonViewer(
   }
 
   function fit() {
-    posedModelBounds(panes.left.model, panes.left.level, amount, leftBounds);
-    posedModelBounds(panes.right.model, panes.right.level, amount, rightBounds);
+    posedModelBounds(
+      panes.left.model,
+      panes.left.level,
+      amount,
+      leftBounds,
+      stageScratch,
+    );
+    posedModelBounds(
+      panes.right.model,
+      panes.right.level,
+      amount,
+      rightBounds,
+      stageScratch,
+    );
     commonModelBounds(leftBounds, rightBounds, commonBounds);
     commonBounds.getSize(size);
     const direction =
       !isPhysical(state.left) && amount > 0.85
         ? cameraDirection.set(0, 1, 0.001)
-        : cameraDirection.set(
-            0.7,
-            T.MathUtils.lerp(
-              1,
-              0.44,
-              Math.min(1, size.y / Math.max(size.x, size.z, 0.001)),
-            ),
-            1.2,
-          );
+        : defaultCameraDirection(size, cameraDirection);
     fitCameraToBounds(
       commonBounds,
       camera,
@@ -192,12 +185,7 @@ export function createComparisonViewer(
     renderer.render(scene, camera);
   }
 
-  let lastTime = performance.now();
-  function render() {
-    if (disposed) return;
-    const now = performance.now(),
-      dt = Math.min(1, (now - lastTime) / 1000);
-    lastTime = now;
+  function render(seconds: number, dt: number, reducedMotion: boolean) {
     amount = reducedMotion
       ? state.explode / 100
       : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
@@ -210,7 +198,7 @@ export function createComparisonViewer(
     posePane(panes.right);
 
     if (!reducedMotion && animated.length) {
-      animateObjects(animated, now / 1000);
+      animateObjects(animated, seconds);
       changed = true;
     }
 
@@ -241,20 +229,16 @@ export function createComparisonViewer(
 
     if (pointerPosition && activePointer === null && changed)
       updateHover(pointerPosition);
-    if (changed || settle-- > 0) frameId = requestAnimationFrame(render);
-    else frameId = 0;
+    return changed;
   }
-
-  function wake() {
-    settle = 35;
-    if (!frameId) frameId = requestAnimationFrame(render);
-  }
-
-  controls.addEventListener('start', () => {
-    autoCamera = false;
-    wake();
-  });
-  controls.addEventListener('change', wake);
+  const loop = createStageLoop(
+    controls,
+    () => {
+      autoCamera = false;
+    },
+    render,
+  );
+  const wake = loop.wake;
 
   function resize() {
     const width = host.clientWidth,
@@ -361,20 +345,12 @@ export function createComparisonViewer(
     wake();
   }
 
-  function lost(event: Event) {
-    event.preventDefault();
-    callbacks.error(
-      'The 3D context was interrupted. Reload the viewer to continue.',
-    );
-  }
-
   const canvas = renderer.domElement;
   canvas.addEventListener('pointerdown', down);
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointermove', move);
   canvas.addEventListener('pointerleave', leave);
   canvas.addEventListener('pointercancel', leave);
-  canvas.addEventListener('webglcontextlost', lost);
   refresh();
   resize();
 
@@ -411,15 +387,13 @@ export function createComparisonViewer(
       wake();
     },
     dispose() {
-      disposed = true;
-      cancelAnimationFrame(frameId);
+      loop.dispose();
       observer.disconnect();
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('pointercancel', leave);
-      canvas.removeEventListener('webglcontextlost', lost);
       for (const pane of Object.values(panes)) {
         scene.remove(pane.model.root);
         disposeModelResources(pane.model);

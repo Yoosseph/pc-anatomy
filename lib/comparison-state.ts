@@ -95,6 +95,9 @@ export const comparisonGroups = {
 export type ComparisonGroupId = keyof typeof comparisonGroups;
 export type ComparisonSpecId =
   (typeof comparisonGroups)[ComparisonGroupId]['rows'][number]['id'];
+const configuredComparisonGroupIds = Object.keys(
+  comparisonGroups,
+) as ComparisonGroupId[];
 
 export type ComparisonState = {
   group: ComparisonGroupId;
@@ -112,9 +115,9 @@ export function comparisonLevels(group: ComparisonGroupId) {
 }
 
 /** Configured categories become visible as soon as they have a valid pair. */
-export const comparisonGroupIds = (
-  Object.keys(comparisonGroups) as ComparisonGroupId[]
-).filter((group) => comparisonLevels(group).length >= 2);
+export const comparisonGroupIds = configuredComparisonGroupIds.filter(
+  (group) => comparisonLevels(group).length >= 2,
+);
 
 function defaultComparisonPair(
   group: ComparisonGroupId,
@@ -270,7 +273,7 @@ export function validateComparisonCatalogue() {
         `Comparison level "${level}" names unknown group "${group}"`,
       );
   }
-  for (const groupId of Object.keys(comparisonGroups) as ComparisonGroupId[]) {
+  for (const groupId of configuredComparisonGroupIds) {
     const groupLevels = comparisonLevels(groupId);
     if (groupLevels.length < 2) continue;
     const kinds = new Set(groupLevels.map((level) => levels[level].kind));

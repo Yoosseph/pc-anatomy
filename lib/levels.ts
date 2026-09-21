@@ -10,6 +10,10 @@
 export type LevelId =
   | 'pc'
   | 'motherboard'
+  | 'dimm'
+  | 'dram'
+  | 'banks'
+  | 'bank'
   | 'ryzen'
   | 'ryzenio'
   | 'corei9'
@@ -127,6 +131,57 @@ export const levels: Record<LevelId, LevelDef> = {
     branchLabel: 'Motherboard',
     concept: 'motherboard',
     spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  dimm: {
+    id: 'dimm',
+    parent: 'motherboard',
+    name: 'DDR5 module',
+    title: 'Inside the memory module.',
+    caption: 'DDR5 UDIMM',
+    summary: 'Board, memory chips, power management and contacts',
+    kind: 'physical',
+    branchLabel: 'Memory',
+    concept: 'ram',
+    spread: 1.4,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  dram: {
+    id: 'dram',
+    parent: 'dimm',
+    name: 'DRAM package',
+    title: 'Inside a memory chip.',
+    caption: 'DDR5 DRAM · 16 GBIT X8',
+    summary: 'Substrate, die and solder balls',
+    kind: 'physical',
+    concept: 'dramchip',
+    spread: 1.2,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  banks: {
+    id: 'banks',
+    parent: 'dram',
+    name: 'DRAM banks',
+    title: 'The bank array.',
+    caption: 'DDR5 DIE · BANK GROUPS',
+    summary: 'Bank groups, banks and I/O periphery',
+    kind: 'logical',
+    concept: 'dramdie',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  bank: {
+    id: 'bank',
+    parent: 'banks',
+    name: 'Bank',
+    title: 'Rows, columns and cells.',
+    caption: 'MEMORY ARRAY · ROW × COLUMN',
+    summary: 'Wordlines, bitlines, cells and sense amplifiers',
+    kind: 'logical',
+    concept: 'drambank',
     phases: dissectionPhases,
     detailed: true,
   },

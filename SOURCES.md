@@ -4,7 +4,7 @@ Reviewed 2026-09-19. PC Anatomy is independent of the manufacturers cited here. 
 
 ## Current component reference audit
 
-All 327 component entries now have references in their detail panels. The complete
+All 343 component entries now have references in their detail panels. The complete
 [component-to-document index](docs/component-references.md) records those mappings.
 The registry in `lib/sources.ts` is authoritative for current app links; older notes
 below preserve the research history.
@@ -54,6 +54,73 @@ also opens from the motherboard. Its nominal 22 × 80 mm module has a mounting
 notch, an M-key contact gap, a controller, DRAM and two NAND packages. BGA joints
 are beneath the chips. Package count, contact count and routing are illustrative.
 The model is an educational assembly, not a reproduction of the Samsung 990 PRO PCB.
+
+### Memory module dive
+
+The Memory menu dives from a DDR5 module to one DRAM package, to the 32 banks
+of a 16 Gb x8 die, to the rows, columns and cells of a single bank. The
+modelled module is one educational example — a single-sided, single-rank UDIMM
+with eight x8 packages — and the copy says so wherever package count, rank
+count or layout could be read as universal. Bank-block sizes, the cell grid
+(about 16 × 8 illustrative cells against tens of thousands of real rows) and
+package internals are illustrative; the package is sealed in reality and no die
+floorplan or transistor placement is claimed. The module keeps the 133.35 mm
+DDR5 length with a JEDEC height class (gaming spreaders are taller) and a keyed
+288-pin edge.
+
+- [JEDEC DDR5 SDRAM standard (JESD79-5D)](https://www.jedec.org/standards-documents/docs/jesd79-5d)
+  and the [JEDEC DDR5 launch release](https://www.jedec.org/news/pressreleases/jedec-publishes-new-ddr5-standard-advancing-next-generation-high-performance)
+  support the two independent 32-bit subchannels, the 32 banks in
+  8 bank groups and BL16.
+- [Micron's DDR5 client-module paper](https://www.micron.com/content/dam/micron/global/public/products/white-paper/ddr5-key-module-features-wp-client.pdf)
+  supports the 288-pin module outline and pin count, the subchannel wiring
+  and the on-module power regulation and SPD hub roles.
+- [Micron's DDR5 new-features white paper](https://www.micron.com/content/dam/micron/global/public/products/white-paper/ddr5-new-features-white-paper.pdf)
+  supports the bank organisation, burst length and refresh behaviour.
+- [SK hynix on DDR5 banks, burst length and refresh](https://news.skhynix.com/en/why-ddr5-is-the-industrys-powerful-next-gen-memory)
+  cross-checks the 32-bank, 8-group organisation.
+- [SFU course notes on DRAM banks, rows and sense amplifiers](https://www.cs.sfu.ca/~ashriram/Courses/CS7ARCH/assets/lectures/11_Memory_Consistency_DRAM.pdf)
+  support the 1T1C cell, destructive read with writeback, row buffer and
+  sense-amp operation that no vendor white paper teaches cleanly.
+- [Kingston's DDR5 overview](https://www.kingston.com/en/blog/pc-performance/ddr5-overview)
+  (already cited) supports the module and subchannel architecture; TI BGA
+  packaging notes (already cited) support the substrate and ball-grid
+  construction language without claiming flip-chip or wire-bond detail.
+
+### Reference module: Kingston FURY Beast
+
+The modelled spreader follows the Kingston FURY Beast DDR5 line in style
+only: two thin mirror plates over the packages with angled asymmetric
+faceting, interlocked along the top edge with locking clips, text-only
+branding that differs per face, and an exposed contact edge. Outline
+(133.35 mm), height class, colour and the exposed edge are the published
+facts; facet styling, interlock and clip detail, surface texture, exact badge
+geometry and placement, IC-side population and routing are illustrative of
+the 1Rx8 example, and no Kingston logo is reproduced.
+
+- [Kingston FURY Beast DDR5 product page](https://www.kingston.com/en/memory/gaming/kingston-fury-beast-ddr5-memory)
+  supports the line's dimensions, colours, capacities and rates.
+- [Tom's Hardware review of the FURY Beast DDR5](https://www.tomshardware.com/reviews/kingston-fury-beast-ddr5-5200-c40-review),
+  an independent review, supports the construction detail the maker does not
+  publish: black PCB with matching spreader, single-sided 1Rx8 layout and the
+  exposed edge seating the slot.
+- [APH Networks review of the FURY Beast DDR5](https://aphnetworks.com/reviews/kingston-fury-beast-ddr5-5200-2x16gb/2),
+  an independent review, supports the plate construction narrative: thin
+  halves, top-edge interlock, locking clips and adhesive strips.
+
+Kingston assembles modules; it does not fabricate the DRAM dies, which it
+sources from manufacturers such as Micron, SK hynix and others with variance
+between kits. Kingston attribution in this project covers the module —
+spreader, dimensions and 1Rx8 organisation — and never the die, which stays
+vendor-neutral throughout.
+
+**Limits.** Early 8 Gb x4/x8 dies hold 16 banks (8 groups × 2), early 8 Gb
+x16 dies hold 8 (4 groups × 2), and 16–64 Gb x16 dies hold 16 (4 groups × 4)
+— the app qualifies its counts to 16 Gb or larger x8 dies. Row, column and
+page counts are qualified the same way (16 row bits × 10 column bits on
+16 Gb x8; a column address selects 8 bits on x8, so an open row is 1 KiB).
+On-die ECC versus side-band DIMM ECC is left out of the copy except for the
+subchannel width note the standard requires.
 
 ## Additional graphics cards · September 17, 2026
 

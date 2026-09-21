@@ -12,7 +12,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 327 catalogue entries are authored in source, and each one
+any kind. The 343 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -62,7 +62,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              327 entries, each with a globally unique id
+      │              343 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -86,7 +86,7 @@ state.
 
 ## The scale tree
 
-28 scales, 327 concepts. `physical` scales are lit like hardware and keep real
+32 scales, 343 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
@@ -94,6 +94,10 @@ lit flat.
 | --- | --- | --- | --- | ---: |
 | `pc` | — | root | physical | 16 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
+| `dimm`        | `motherboard` | Memory           | physical |        6 |
+| `dram` | `dimm` | Memory | physical | 3 |
+| `banks` | `dram` | Memory | logical | 2 |
+| `bank` | `banks` | Memory | logical | 5 |
 | `ryzen` | `motherboard` | Motherboard | logical | 6 |
 | `ryzenio` | `ryzen` | Motherboard | logical | 5 |
 | `corei9` | `motherboard` | Motherboard | logical | 9 |
@@ -147,13 +151,14 @@ subsystems stop touching.
 | `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
 | `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
-| `lib/sources.ts` | Every citable reference, keyed by id. 56 of them. |
+| `lib/sources.ts` | Every citable reference, keyed by id. 63 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
 | `lib/explorer-state.ts` | `ExplorerState` — what the viewer is looking at — plus `initialState` and `selectSearch`. |
 | `lib/models.ts` | The `builders` registry, the `Piece` type, the shared `material()` cache, and `buildModel(level)`. |
 | `lib/hardware.ts` | `ModelTools`, the interface every builder is handed, and the RTX 5090 card assembly. |
 | `lib/machine.ts` | The tower itself: ATX constants, chassis, cable routing, RGB palette. |
 | `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
+| `lib/dimm.ts`, `lib/dram.ts`, `lib/ram-architecture.ts` | Builders for the memory dive: the DDR5 module and one DRAM package as physical scales, the bank array and one bank as logical diagrams. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
@@ -171,7 +176,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 52 tests: catalogue integrity, layout, picking, geometry presence, airflow. |
+| `tests/*.test.ts` | 63 tests: catalogue integrity, layout, picking, geometry presence, airflow, the RAM dive. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 
@@ -335,7 +340,7 @@ timeline. Do not add a second hand-written route table.
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 327 concepts currently cite at least one
+and vendor documentation first. All 343 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -352,16 +357,16 @@ cites the same source twice. It does not check that a citation is appropriate.
 Nothing here claims a specific product's bill of materials. Every physical
 concept carries a `physicalAccuracy` string saying so, and they are not
 decorative — read one before adding a component that implies more precision than
-the model has. 229 concepts are physical, 98 are logical diagrams.
+the model has. 238 concepts are physical, 105 are logical diagrams.
 
 ## Tests
 
-52 tests, all through Node's built-in runner.
+63 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
 
-- `tests/manifest.test.ts` (15) — unique ids, reciprocal parents, no cycles,
+- `tests/manifest.test.ts` (16) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
   packing without overlap at several aspect ratios, machine depth.
@@ -382,6 +387,14 @@ production build on every push and pull request with Node.js 22.
   and over by a tenth, that the chevrons march and stop on command, that no
   stream strays far from the hardware it describes, and that the tower's air
   enters at the front and leaves at the back.
+- `tests/ram.test.ts` (11) — the Memory menu order and the open chain down to
+  the cell array, bank counts multiplying out to the 16 Gb x8 organisation,
+  diagram blocks not overlapping, the module outline with its keyed contact
+  edge, the empty key cutout, the 288-pin finger count and face clearance,
+  bank-group membership, the spreader cladding with a clear contact field,
+  pad seating between chips and plate, the package stack order, named geometry
+  on every new scale, and search reaching the module and the cells at their
+  own scales.
 
 The suite builds every scale, so a geometry regression usually surfaces as a
 failing assertion rather than a silent visual change.

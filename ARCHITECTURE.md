@@ -167,7 +167,7 @@ subsystems stop touching.
 | `lib/stage-runtime.ts` | Shared Three.js stage foundation: renderer, environment, lighting, camera, controls, demand-driven frame scheduling, animation ticking, camera fitting, context-loss reporting, and base disposal. |
 | `lib/scene.ts` | Ordinary explorer visibility, picking, camera targets, and dive ramp composed over the shared stage runtime. Returns `{ update, dispose }`. |
 | `lib/model-stage.ts` | Reusable model-stage primitives shared by both renderers: scratch-backed piece posing and bounds, inventory preparation, common bounds, and resource disposal. |
-| `lib/comparison-state.ts` | Typed GPU, PSU, and CPU group registry, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
+| `lib/comparison-state.ts` | Category-specific comparison schemas, metadata-driven model discovery, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
@@ -179,7 +179,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 57 tests: catalogue integrity, layout, picking, geometry presence, airflow, and comparison state/data/pane/bounds behaviour. |
+| `tests/*.test.ts` | 58 tests: catalogue integrity, layout, picking, geometry presence, airflow, and comparison state/data/pane/bounds behaviour. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 

@@ -96,10 +96,13 @@ accuracy language remain available in the explorer.
 
 ### Category registry
 
-`lib/comparison-state.ts` owns a typed registry. Each group declares its label,
-eligible levels, root catalogue concepts, and specification rows. State
-transitions validate category membership and prevent identical pairs. Adding a
-future category should be a registry change plus tests, not a new workbench.
+Comparable model roots declare a `comparisonGroup` in `lib/levels.ts`.
+`lib/comparison-state.ts` discovers eligible levels and their root catalogue
+concepts from that canonical data; it owns only the group labels and semantic
+specification rows that cannot be inferred safely. State transitions validate
+category membership and prevent identical pairs. Adding a model to an existing
+group requires no comparison-view change. Adding a future category requires a
+schema and tests, not a new workbench.
 
 ### Shared stage runtime
 

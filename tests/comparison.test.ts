@@ -16,6 +16,8 @@ import {
   type ComparisonLevel,
   validateComparisonCatalogue,
 } from '../lib/comparison-state.ts';
+import { levels } from '../lib/levels.ts';
+import { manifest } from '../lib/manifest.ts';
 import { buildModel } from '../lib/models.ts';
 import {
   commonModelBounds,
@@ -58,6 +60,22 @@ await test('comparison state starts with a distinct valid pair', () => {
   assert.equal(initialComparisonState.group, 'gpu');
   assert.notEqual(initialComparisonState.left, initialComparisonState.right);
   validateComparisonCatalogue();
+});
+
+await test('comparison models and catalogue roots are discovered from canonical data', () => {
+  assert.deepEqual(comparisonLevels('gpu'), ['card', 'rx9070', 'arcb580']);
+  assert.deepEqual(comparisonLevels('psu'), ['psu', 'psubronze']);
+  assert.deepEqual(comparisonLevels('cpu'), ['ryzen', 'corei9']);
+  for (const group of comparisonGroupIds)
+    for (const level of comparisonLevels(group)) {
+      assert.equal(levels[level].comparisonGroup, group);
+      assert.equal(
+        manifest.filter(
+          (concept) => concept.level === level && concept.open === level,
+        ).length,
+        1,
+      );
+    }
 });
 
 await test('comparison transitions preserve unrelated state', () => {

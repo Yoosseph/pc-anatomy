@@ -62,6 +62,12 @@ export interface LevelDef {
   /** Marked false while a branch is still a placeholder. */
   detailed: boolean;
   /**
+   * Models carrying the same value are eligible for the shared comparison
+   * workbench. The workbench discovers them from this catalogue instead of
+   * maintaining a second list of level and concept ids.
+   */
+  comparisonGroup?: string;
+  /**
    * Set on a subsystem root, including nested roots such as an M.2 drive. It names the subsystem menu
    * that this scale and everything beneath it are listed under, so a viewer
    * picks "GPU" and then chooses a scale, rather than tunnelling through the
@@ -141,6 +147,7 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'ryzenpackage',
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'cpu',
   },
   ryzenio: {
     id: 'ryzenio',
@@ -168,6 +175,7 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'corepackage',
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'cpu',
   },
   coreio: {
     id: 'coreio',
@@ -194,6 +202,7 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'psu',
   },
   psubronze: {
     id: 'psubronze',
@@ -209,6 +218,7 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'psu',
   },
   fan: {
     id: 'fan',
@@ -297,6 +307,7 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'card',
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'gpu',
   },
   die: {
     id: 'die',
@@ -364,6 +375,7 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'rxcard',
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'gpu',
   },
   navi48: {
     id: 'navi48',
@@ -430,6 +442,7 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'arccard',
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'gpu',
   },
   bmg: {
     id: 'bmg',

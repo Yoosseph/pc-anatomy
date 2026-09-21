@@ -1,17 +1,8 @@
 import { byId, manifest } from './manifest.ts';
-import { levels, type LevelId } from './levels.ts';
+import { levelIds, levels, type LevelId } from './levels.ts';
 import type { Category } from './concept.ts';
 
-export const comparisonGroupIds = ['gpu', 'psu', 'cpu'] as const;
-export type ComparisonGroupId = (typeof comparisonGroupIds)[number];
-export type ComparisonLevel =
-  | 'card'
-  | 'rx9070'
-  | 'arcb580'
-  | 'psu'
-  | 'psubronze'
-  | 'ryzen'
-  | 'corei9';
+export type ComparisonLevel = LevelId;
 export type ComparisonSide = 'left' | 'right';
 
 export type ComparisonSpecId =
@@ -41,32 +32,18 @@ type ComparisonRowDefinition = {
   category?: Category;
 };
 
-type ComparisonOptionDefinition = {
-  level: ComparisonLevel;
-  concept: string;
-};
-
 export type ComparisonGroupDefinition = {
   label: string;
   shortLabel: string;
   itemLabel: string;
-  options: readonly ComparisonOptionDefinition[];
   rows: readonly ComparisonRowDefinition[];
 };
 
-export const comparisonGroups: Record<
-  ComparisonGroupId,
-  ComparisonGroupDefinition
-> = {
+export const comparisonGroups = {
   gpu: {
     label: 'Graphics cards',
     shortLabel: 'GPU',
     itemLabel: 'graphics card',
-    options: [
-      { level: 'card', concept: 'card' },
-      { level: 'rx9070', concept: 'rxcard' },
-      { level: 'arcb580', concept: 'arccard' },
-    ],
     rows: [
       { id: 'architecture', label: 'Architecture', keys: ['Architecture'] },
       { id: 'gpu', label: 'GPU', keys: ['GPU'] },
@@ -95,10 +72,6 @@ export const comparisonGroups: Record<
     label: 'Power supplies',
     shortLabel: 'PSU',
     itemLabel: 'power supply',
-    options: [
-      { level: 'psu', concept: 'psucase' },
-      { level: 'psubronze', concept: 'bronzepsucase' },
-    ],
     rows: [
       { id: 'format', label: 'Format', keys: ['Format'] },
       { id: 'output', label: 'Output', keys: ['Output'] },
@@ -111,10 +84,6 @@ export const comparisonGroups: Record<
     label: 'Processors',
     shortLabel: 'CPU',
     itemLabel: 'processor',
-    options: [
-      { level: 'ryzen', concept: 'ryzenpackage' },
-      { level: 'corei9', concept: 'corepackage' },
-    ],
     rows: [
       { id: 'cores', label: 'Cores / threads', keys: ['Cores'] },
       { id: 'clocks', label: 'Clocks', keys: ['Clocks'] },
@@ -128,7 +97,12 @@ export const comparisonGroups: Record<
       },
     ],
   },
-};
+} as const satisfies Record<string, ComparisonGroupDefinition>;
+
+export type ComparisonGroupId = keyof typeof comparisonGroups;
+export const comparisonGroupIds = Object.keys(
+  comparisonGroups,
+) as ComparisonGroupId[];
 
 export type ComparisonState = {
   group: ComparisonGroupId;
@@ -141,31 +115,36 @@ export type ComparisonState = {
 
 export type ComparisonViewState = Omit<ComparisonState, 'specsOpen'>;
 
+export function comparisonLevels(group: ComparisonGroupId) {
+  return levelIds.filter((level) => levels[level].comparisonGroup === group);
+}
+
+function defaultComparisonPair(
+  group: ComparisonGroupId,
+): readonly [ComparisonLevel, ComparisonLevel] {
+  const [left, right] = comparisonLevels(group);
+  if (!left || !right)
+    throw new Error(`Comparison group "${group}" needs at least two models`);
+  return [left, right];
+}
+
+const [initialLeft, initialRight] = defaultComparisonPair('gpu');
+
 export const initialComparisonState: ComparisonState = {
   group: 'gpu',
-  left: 'card',
-  right: 'rx9070',
+  left: initialLeft,
+  right: initialRight,
   activeSide: 'left',
   explode: 0,
   specsOpen: false,
 };
-
-export function comparisonLevels(group: ComparisonGroupId) {
-  return comparisonGroups[group].options.map(({ level }) => level);
-}
-
-function optionFor(group: ComparisonGroupId, level: ComparisonLevel) {
-  return comparisonGroups[group].options.find(
-    (option) => option.level === level,
-  );
-}
 
 export function selectComparisonGroup(
   state: ComparisonState,
   group: ComparisonGroupId,
 ): ComparisonState {
   if (group === state.group) return state;
-  const [left, right] = comparisonLevels(group);
+  const [left, right] = defaultComparisonPair(group);
   return {
     ...state,
     group,
@@ -183,7 +162,8 @@ export function selectComparisonItem(
   level: ComparisonLevel,
 ): ComparisonState {
   const other = side === 'left' ? state.right : state.left;
-  if (level === other || !optionFor(state.group, level)) return state;
+  if (level === other || levels[level].comparisonGroup !== state.group)
+    return state;
   return { ...state, [side]: level };
 }
 
@@ -247,32 +227,39 @@ function specificationValue(
   return null;
 }
 
+function comparisonRoot(level: ComparisonLevel) {
+  const roots = manifest.filter(
+    (concept) => concept.level === level && concept.open === level,
+  );
+  if (roots.length !== 1)
+    throw new Error(
+      `Comparison level "${level}" needs exactly one root catalogue concept`,
+    );
+  return roots[0];
+}
+
 export function comparisonItem(
   group: ComparisonGroupId,
   level: ComparisonLevel,
 ): ComparisonItem {
-  const option = optionFor(group, level);
-  if (!option)
+  if (levels[level].comparisonGroup !== group)
     throw new Error(
       `Comparison level "${level}" does not belong to "${group}"`,
     );
   const definition = levels[level];
-  const root = byId[option.concept];
-  if (!root || root.level !== level || root.open !== level)
-    throw new Error(`Comparison level "${level}" has no valid root concept`);
+  const root = comparisonRoot(level);
+  const rows: readonly ComparisonRowDefinition[] = comparisonGroups[group].rows;
 
-  const specs = comparisonGroups[group].rows.map(
-    ({ id, label, keys, fallback, category }) => {
-      const value =
-        specificationValue(level, option.concept, keys, category) ??
-        (fallback === 'name' ? root.name : null);
-      if (!value)
-        throw new Error(
-          `Comparison level "${level}" has no value for "${label}"`,
-        );
-      return { id, label, value };
-    },
-  );
+  const specs = rows.map(({ id, label, keys, fallback, category }) => {
+    const value =
+      specificationValue(level, root.id, keys, category) ??
+      (fallback === 'name' ? root.name : null);
+    if (!value)
+      throw new Error(
+        `Comparison level "${level}" has no value for "${label}"`,
+      );
+    return { id, label, value };
+  });
 
   return {
     level,
@@ -284,22 +271,22 @@ export function comparisonItem(
 }
 
 export function validateComparisonCatalogue() {
-  const seen = new Set<LevelId>();
-  for (const groupId of comparisonGroupIds) {
-    const group = comparisonGroups[groupId];
-    if (group.options.length < 2)
+  for (const level of levelIds) {
+    const group = levels[level].comparisonGroup;
+    if (group && !(group in comparisonGroups))
       throw new Error(
-        `Comparison group "${groupId}" needs at least two models`,
+        `Comparison level "${level}" names unknown group "${group}"`,
       );
-    const kinds = new Set(group.options.map(({ level }) => levels[level].kind));
+  }
+  for (const groupId of comparisonGroupIds) {
+    const groupLevels = comparisonLevels(groupId);
+    defaultComparisonPair(groupId);
+    const kinds = new Set(groupLevels.map((level) => levels[level].kind));
     if (kinds.size !== 1)
       throw new Error(
         `Comparison group "${groupId}" mixes physical and logical models`,
       );
-    for (const { level } of group.options) {
-      if (seen.has(level))
-        throw new Error(`Comparison level "${level}" belongs to two groups`);
-      seen.add(level);
+    for (const level of groupLevels) {
       comparisonItem(groupId, level);
     }
   }

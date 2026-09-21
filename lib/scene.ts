@@ -23,6 +23,7 @@ import {
   createStageRuntime,
   defaultCameraDirection,
   fitCameraToBounds,
+  pointerMoved,
 } from './stage-runtime.ts';
 /**
  * How far off a part you may point and still mean it, in CSS pixels.
@@ -418,7 +419,7 @@ export function createViewer(
       gestureMoved ||
       activeTouches.size > 0 ||
       e.button !== 0 ||
-      Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 5
+      pointerMoved(e, dragStart)
     )
       return;
     const p = hit(e, e.pointerType === 'touch' ? TOUCH_AIM : MOUSE_AIM);
@@ -432,14 +433,10 @@ export function createViewer(
     if (
       e.pointerType === 'mouse' &&
       (e.buttons & 2) !== 0 &&
-      Math.hypot(e.clientX - rightDragStart[0], e.clientY - rightDragStart[1]) >
-        5
+      pointerMoved(e, rightDragStart)
     )
       rightGestureMoved = true;
-    if (
-      activePointer === e.pointerId &&
-      Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 5
-    )
+    if (activePointer === e.pointerId && pointerMoved(e, dragStart))
       gestureMoved = true;
     pointerPosition = { clientX: e.clientX, clientY: e.clientY };
     if (e.buttons || e.pointerType === 'touch') return;

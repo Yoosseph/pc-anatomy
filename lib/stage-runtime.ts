@@ -175,6 +175,14 @@ export function animateObjects(objects: T.Object3D[], seconds: number) {
   }
 }
 
+/** Distinguish a click from a pointer gesture using the shared CSS-pixel slop. */
+export function pointerMoved(
+  { clientX, clientY }: { clientX: number; clientY: number },
+  [startX, startY]: readonly [number, number],
+) {
+  return Math.hypot(clientX - startX, clientY - startY) > 5;
+}
+
 export function defaultCameraDirection(size: T.Vector3, target: T.Vector3) {
   return target.set(
     0.7,

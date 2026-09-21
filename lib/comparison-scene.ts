@@ -26,6 +26,7 @@ import {
   createStageRuntime,
   defaultCameraDirection,
   fitCameraToBounds,
+  pointerMoved,
 } from './stage-runtime.ts';
 
 const BREAKPOINT = 700,
@@ -319,17 +320,13 @@ export function createComparisonViewer(
     if (
       !gestureMoved &&
       activeTouches.size === 0 &&
-      Math.hypot(event.clientX - dragStart[0], event.clientY - dragStart[1]) <=
-        5
+      !pointerMoved(event, dragStart)
     )
       updateHover(event);
   }
 
   function move(event: PointerEvent) {
-    if (
-      activePointer === event.pointerId &&
-      Math.hypot(event.clientX - dragStart[0], event.clientY - dragStart[1]) > 5
-    )
+    if (activePointer === event.pointerId && pointerMoved(event, dragStart))
       gestureMoved = true;
     pointerPosition = { clientX: event.clientX, clientY: event.clientY };
     if (event.buttons || event.pointerType === 'touch') return;

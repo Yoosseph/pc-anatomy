@@ -2692,32 +2692,40 @@ a {
   position: absolute;
   inset: 76px 0 auto;
   z-index: 10;
-  height: 132px;
+  height: 144px;
   background: #17191b;
   border-bottom: 1px solid #34373b;
 }
 .comparison-groups {
-  height: 38px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
+  padding-inline: 12px;
   border-bottom: 1px solid #303338;
 }
 .comparison-groups button {
-  min-height: 28px;
-  padding: 0 13px;
-  color: #8e939a;
-  border-radius: 4px;
-  font-size: 10px;
+  min-width: 116px;
+  min-height: 36px;
+  padding: 0 18px;
+  color: #b9bec5;
+  background: #1f2225;
+  border: 1px solid #3d4247;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
 }
 .comparison-groups button:hover {
-  color: #d9dde0;
-  background: #25282b;
+  color: #f1f3f4;
+  background: #292e32;
+  border-color: #59636a;
 }
 .comparison-groups button[aria-pressed='true'] {
-  color: #eef8f9;
-  background: #304247;
+  color: #f4fbfc;
+  background: #324a50;
+  border-color: #6ea7b2;
+  box-shadow: inset 0 -3px var(--accent-bright);
 }
 .comparison-pair {
   height: 94px;
@@ -2800,7 +2808,7 @@ a {
 }
 .comparison-viewport {
   position: absolute;
-  inset: 208px 0 112px;
+  inset: 220px 0 112px;
   touch-action: none;
 }
 .comparison-viewport canvas {
@@ -2824,7 +2832,7 @@ a {
 .comparison-divider {
   position: absolute;
   z-index: 4;
-  top: 208px;
+  top: 220px;
   bottom: 112px;
   left: 50%;
   width: 1px;
@@ -2844,7 +2852,7 @@ a {
 .comparison-pane-label {
   position: absolute;
   z-index: 5;
-  top: 228px;
+  top: 240px;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -3038,15 +3046,19 @@ a {
   }
   .comparison-setup {
     inset-block-start: 64px;
-    height: 136px;
+    height: 144px;
   }
   .comparison-groups {
-    height: 38px;
-    gap: 2px;
+    height: 46px;
+    gap: 4px;
+    padding-inline: 6px;
   }
   .comparison-groups button {
-    padding-inline: 9px;
-    font-size: 9px;
+    flex: 1;
+    min-width: 0;
+    min-height: 36px;
+    padding-inline: 4px;
+    font-size: 11px;
   }
   .comparison-pair {
     height: 98px;
@@ -3080,7 +3092,7 @@ a {
   .comparison-mobile-switch {
     position: absolute;
     z-index: 9;
-    top: 200px;
+    top: 208px;
     left: 50%;
     display: flex;
     width: min(280px, calc(100vw - 36px));
@@ -3102,7 +3114,7 @@ a {
     background: #3a4b4f;
   }
   .comparison-viewport {
-    inset: 238px 0 142px;
+    inset: 246px 0 142px;
   }
   .comparison-pane-a11y {
     inset: 0;
@@ -3120,7 +3132,7 @@ a {
     display: none;
   }
   .comparison-pane-label {
-    top: 252px;
+    top: 260px;
   }
   .comparison-pane-label:is(.left, .right) {
     left: 14px;
@@ -3187,6 +3199,11 @@ a {
   }
   .comparison-groups {
     height: 36px;
+  }
+  .comparison-groups button {
+    min-height: 28px;
+    padding-inline: 10px;
+    font-size: 10px;
   }
   .comparison-pair {
     height: 72px;

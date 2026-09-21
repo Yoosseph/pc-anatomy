@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   comparisonItem,
   type ComparisonViewState,
 } from '@/lib/comparison-state';
-import type { createComparisonViewer } from '@/lib/comparison-scene';
+import { useViewerEngine } from './use-viewer-engine';
 
 type Props = {
   state: ComparisonViewState;
@@ -12,59 +12,27 @@ type Props = {
 };
 
 export default function ComparisonViewer({ state, onCount }: Props) {
-  const host = useRef<HTMLDivElement>(null),
-    engine = useRef<ReturnType<typeof createComparisonViewer> | null>(null),
-    latest = useRef({ state, onCount });
-  const [error, setError] = useState(''),
-    [hover, setHover] = useState<{
-      name: string;
-      x: number;
-      y: number;
-    } | null>(null),
-    [ready, setReady] = useState(false);
+  const [hover, setHover] = useState<{
+    name: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const left = comparisonItem(state.group, state.left),
     right = comparisonItem(state.group, state.right);
-
-  useEffect(() => {
-    latest.current = { state, onCount };
-    engine.current?.update(state);
-  }, [state, onCount]);
-
-  useLayoutEffect(() => {
-    let stopped = false;
-    void import('@/lib/comparison-scene')
-      .then(({ createComparisonViewer }) => {
-        if (stopped || !host.current) return;
-        try {
-          engine.current = createComparisonViewer(
-            host.current,
-            latest.current.state,
-            {
-              stats: (count) => latest.current.onCount(count),
-              hover: (name, x, y) => setHover(name ? { name, x, y } : null),
-              error: setError,
-            },
-          );
-          setReady(true);
-        } catch {
-          setError(
-            'WebGL could not start. Enable graphics acceleration in your browser, then reload the viewer.',
-          );
-        }
-      })
-      .catch(() => {
-        if (!stopped)
-          setError(
-            'The comparison viewer could not load. Reload to try again.',
-          );
-      });
-    return () => {
-      stopped = true;
-      const current = engine.current;
-      engine.current = null;
-      current?.dispose();
-    };
-  }, []);
+  const { host, error, ready } = useViewerEngine(
+    state,
+    { onCount },
+    () =>
+      import('@/lib/comparison-scene').then(
+        ({ createComparisonViewer }) => createComparisonViewer,
+      ),
+    (current, reportError) => ({
+      stats: (count) => current().onCount(count),
+      hover: (name, x, y) => setHover(name ? { name, x, y } : null),
+      error: reportError,
+    }),
+    'The comparison viewer could not load. Reload to try again.',
+  );
 
   return (
     <>

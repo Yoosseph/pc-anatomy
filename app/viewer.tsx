@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ExplorerState, Selection } from '@/lib/explorer-state';
-import type { createViewer } from '@/lib/scene';
+import { useViewerEngine } from './use-viewer-engine';
 type Props = {
   state: ExplorerState;
   onSelect: (v: Selection | null, intent: 'open' | 'inspect') => void;
@@ -10,53 +10,26 @@ type Props = {
   onDived: () => void;
 };
 export default function Viewer({ state, onSelect, onCount, onDived }: Props) {
-  const host = useRef<HTMLDivElement>(null),
-    engine = useRef<ReturnType<typeof createViewer> | null>(null),
-    latest = useRef({ state, onSelect, onCount, onDived });
-  const [error, setError] = useState(''),
-    [hover, setHover] = useState<{
-      name: string;
-      x: number;
-      y: number;
-      opens: boolean;
-    } | null>(null),
-    [ready, setReady] = useState(false);
-  useEffect(() => {
-    latest.current = { state, onSelect, onCount, onDived };
-    engine.current?.update(state);
-  }, [state, onSelect, onCount, onDived]);
-  useLayoutEffect(() => {
-    let stopped = false;
-    void import('@/lib/scene')
-      .then(({ createViewer }) => {
-        if (stopped || !host.current) return;
-        try {
-          engine.current = createViewer(host.current, latest.current.state, {
-            select: (v, intent) => latest.current.onSelect(v, intent),
-            stats: (v) => latest.current.onCount(v),
-            dived: () => latest.current.onDived(),
-            hover: (name, x, y, opens) =>
-              setHover(name ? { name, x, y, opens } : null),
-            error: setError,
-          });
-          setReady(true);
-        } catch {
-          setError(
-            'WebGL could not start. Enable graphics acceleration in your browser, then reload the viewer.',
-          );
-        }
-      })
-      .catch(() => {
-        if (!stopped)
-          setError('The 3D viewer could not load. Reload to try again.');
-      });
-    return () => {
-      stopped = true;
-      const current = engine.current;
-      engine.current = null;
-      current?.dispose();
-    };
-  }, []);
+  const [hover, setHover] = useState<{
+    name: string;
+    x: number;
+    y: number;
+    opens: boolean;
+  } | null>(null);
+  const { host, error, ready } = useViewerEngine(
+    state,
+    { onSelect, onCount, onDived },
+    () => import('@/lib/scene').then(({ createViewer }) => createViewer),
+    (current, reportError) => ({
+      select: (value, intent) => current().onSelect(value, intent),
+      stats: (value) => current().onCount(value),
+      dived: () => current().onDived(),
+      hover: (name, x, y, opens) =>
+        setHover(name ? { name, x, y, opens } : null),
+      error: reportError,
+    }),
+    'The 3D viewer could not load. Reload to try again.',
+  );
   return (
     <>
       <div

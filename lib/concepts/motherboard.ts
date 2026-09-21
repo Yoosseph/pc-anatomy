@@ -234,9 +234,11 @@ export const motherboardConcepts: Concept[] = [
       'Stores the operating system and data with far more parallelism than the older SATA command set allowed.',
     quantity: '1 modeled drive',
     specifications: {
+      Architecture: 'Bare module · motherboard edge connector',
       Protocol: 'NVM Express',
-      Interface: 'PCIe',
+      Interface: 'PCIe ×4',
       Format: 'M.2 2280',
+      Dimensions: '80 × 22 mm',
     },
     representationType: 'physical',
     physicalAccuracy: standard,

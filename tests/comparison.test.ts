@@ -17,7 +17,7 @@ import {
   validateComparisonCatalogue,
 } from '../lib/comparison-state.ts';
 import { levels } from '../lib/levels.ts';
-import { manifest } from '../lib/manifest.ts';
+import { byId } from '../lib/manifest.ts';
 import { buildModel } from '../lib/models.ts';
 import {
   commonModelBounds,
@@ -49,6 +49,13 @@ const allComparisonLevels = comparisonGroupIds.flatMap(comparisonLevels);
 const comparisonModels = Object.fromEntries(
   allComparisonLevels.map((level) => [level, buildModel(level)]),
 ) as Record<ComparisonLevel, ReturnType<typeof buildModel>>;
+const specValue = (
+  group: Parameters<typeof comparisonItem>[0],
+  level: ComparisonLevel,
+  id: string,
+) => comparisonItem(group, level).specs.find((row) => row.id === id)?.value;
+const modelSize = (level: ComparisonLevel) =>
+  posedModelBounds(comparisonModels[level], level, 0).getSize(new T.Vector3());
 after(() => {
   Object.values(comparisonModels).forEach(disposeModelResources);
   globalThis.document = previousDocument;
@@ -66,15 +73,11 @@ await test('comparison models and catalogue roots are discovered from canonical 
   assert.deepEqual(comparisonLevels('gpu'), ['card', 'rx9070', 'arcb580']);
   assert.deepEqual(comparisonLevels('psu'), ['psu', 'psubronze']);
   assert.deepEqual(comparisonLevels('cpu'), ['ryzen', 'corei9']);
+  assert.deepEqual(comparisonLevels('storage'), ['ssd', 'nvme']);
   for (const group of comparisonGroupIds)
     for (const level of comparisonLevels(group)) {
       assert.equal(levels[level].comparisonGroup, group);
-      assert.equal(
-        manifest.filter(
-          (concept) => concept.level === level && concept.open === level,
-        ).length,
-        1,
-      );
+      assert.equal(byId[levels[level].concept].open, level);
     }
 });
 
@@ -116,55 +119,29 @@ await test('every comparison group resolves complete catalogue-backed specs', ()
       assert.equal(item.specs.length, comparisonGroups[group].rows.length);
       assert.ok(item.specs.every((row) => row.value.trim().length > 0));
     }
-  assert.equal(
-    comparisonItem('gpu', 'card').specs.find((row) => row.id === 'boardPower')
-      ?.value,
-    '575 W',
-  );
-  assert.equal(
-    comparisonItem('gpu', 'card').specs.find((row) => row.id === 'interface')
-      ?.value,
-    'PCI Express 5.0',
-  );
-  assert.equal(
-    comparisonItem('psu', 'psu').specs.find((row) => row.id === 'output')
-      ?.value,
-    '850 W',
-  );
-  assert.equal(
-    comparisonItem('cpu', 'corei9').specs.find((row) => row.id === 'socket')
-      ?.value,
-    'LGA 1851',
-  );
-  assert.equal(
-    comparisonItem('gpu', 'arcb580').specs.find((row) => row.id === 'exterior')
-      ?.value,
-    'Intel Arc B580 Limited Edition',
-  );
+  const cases = [
+    ['gpu', 'card', 'boardPower', '575 W'],
+    ['gpu', 'card', 'interface', 'PCI Express 5.0'],
+    ['psu', 'psu', 'output', '850 W'],
+    ['cpu', 'corei9', 'socket', 'LGA 1851'],
+    ['gpu', 'arcb580', 'exterior', 'Intel Arc B580 Limited Edition'],
+    ['storage', 'ssd', 'interface', 'SATA 6 Gb/s'],
+    ['storage', 'nvme', 'dimensions', '80 × 22 mm'],
+  ] as const;
+  for (const [group, level, id, expected] of cases)
+    assert.equal(specValue(group, level, id), expected);
 });
 
 await test('pane coordinates map split and mobile viewports independently', () => {
   const rect = { left: 100, top: 50, width: 1000, height: 500 };
-  assert.deepEqual(comparisonPanePoint(100, 50, rect, true, 'left'), {
-    side: 'left',
-    x: -1,
-    y: 1,
-  });
-  assert.deepEqual(comparisonPanePoint(600, 300, rect, true, 'left'), {
-    side: 'right',
-    x: -1,
-    y: 0,
-  });
-  assert.deepEqual(comparisonPanePoint(1100, 550, rect, true, 'left'), {
-    side: 'right',
-    x: 1,
-    y: -1,
-  });
-  assert.deepEqual(comparisonPanePoint(600, 300, rect, false, 'right'), {
-    side: 'right',
-    x: 0,
-    y: 0,
-  });
+  const cases = [
+    [100, 50, true, 'left', { side: 'left', x: -1, y: 1 }],
+    [600, 300, true, 'left', { side: 'right', x: -1, y: 0 }],
+    [1100, 550, true, 'left', { side: 'right', x: 1, y: -1 }],
+    [600, 300, false, 'right', { side: 'right', x: 0, y: 0 }],
+  ] as const;
+  for (const [x, y, split, side, expected] of cases)
+    assert.deepEqual(comparisonPanePoint(x, y, rect, split, side), expected);
 });
 
 await test('common camera bounds contain every configured pair', () => {
@@ -187,23 +164,20 @@ await test('common camera bounds contain every configured pair', () => {
       for (let left = 0; left < boxes.length; left++)
         for (let right = left + 1; right < boxes.length; right++) {
           const common = commonModelBounds(boxes[left], boxes[right]);
-          for (const box of [boxes[left], boxes[right]]) {
+          for (const box of [boxes[left], boxes[right]])
             assert.ok(
-              common.containsPoint(box.min),
-              `${group} minimum escaped at ${amount}`,
+              [box.min, box.max].every((point) => common.containsPoint(point)),
+              `${group} bounds escaped at ${amount}`,
             );
-            assert.ok(
-              common.containsPoint(box.max),
-              `${group} maximum escaped at ${amount}`,
-            );
-          }
         }
     }
-  const rtx = posedModelBounds(comparisonModels.card, 'card', 0).getSize(
-    new T.Vector3(),
-  );
-  const arc = posedModelBounds(comparisonModels.arcb580, 'arcb580', 0).getSize(
-    new T.Vector3(),
-  );
+  const rtx = modelSize('card'),
+    arc = modelSize('arcb580');
   assert.ok(rtx.x > arc.x, 'the RTX 5090 must remain longer than the Arc B580');
+  const sata = modelSize('ssd'),
+    nvme = modelSize('nvme');
+  assert.ok(
+    sata.x > nvme.x * 1.15,
+    'the 100 mm SATA drive must remain longer than the 80 mm NVMe module',
+  );
 });

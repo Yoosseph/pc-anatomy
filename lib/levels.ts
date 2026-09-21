@@ -278,6 +278,7 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.7,
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'storage',
   },
   nvme: {
     id: 'nvme',
@@ -292,6 +293,7 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.5,
     phases: dissectionPhases,
     detailed: true,
+    comparisonGroup: 'storage',
   },
   card: {
     id: 'card',

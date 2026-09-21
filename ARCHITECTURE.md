@@ -302,38 +302,17 @@ Three interaction decisions are settled, and re-opening them has been tried:
 
 ## Same-category comparison mode
 
-Comparison is a separate workbench rather than nullable fields added to
-`ExplorerState`. A typed group registry defines the supported roots, labels,
-root concept ids and catalogue-backed specification rows. The current groups
-are the three GPUs, two PSUs, and two processors; motherboard comparison stays
-unavailable until a second motherboard model exists. Pure transitions reject
-duplicate pairs and cross-group selections at the state boundary. The
-catalogue validator fails when a configured root, root concept, or required
-specification is missing.
+Comparison is a separate workbench; see
+[`docs/comparison-mode-spec.md`](docs/comparison-mode-spec.md) for its contract.
+Levels opt in through `comparisonGroup`, and configured groups appear once two
+models opt in. The registry supplies labels and catalogue-backed row schemas;
+pure transitions and startup validation reject invalid groups, pairs, or rows.
 
-The comparison engine and ordinary explorer are separate scene coordinators,
-but both compose the same `stage-runtime.ts` and `model-stage.ts` primitives.
-The runtime owns one `WebGLRenderer`, canvas, scene, camera and `OrbitControls`
-pair. Both selected roots sit at the same origin. At 700 CSS pixels and wider,
-equal scissored render passes alternately reveal the left and right root; below
-that breakpoint only the selected A/B root is rendered. Raycasting first
-converts the pointer into coordinates local to its pane and then tests only
-that pane's root.
-
-Both models use the same disassembly amount and the same camera. Each model's
-posed bounds are computed through `lib/model-stage.ts`, unioned, and fitted once
-for the shared camera. Physical models therefore retain their builder-derived
-relative scale, while logical processor diagrams share one consistent diagram
-scale and switch to a top-down inventory view. Inventory packing does not
-normalize either side. The comparison renderer builds each selected model once,
-disposes only a replaced side, swaps existing roots without rebuilding, and
-disposes both sides plus the shared runtime resources on exit.
-
-The specification sheet does not store product values. Each group's row
-definitions project from the existing catalogue, with small lookup adapters
-only where equivalent source fields use different labels or live on a child
-concept. A root product name is the exterior/reference value only when that
-catalogue root does not carry an `Exterior reference` field.
+Its scene coordinator shares `stage-runtime.ts` and `model-stage.ts` with the
+explorer. One camera and disassembly amount frame both models at true relative
+scale. Wide screens use two scissored panes; below 700 CSS pixels only the
+selected A/B pane renders. Swaps reuse both roots, replacements dispose only
+one root, and exit disposes the renderer and both models.
 
 ## Adding a component
 
@@ -399,7 +378,7 @@ the model has. 229 concepts are physical, 98 are logical diagrams.
 
 ## Tests
 
-57 tests, all through Node's built-in runner.
+58 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
@@ -425,8 +404,8 @@ production build on every push and pull request with Node.js 22.
   and over by a tenth, that the chevrons march and stop on command, that no
   stream strays far from the hardware it describes, and that the tower's air
   enters at the front and leaves at the back.
-- `tests/comparison.test.ts` (5) — valid distinct state and group transitions,
-  complete catalogue-backed spec rows for every configured group, pane-local
+- `tests/comparison.test.ts` (6) — metadata-driven discovery, valid distinct
+  state and group transitions, complete catalogue-backed spec rows, pane-local
   pointer coordinates at desktop and mobile widths, and common bounds that
   contain both posed models at assembled, half-disassembled, and inventory
   positions.

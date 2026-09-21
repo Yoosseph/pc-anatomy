@@ -11,10 +11,8 @@ export function useDisassemblyPlayback(
   const changeRef = useRef(onExplodeChange);
   useEffect(() => {
     explodeRef.current = explode;
-  }, [explode]);
-  useEffect(() => {
     changeRef.current = onExplodeChange;
-  }, [onExplodeChange]);
+  }, [explode, onExplodeChange]);
 
   const stop = useCallback(() => setPlaying(false), []);
   const setExplode = useCallback((value: number) => {
@@ -25,10 +23,7 @@ export function useDisassemblyPlayback(
   }, []);
 
   const toggleAuto = useCallback(() => {
-    if (playing) {
-      setPlaying(false);
-      return;
-    }
+    if (playing) return setPlaying(false);
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       explodeRef.current = 100;
       changeRef.current(100);

@@ -6,7 +6,9 @@ import { buildScrew } from './parts.ts';
 /** Representative single-sided 2280 module; package placement is illustrative. */
 export function buildNvme(tools: ModelTools, _root: T.Group) {
   const { add, box, pcb, label, material } = tools;
-  const mm = (value: number) => value / 6;
+  // Match the SATA drive and other storage hardware so their physical size is
+  // truthful when the models share a comparison camera.
+  const mm = (value: number) => value / 8;
   const place = (group: T.Group, object: T.Object3D, at: Vec3) => {
     object.position.set(...at);
     group.add(object);

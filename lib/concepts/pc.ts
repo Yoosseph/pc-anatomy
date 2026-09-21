@@ -349,7 +349,13 @@ export const pcConcepts: Concept[] = [
     purpose:
       'Holds data that must survive power loss, without the seek delay of a spinning disk.',
     quantity: '1 modeled drive',
-    specifications: { Interface: 'SATA 6 Gb/s', Format: '2.5-inch' },
+    specifications: {
+      Architecture: 'Enclosed drive · separate data and power connectors',
+      Protocol: 'Serial ATA',
+      Interface: 'SATA 6 Gb/s',
+      Format: '2.5-inch · 7 mm',
+      Dimensions: '100 × 69.85 × 7 mm',
+    },
     representationType: 'physical',
     physicalAccuracy: standard,
     sources: ['samsungsata', 'ssdarchitecture'],

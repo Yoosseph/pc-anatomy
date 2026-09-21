@@ -376,10 +376,6 @@ export function createComparisonViewer(
         next.left !== state.left ||
         next.right !== state.right;
       state = next;
-      if (swapped || next.left !== panes.left.level)
-        panes.left.level = next.left;
-      if (swapped || next.right !== panes.right.level)
-        panes.right.level = next.right;
       configureStageLighting(runtime, next.left);
       collectAnimations();
       refresh();

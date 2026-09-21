@@ -2559,10 +2559,12 @@ a {
 }
 
 /* Component comparison workbench ------------------------------------------ */
-.compare-button,
-.comparison-specs-button,
-.comparison-exit,
-.comparison-swap {
+:is(
+  .compare-button,
+  .comparison-specs-button,
+  .comparison-exit,
+  .comparison-swap
+) {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2594,8 +2596,7 @@ a {
 .compare-button > span {
   min-width: 0;
 }
-.compare-button strong,
-.compare-button small {
+.compare-button :is(strong, small) {
   display: block;
 }
 .compare-button strong {
@@ -2647,8 +2648,7 @@ a {
   background: var(--accent);
   border-radius: 6px;
 }
-.comparison-brand strong,
-.comparison-brand span {
+.comparison-brand :is(strong, span) {
   display: block;
 }
 .comparison-brand strong {
@@ -2668,8 +2668,7 @@ a {
   align-items: center;
   gap: 9px;
 }
-.comparison-specs-button,
-.comparison-exit {
+:is(.comparison-specs-button, .comparison-exit) {
   gap: 7px;
   min-height: 36px;
   padding: 0 12px;
@@ -2685,8 +2684,7 @@ a {
   color: #c3c7cc;
   border: 1px solid #45484d;
 }
-.comparison-specs-button:hover,
-.comparison-exit:hover {
+:is(.comparison-specs-button, .comparison-exit):hover {
   color: #fff;
   background: #292c30;
 }
@@ -2893,8 +2891,7 @@ a {
 .comparison-workbench .disassembly {
   left: 0;
 }
-.comparison-loading,
-.comparison-error {
+:is(.comparison-loading, .comparison-error) {
   position: absolute;
   z-index: 6;
   top: 48%;
@@ -2971,8 +2968,7 @@ a {
 .spec-row {
   border-bottom: 1px solid #34373b;
 }
-.spec-row > th,
-.spec-row > td {
+.spec-row > :is(th, td) {
   padding: 13px 7px;
   text-align: left;
   vertical-align: top;
@@ -3032,8 +3028,7 @@ a {
   .comparison-top-actions {
     gap: 5px;
   }
-  .comparison-specs-button,
-  .comparison-exit {
+  :is(.comparison-specs-button, .comparison-exit) {
     min-height: 34px;
     padding: 0 8px;
   }
@@ -3113,8 +3108,7 @@ a {
     inset: 0;
     width: 100%;
   }
-  .comparison-pane-a11y.left,
-  .comparison-pane-a11y.right {
+  .comparison-pane-a11y:is(.left, .right) {
     left: 0;
     right: 0;
   }
@@ -3128,8 +3122,7 @@ a {
   .comparison-pane-label {
     top: 252px;
   }
-  .comparison-pane-label.left,
-  .comparison-pane-label.right {
+  .comparison-pane-label:is(.left, .right) {
     left: 14px;
   }
   .comparison-pane-label.right {
@@ -3161,8 +3154,7 @@ a {
   .comparison-specs-heading [data-slot='sheet-title'] {
     font-size: 21px;
   }
-  .spec-row > th,
-  .spec-row > td {
+  .spec-row > :is(th, td) {
     padding: 11px 5px;
   }
   .spec-row > td {
@@ -3177,9 +3169,11 @@ a {
   .comparison-topbar {
     height: 52px;
   }
-  .comparison-brand > svg,
-  .comparison-brand span,
-  .comparison-specs-button span {
+  :is(
+    .comparison-brand > svg,
+    .comparison-brand span,
+    .comparison-specs-button span
+  ) {
     display: none;
   }
   .comparison-specs-button {
@@ -3229,9 +3223,7 @@ a {
     grid-column: 1;
     grid-row: 1;
   }
-  .comparison-workbench .disassembly-label,
-  .comparison-workbench .phase-labels,
-  .comparison-workbench .ruler {
+  .comparison-workbench :is(.disassembly-label, .phase-labels, .ruler) {
     display: none;
   }
   .comparison-workbench .timeline {

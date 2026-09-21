@@ -93,7 +93,7 @@ export default function ScaleNav({
         <GitCompareArrows size={17} />
         <span>
           <strong>Compare components</strong>
-          <small>GPUs, power supplies, and processors</small>
+          <small>All eligible same-category models</small>
         </span>
         <ChevronRight size={15} />
       </button>

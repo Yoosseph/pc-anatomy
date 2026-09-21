@@ -5,27 +5,8 @@ import type { Category } from './concept.ts';
 export type ComparisonLevel = LevelId;
 export type ComparisonSide = 'left' | 'right';
 
-export type ComparisonSpecId =
-  | 'architecture'
-  | 'gpu'
-  | 'memory'
-  | 'boardPower'
-  | 'interface'
-  | 'dimensions'
-  | 'exterior'
-  | 'format'
-  | 'output'
-  | 'efficiency'
-  | 'cabling'
-  | 'cores'
-  | 'clocks'
-  | 'cache'
-  | 'process'
-  | 'socket'
-  | 'power';
-
 type ComparisonRowDefinition = {
-  id: ComparisonSpecId;
+  id: string;
   label: string;
   keys: readonly string[];
   fallback?: 'name';
@@ -97,12 +78,23 @@ export const comparisonGroups = {
       },
     ],
   },
+  storage: {
+    label: 'Storage',
+    shortLabel: 'storage',
+    itemLabel: 'storage device',
+    rows: [
+      { id: 'architecture', label: 'Architecture', keys: ['Architecture'] },
+      { id: 'protocol', label: 'Protocol', keys: ['Protocol'] },
+      { id: 'interface', label: 'Interface', keys: ['Interface'] },
+      { id: 'format', label: 'Format', keys: ['Format'] },
+      { id: 'dimensions', label: 'Dimensions', keys: ['Dimensions'] },
+    ],
+  },
 } as const satisfies Record<string, ComparisonGroupDefinition>;
 
 export type ComparisonGroupId = keyof typeof comparisonGroups;
-export const comparisonGroupIds = Object.keys(
-  comparisonGroups,
-) as ComparisonGroupId[];
+export type ComparisonSpecId =
+  (typeof comparisonGroups)[ComparisonGroupId]['rows'][number]['id'];
 
 export type ComparisonState = {
   group: ComparisonGroupId;
@@ -118,6 +110,11 @@ export type ComparisonViewState = Omit<ComparisonState, 'specsOpen'>;
 export function comparisonLevels(group: ComparisonGroupId) {
   return levelIds.filter((level) => levels[level].comparisonGroup === group);
 }
+
+/** Configured categories become visible as soon as they have a valid pair. */
+export const comparisonGroupIds = (
+  Object.keys(comparisonGroups) as ComparisonGroupId[]
+).filter((group) => comparisonLevels(group).length >= 2);
 
 function defaultComparisonPair(
   group: ComparisonGroupId,
@@ -167,30 +164,27 @@ export function selectComparisonItem(
   return { ...state, [side]: level };
 }
 
-export function swapComparisonSides(state: ComparisonState): ComparisonState {
-  return { ...state, left: state.right, right: state.left };
-}
+export const swapComparisonSides = (
+  state: ComparisonState,
+): ComparisonState => ({ ...state, left: state.right, right: state.left });
 
-export function setComparisonActiveSide(
+export const setComparisonActiveSide = (
   state: ComparisonState,
   activeSide: ComparisonSide,
-): ComparisonState {
-  return { ...state, activeSide };
-}
+): ComparisonState => ({ ...state, activeSide });
 
-export function setComparisonExplode(
+export const setComparisonExplode = (
   state: ComparisonState,
   explode: number,
-): ComparisonState {
-  return { ...state, explode: Math.min(100, Math.max(0, explode)) };
-}
+): ComparisonState => ({
+  ...state,
+  explode: Math.min(100, Math.max(0, explode)),
+});
 
-export function setComparisonSpecsOpen(
+export const setComparisonSpecsOpen = (
   state: ComparisonState,
   specsOpen: boolean,
-): ComparisonState {
-  return { ...state, specsOpen };
-}
+): ComparisonState => ({ ...state, specsOpen });
 
 export type ComparisonSpec = {
   id: ComparisonSpecId;
@@ -228,14 +222,12 @@ function specificationValue(
 }
 
 function comparisonRoot(level: ComparisonLevel) {
-  const roots = manifest.filter(
-    (concept) => concept.level === level && concept.open === level,
-  );
-  if (roots.length !== 1)
+  const root = byId[levels[level].concept];
+  if (!root || root.open !== level)
     throw new Error(
-      `Comparison level "${level}" needs exactly one root catalogue concept`,
+      `Comparison level "${level}" needs a catalogue concept that opens it`,
     );
-  return roots[0];
+  return root;
 }
 
 export function comparisonItem(
@@ -248,9 +240,9 @@ export function comparisonItem(
     );
   const definition = levels[level];
   const root = comparisonRoot(level);
-  const rows: readonly ComparisonRowDefinition[] = comparisonGroups[group].rows;
-
-  const specs = rows.map(({ id, label, keys, fallback, category }) => {
+  const specs = comparisonGroups[group].rows.map((entry) => {
+    const { id, label, keys, fallback, category } = entry as typeof entry &
+      ComparisonRowDefinition;
     const value =
       specificationValue(level, root.id, keys, category) ??
       (fallback === 'name' ? root.name : null);
@@ -278,9 +270,9 @@ export function validateComparisonCatalogue() {
         `Comparison level "${level}" names unknown group "${group}"`,
       );
   }
-  for (const groupId of comparisonGroupIds) {
+  for (const groupId of Object.keys(comparisonGroups) as ComparisonGroupId[]) {
     const groupLevels = comparisonLevels(groupId);
-    defaultComparisonPair(groupId);
+    if (groupLevels.length < 2) continue;
     const kinds = new Set(groupLevels.map((level) => levels[level].kind));
     if (kinds.size !== 1)
       throw new Error(

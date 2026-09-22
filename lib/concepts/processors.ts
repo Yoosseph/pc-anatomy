@@ -42,6 +42,7 @@ export const processorConcepts: Concept[] = [
       'Splitting the processor into small repeated dies keeps yields high and lets the parts that do not need an expensive process stay on a cheaper one.',
     quantity: '1 modeled package',
     specifications: {
+      Architecture: 'Zen 5 · chiplet',
       Cores: '16 cores, 32 threads',
       Clocks: '4.3 GHz base, up to 5.7 GHz boost',
       Cache: '64 MB L3, 16 MB L2, 1280 KB L1',
@@ -257,6 +258,7 @@ export const processorConcepts: Concept[] = [
       'Where AMD repeats one small die, Intel specialises: each tile is made on the process that suits its job, and the base tile underneath carries the connections between them.',
     quantity: '1 modeled package',
     specifications: {
+      Architecture: 'Arrow Lake · Lion Cove + Skymont',
       Cores: '24 cores, 24 threads, 8 performance and 16 efficient',
       Clocks: '3.7 GHz performance base, up to 5.7 GHz turbo',
       Cache: '36 MB shared, 40 MB total L2',

@@ -50,7 +50,7 @@ comparison state:
 
 - GPU: architecture, GPU, memory, board power, interface, dimensions, exterior.
 - PSU: format, output, efficiency, cabling, dimensions.
-- CPU: cores/threads, clocks, cache, process, socket, power.
+- CPU: architecture, cores/threads, clocks, cache, process, socket, power.
 - Storage: architecture, protocol, interface, format, dimensions.
 
 ## Architecture

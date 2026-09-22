@@ -1,4 +1,5 @@
 'use client';
+import { useRef, type RefObject } from 'react';
 import { X } from 'lucide-react';
 import {
   Sheet,
@@ -18,6 +19,7 @@ type Props = {
   left: ComparisonLevel;
   right: ComparisonLevel;
   open: boolean;
+  returnFocusRef: RefObject<HTMLButtonElement | null>;
   onOpenChange: (open: boolean) => void;
 };
 
@@ -26,8 +28,10 @@ export default function ComparisonSpecs({
   left,
   right,
   open,
+  returnFocusRef,
   onOpenChange,
 }: Props) {
+  const closeButton = useRef<HTMLButtonElement>(null);
   const leftItem = comparisonItem(group, left),
     rightItem = comparisonItem(group, right),
     definition = comparisonGroups[group];
@@ -37,7 +41,8 @@ export default function ComparisonSpecs({
         className="comparison-specs"
         side="right"
         showCloseButton={false}
-        initialFocus={false}
+        initialFocus={closeButton}
+        finalFocus={returnFocusRef}
       >
         <div className="comparison-specs-heading">
           <div>
@@ -48,6 +53,7 @@ export default function ComparisonSpecs({
             </SheetDescription>
           </div>
           <button
+            ref={closeButton}
             aria-label="Close specification comparison"
             onClick={() => onOpenChange(false)}
           >

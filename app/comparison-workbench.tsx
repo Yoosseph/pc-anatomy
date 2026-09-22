@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ArrowLeftRight, BarChart3, ChevronLeft, Cpu } from 'lucide-react';
 import {
   comparisonGroupIds,
@@ -28,6 +28,7 @@ import { useDisassemblyPlayback } from './use-disassembly-playback';
 type Props = { onExit: () => void };
 
 export default function ComparisonWorkbench({ onExit }: Props) {
+  const specsButton = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState(initialComparisonState);
   const [count, setCount] = useState<number | null>(null);
   const [viewerRevision, setViewerRevision] = useState(0);
@@ -122,6 +123,7 @@ export default function ComparisonWorkbench({ onExit }: Props) {
         </div>
         <div className="comparison-top-actions">
           <button
+            ref={specsButton}
             className="comparison-specs-button"
             onClick={() =>
               setState((current) => setComparisonSpecsOpen(current, true))
@@ -221,6 +223,7 @@ export default function ComparisonWorkbench({ onExit }: Props) {
         left={state.left}
         right={state.right}
         open={state.specsOpen}
+        returnFocusRef={specsButton}
         onOpenChange={(open) =>
           setState((current) => setComparisonSpecsOpen(current, open))
         }

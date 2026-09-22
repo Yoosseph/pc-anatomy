@@ -66,6 +66,7 @@ export const comparisonGroups = {
     shortLabel: 'CPU',
     itemLabel: 'processor',
     rows: [
+      { id: 'architecture', label: 'Architecture', keys: ['Architecture'] },
       { id: 'cores', label: 'Cores / threads', keys: ['Cores'] },
       { id: 'clocks', label: 'Clocks', keys: ['Clocks'] },
       { id: 'cache', label: 'Cache', keys: ['Cache'] },
@@ -128,10 +129,15 @@ function defaultComparisonPair(
   return [left, right];
 }
 
-const [initialLeft, initialRight] = defaultComparisonPair('gpu');
+const initialComparisonGroup = comparisonGroupIds[0];
+if (!initialComparisonGroup)
+  throw new Error('Comparison mode needs at least one eligible category');
+const [initialLeft, initialRight] = defaultComparisonPair(
+  initialComparisonGroup,
+);
 
 export const initialComparisonState: ComparisonState = {
-  group: 'gpu',
+  group: initialComparisonGroup,
   left: initialLeft,
   right: initialRight,
   activeSide: 'left',

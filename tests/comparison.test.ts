@@ -62,6 +62,7 @@ after(() => {
 });
 
 await test('comparison state starts with a distinct valid pair', () => {
+  assert.equal(initialComparisonState.group, comparisonGroupIds[0]);
   assert.equal(initialComparisonState.left, 'card');
   assert.equal(initialComparisonState.right, 'rx9070');
   assert.equal(initialComparisonState.group, 'gpu');
@@ -123,6 +124,13 @@ await test('every comparison group resolves complete catalogue-backed specs', ()
     ['gpu', 'card', 'boardPower', '575 W'],
     ['gpu', 'card', 'interface', 'PCI Express 5.0'],
     ['psu', 'psu', 'output', '850 W'],
+    ['cpu', 'ryzen', 'architecture', 'Zen 5 · chiplet'],
+    [
+      'cpu',
+      'corei9',
+      'architecture',
+      'Arrow Lake · Lion Cove + Skymont',
+    ],
     ['cpu', 'corei9', 'socket', 'LGA 1851'],
     ['gpu', 'arcb580', 'exterior', 'Intel Arc B580 Limited Edition'],
     ['storage', 'ssd', 'interface', 'SATA 6 Gb/s'],

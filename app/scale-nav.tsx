@@ -79,21 +79,17 @@ export default function ScaleNav({
 }: Props) {
   return (
     <div className="explore-section">
-      <div className="section-heading">
-        EXPLORE BY SCALE
-        <button
-          className="mobile-close"
-          aria-label="Close systems"
-          onClick={onClose}
-        >
-          <X size={17} />
-        </button>
-      </div>
+      <button
+        className="mobile-close"
+        aria-label="Close systems"
+        onClick={onClose}
+      >
+        <X size={17} />
+      </button>
       <button className="compare-button" onClick={onCompare}>
         <GitCompareArrows size={17} />
         <span>
           <strong>Compare components</strong>
-          <small>All eligible same-category models</small>
         </span>
         <ChevronRight size={15} />
       </button>

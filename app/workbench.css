@@ -1,7 +1,7 @@
 :root {
   font-family: 'Segoe UI', Arial, sans-serif;
   color: #e4e7e9;
-  background: #0f1011;
+  background: #0c0d0e;
   font-synthesis: none;
   color-scheme: dark;
   --background: #0f1011;
@@ -56,9 +56,9 @@ body {
      screen show a seam in landscape. */
   background: radial-gradient(
     ellipse at 62% 45%,
-    #232528 0%,
-    #131415 44%,
-    #08090a 80%
+    #1b1d1e 0%,
+    #0f1011 44%,
+    #070808 80%
   );
 }
 button,
@@ -134,13 +134,13 @@ a {
 .workbench::before {
   top: 0;
   height: var(--safe-t);
-  background: #101112;
+  background: #0d0e0e;
   z-index: 16;
 }
 .workbench::after {
   bottom: 0;
   height: var(--safe-b);
-  background: #111213;
+  background: #0e0f10;
   z-index: 9;
 }
 /* Chrome is furniture: dragging across it should orbit or do nothing, never
@@ -164,7 +164,7 @@ a {
   justify-content: space-between;
   padding: 0 28px;
   z-index: 15;
-  background: #101112;
+  background: #0d0e0e;
   border-bottom: 1px solid #26272a;
 }
 .brand {
@@ -296,7 +296,7 @@ a {
      you read, not part of the backdrop. Every hover, active row, divider and
      switch inside it is keyed above this value. Drop it back towards the
      stage colour and they invert into dark holes. */
-  background: #212327;
+  background: #1b1d1e;
   border-right: 1px solid #3a3d42;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -328,7 +328,8 @@ a {
   color: #c8c9cd;
 }
 .explore-section {
-  padding: 24px 0 20px;
+  position: relative;
+  padding: 12px 0 20px;
   border-bottom: 1px solid #34373c;
 }
 .scale-navigation {
@@ -783,7 +784,7 @@ a {
   align-items: center;
   gap: 24px;
   padding: 20px 38px;
-  background: #131415;
+  background: #0f1011;
   border-top: 1px solid #3f4146;
   border-bottom: 1px solid #292a2d;
   z-index: 8;
@@ -1495,7 +1496,7 @@ a {
     padding-top: 24px;
   }
   .explore-section {
-    padding: 24px 0 14px;
+    padding: 12px 0 14px;
   }
   .scale-navigation > button {
     padding-top: 10px;
@@ -1627,6 +1628,11 @@ a {
   }
   .mobile-close {
     display: block;
+  }
+  .explore-section > .mobile-close {
+    position: absolute;
+    top: -18px;
+    right: 0;
   }
   .stage-heading {
     top: 98px;
@@ -2154,7 +2160,7 @@ a {
     padding-top: 24px;
   }
   .explore-section {
-    padding-top: 22px;
+    padding-top: 12px;
     padding-bottom: 14px;
   }
   .scale-navigation > button {
@@ -2571,11 +2577,11 @@ a {
 }
 .compare-button {
   width: 100%;
-  min-height: 58px;
+  min-height: 40px;
   justify-content: flex-start;
   gap: 11px;
-  margin: 0 0 14px;
-  padding: 9px 10px;
+  margin: 0 0 10px;
+  padding: 7px 10px;
   color: #d8edf0;
   background: #1b3339;
   border: 1px solid #4d7f89;
@@ -2614,9 +2620,9 @@ a {
 .comparison-workbench {
   background: radial-gradient(
     ellipse at 50% 47%,
-    #292b2f 0%,
-    #151719 48%,
-    #090a0b 88%
+    #212327 0%,
+    #111315 48%,
+    #070809 88%
   );
 }
 .comparison-topbar {
@@ -2629,7 +2635,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  background: #101112;
+  background: #0d0e0e;
   border-bottom: 1px solid #2c2e31;
   -webkit-user-select: none;
   user-select: none;

@@ -41,8 +41,10 @@ export function pieceDestination(
   position: T.Vector3,
   inventoryTarget: T.Vector3,
 ) {
-  const stage =
-    byId[piece.concept].category === 'Cooling'
+  const entry = byId[piece.concept];
+  const stage = entry.opensFirst
+    ? smoothstep(0, 0.2, value)
+    : entry.category === 'Cooling'
       ? smoothstep(0, 0.48, value)
       : smoothstep(0.22, 0.68, value);
   position

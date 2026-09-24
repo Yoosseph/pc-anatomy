@@ -73,6 +73,7 @@ export const pcConcepts: Concept[] = [
     representationType: 'physical',
     sources: ['chassis'],
     searchTerms: ['glass', 'window', 'cover', 'panel'],
+    opensFirst: true,
   }),
   concept({
     id: 'frontpanel',
@@ -81,14 +82,71 @@ export const pcConcepts: Concept[] = [
     parent: 'chassis',
     level: 'pc',
     description:
-      'The face of the case, with its intake mesh and front connectors.',
+      'The removable face of the case: a perforated steel mesh in an aluminium frame, directly in front of the intake fans.',
     purpose:
-      'Lets intake fans draw cool air in while presenting the power button and front ports.',
+      'Lets the intake fans draw cool air straight in across their whole face while keeping fingers out of the blades.',
     quantity: '1 modeled panel',
-    specifications: { Intake: 'Illustrative mesh' },
+    specifications: {
+      Intake: 'Perforated steel mesh, illustrative hole pattern',
+      Mounting: 'Push-fit ball studs',
+    },
     representationType: 'physical',
     sources: ['chassis'],
-    searchTerms: ['bezel', 'mesh', 'intake', 'front'],
+    searchTerms: ['bezel', 'mesh', 'intake', 'front', 'grille'],
+    opensFirst: true,
+  }),
+  concept({
+    id: 'frontio',
+    name: 'Front I/O panel',
+    shortName: 'Front I/O',
+    category: 'Chassis',
+    parent: 'chassis',
+    level: 'pc',
+    description:
+      'The row of buttons and connectors along the top front edge of the case: power, reset, two USB-A ports, one USB-C port and a headset jack.',
+    purpose:
+      'Puts the controls and the ports used most often within reach, wired by internal cables to the motherboard’s front-panel, USB and audio headers.',
+    quantity: '1 modeled panel',
+    specifications: {
+      Buttons: 'Power with lit ring · reset',
+      Ports: '2 × USB-A · 1 × USB-C · 3.5 mm audio combo',
+      'Board headers': 'Front panel · USB 3 · USB-C · HD audio',
+    },
+    representationType: 'physical',
+    sources: ['chassis', 'mainboardmanual'],
+    searchTerms: [
+      'power button',
+      'reset',
+      'usb',
+      'usb-c',
+      'headphone',
+      'audio jack',
+      'front ports',
+      'io',
+    ],
+  }),
+  concept({
+    id: 'dustfilter',
+    name: 'Dust filters',
+    shortName: 'Dust filter',
+    category: 'Chassis',
+    parent: 'chassis',
+    level: 'pc',
+    description:
+      'Fine nylon mesh over every opening that draws air in: a framed sheet behind the front mesh, a slide-out tray under the power supply and a magnetic sheet in the lid.',
+    purpose:
+      'Catches dust before the fans pull it onto heatsink fins, where it would insulate them. Each one comes off for cleaning without tools.',
+    quantity: '3 modeled filters',
+    specifications: {
+      Front: 'Framed mesh behind the front panel',
+      Bottom: 'Slide-out tray, removed from the front',
+      Top: 'Magnetic sheet',
+      Mesh: 'Illustrative weave',
+    },
+    representationType: 'physical',
+    sources: ['chassis'],
+    searchTerms: ['filter', 'dust', 'mesh', 'magnetic', 'nylon', 'intake'],
+    opensFirst: true,
   }),
   concept({
     id: 'toppanel',
@@ -103,6 +161,7 @@ export const pcConcepts: Concept[] = [
     representationType: 'physical',
     sources: ['chassis'],
     searchTerms: ['lid', 'exhaust', 'roof', 'vent'],
+    opensFirst: true,
   }),
   concept({
     id: 'psushroud',
@@ -161,11 +220,14 @@ export const pcConcepts: Concept[] = [
     parent: 'chassis',
     level: 'pc',
     description:
-      'The opening in the back of the case that the board’s port stack shows through.',
+      'The opening in the back of the case and the stamped shield plate in it, cut to the board’s port stack so each connector sits flush in its own hole.',
     purpose:
-      'Gives external connectors a fixed, shielded exit point at a standardised size.',
-    quantity: '1 modeled aperture',
-    specifications: { Aperture: '158.75 × 44.45 mm' },
+      'Gives external connectors a fixed, shielded exit point at a standardised size, and grounds each connector shell to the case.',
+    quantity: '1 modeled aperture and shield',
+    specifications: {
+      Aperture: '158.75 × 44.45 mm',
+      Shield: 'Cut-outs follow the modeled port stack',
+    },
     representationType: 'physical',
     physicalAccuracy: standard,
     sources: ['chassis'],

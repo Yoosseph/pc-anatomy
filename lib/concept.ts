@@ -48,6 +48,14 @@ export interface Concept {
   level: LevelId;
   /** Set when selecting this component can descend into a scale of its own. */
   open?: LevelId;
+  /**
+   * An outer cover that has to come off before anything behind it can move:
+   * a glass or mesh panel, the lid, a dust filter. These leave at the start of
+   * the disassembly, ahead of everything else, because a fan that sets off
+   * forward while the panel in front of it is still shut goes through the
+   * panel.
+   */
+  opensFirst?: boolean;
 }
 
 export const physical =

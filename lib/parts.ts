@@ -401,6 +401,8 @@ export function buildPerforation(
   thickness: number,
   pitch: number,
   color = '#3b4146',
+  /** Hole radius as a fraction of the pitch. */
+  open = 0.31,
 ) {
   const shape = new T.Shape();
   shape.moveTo(-width / 2, -height / 2);
@@ -416,7 +418,7 @@ export function buildPerforation(
       if (Math.abs(x) > width / 2 - pitch || Math.abs(y) > height / 2 - pitch)
         continue;
       const hole = new T.Path();
-      hole.absarc(x, y, pitch * 0.31, 0, Math.PI * 2, true);
+      hole.absarc(x, y, pitch * open, 0, Math.PI * 2, true);
       shape.holes.push(hole);
     }
   const geometry = new T.ExtrudeGeometry(shape, {

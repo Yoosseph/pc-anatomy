@@ -4,7 +4,14 @@ import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import type { Finisher } from './materials.ts';
 import { temperedGlass } from './materials.ts';
-import { buildPerforation, buildScrew, glowMaterial } from './parts.ts';
+import {
+  buildHoneycomb,
+  buildPerforation,
+  buildPort,
+  buildScrew,
+  glowMaterial,
+} from './parts.ts';
+import { filterWeaveTexture } from './surfaces.ts';
 
 /**
  * The case.
@@ -17,15 +24,18 @@ import { buildPerforation, buildScrew, glowMaterial } from './parts.ts';
  * that: the shell is continuous, every opening in it is a deliberate cut-out
  * with an edge, and the panels meet their frame instead of floating near it.
  *
- * The exterior follows a dual-glass aluminium tower of the Lian Li O11 Dynamic
- * kind, because that layout is the one that answers both problems at once: the
- * body is genuinely solid steel and aluminium, and the two faces you look
- * through are deliberate glass panels rather than missing walls.
+ * The exterior is an aluminium-framed mid tower built for front-to-back air:
+ * the body is solid steel and aluminium, the one face you look through is a
+ * deliberate glass panel rather than a missing wall, and the face the fans
+ * breathe through is mesh. It used to be glass there too, with the three
+ * intake fans pressed against it and drawing through a strip at the edge,
+ * which no case that puts its fans at the front actually does.
  *
  *   · four extruded aluminium corner columns carry the whole frame
- *   · tempered glass across the front and the left side, meeting at a column
+ *   · tempered glass down the left side, a perforated mesh front
  *   · folded steel everywhere else: rear panel, tray, floor, roof, back side
- *   · a recessed mesh lid, a floor intake with a filter, and four feet
+ *   · a filter behind every intake: front, floor and lid
+ *   · the front I/O along the top front edge, and four feet
  *
  * Axes match `machine.ts`: +X front, −X rear, +Y up, +Z toward the viewer.
  */
@@ -51,6 +61,15 @@ export type CaseShell = {
   slots: number;
   /** The supply's rear face, which shows through its own opening. */
   psu: { y: number; z: number; up: number; across: number };
+  /** The supply's centre, front to back, which its floor intake sits under. */
+  psuX: number;
+  /** The rear exhaust fan's mounting: its centre and its frame size. */
+  exhaust: { y: number; z: number; size: number };
+  /**
+   * The grommet above the board's top edge that the processor power lead
+   * comes through, centred on the connector it feeds.
+   */
+  eps: { x: number; y: number; width: number; height: number };
   /** Accent colour for the lit trim. */
   accent: string;
 };
@@ -106,7 +125,7 @@ export function buildChassis(
   finish: Finisher,
   s: CaseShell,
 ) {
-  const { add, material, label } = tools;
+  const { add, material } = tools;
   const { REAR, FRONT, FLOOR, ROOF, TRAY, GLASS, BACK } = s;
   const DEPTH = FRONT - REAR,
     HEIGHT = ROOF - FLOOR,
@@ -154,6 +173,8 @@ export function buildChassis(
    * that a plain bar does not.
    */
   const COL = 0.36;
+  /** The solid strip of roof ahead of the lid opening, carrying the front I/O. */
+  const FRONT_BAND = 1.35;
   for (const [cx, cz] of [
     [FRONT - COL / 2, GLASS - COL / 2],
     [FRONT - COL / 2, BACK + COL / 2],
@@ -195,11 +216,25 @@ export function buildChassis(
   }
 
   /**
-   * The rear panel, cut rather than covered: the I/O window, the eight
-   * expansion slots and the supply's own opening are real holes with material
-   * between them. This is the panel that used to be two thin bars with the
-   * whole back of the case open between them.
+   * A cut sheet: the pieces `plateWithHoles` returns, laid edge to edge.
+   *
+   * The pieces meet in the middle of a flat sheet, so they are square-edged.
+   * Rounding them, as a panel's outer edge should be, put a dark groove along
+   * every seam, and the rear panel read as a stack of planks with a line at
+   * every slot.
    */
+  const sheet = (size: Vec3, mat: T.Material) =>
+    new T.Mesh(new T.BoxGeometry(...size), mat);
+
+  /**
+   * The rear panel, cut rather than covered: the I/O window, the expansion
+   * slots, the exhaust fan's opening and the supply's own opening are real
+   * holes with material between them. The fan used to sit in front of solid
+   * steel with its frame through the sheet.
+   */
+  // Square, and inside the fan's 105 mm screw pattern, so the four screws
+  // land on steel rather than on the grille.
+  const fanHole = s.exhaust.size - 0.6;
   const rearHoles: Rect[] = [
     [s.io.across, s.io.up, s.io.z - MIDZ, s.io.y],
     [s.psu.across, s.psu.up, s.psu.z - MIDZ, s.psu.y],
@@ -211,14 +246,18 @@ export function buildChassis(
       s.slotZ - MIDZ,
       s.slotY - i * s.slotPitch,
     ]);
+  const lipped = rearHoles.length;
+  rearHoles.push([fanHole, fanHole, s.exhaust.z - MIDZ, s.exhaust.y]);
   for (const [w, h, cz, cy] of plateWithHoles(
     WIDTH - COL * 2,
     HEIGHT - 0.38,
     rearHoles,
   ))
-    put(frame, slab([0.1, h, w], steel, 0.014), [REAR + 0.05, cy, MIDZ + cz]);
+    put(frame, sheet([0.1, h, w], steel), [REAR + 0.05, cy, MIDZ + cz]);
   // A returned lip round each opening, so the cuts have an edge you can read.
-  for (const [w, h, cz, cy] of rearHoles) {
+  // Not round the fan's: the fan frame sits against the inside of the sheet
+  // there, and a lip would be inside the frame.
+  for (const [w, h, cz, cy] of rearHoles.slice(0, lipped)) {
     for (const sz of [-1, 1])
       put(frame, slab([0.13, h + 0.09, 0.05], steelInner, 0.01), [
         REAR + 0.12,
@@ -232,29 +271,58 @@ export function buildChassis(
         MIDZ + cz,
       ]);
   }
+  // The exhaust grille: a hex pattern punched in its own insert, level with
+  // the sheet, and the four screws that hold the fan to the inside of it.
+  const grille = buildHoneycomb(
+    material,
+    fanHole,
+    fanHole,
+    0.05,
+    0.11,
+    '#1d2124',
+  );
+  grille.rotation.y = Math.PI / 2;
+  put(frame, grille, [REAR + 0.05, s.exhaust.y, s.exhaust.z]);
+  for (const sy of [-1, 1])
+    for (const sz of [-1, 1]) {
+      const screw = buildScrew(material, 0.065);
+      screw.rotation.z = Math.PI / 2;
+      put(frame, screw, [
+        REAR - 0.02,
+        s.exhaust.y + sy * s.exhaust.size * 0.4375,
+        s.exhaust.z + sz * s.exhaust.size * 0.4375,
+      ]);
+    }
 
   /**
    * The motherboard tray: one continuous sheet, not the five bars it was.
    *
    * A tray is the part every other part is bolted to, so a tray with gaps in
-   * it is the reason a build looks like it is hanging in mid-air. The three
+   * it is the reason a build looks like it is hanging in mid-air. The
    * openings are the ones a real tray has, and each is bound by a rubber
-   * grommet: the big pass-through down the front edge, the run along the top
-   * for the processor power lead, and the window behind the socket that lets a
-   * cooler backplate come off without stripping the board out.
+   * grommet: the big pass-through down the front edge, the slot above the
+   * board's top edge for the processor power lead, the window behind the
+   * socket that lets a cooler backplate come off without stripping the board
+   * out, and two low ones under the shroud where the supply's leads cross into
+   * the cable chamber.
+   *
+   * The processor lead's slot used to be a long run hidden behind the top of
+   * the board, where no cable can reach it, so the lead went up the gap behind
+   * the board's rear edge instead and through the I/O shield on its way.
    */
   const trayHoles: Rect[] = [
-    [1.15, 7.3, FRONT - 2.0, 0.1], // front pass-through
-    [4.4, 0.75, MIDX - 1.0, ROOF - 1.25], // top run
-    [2.5, 2.6, REAR + 3.0, 2.05], // socket access window
-    [1.05, 1.5, FRONT - 2.0, FLOOR + 2.35], // lower pass-through
+    [1.15, 7.3, FRONT - 2.0 - MIDX, 0.1], // front pass-through
+    [s.eps.width, s.eps.height, s.eps.x - MIDX, s.eps.y], // processor power
+    [2.5, 2.6, REAR + 3.0 - MIDX, 2.05], // socket access window
+    [1.05, 1.5, FRONT - 2.0 - MIDX, FLOOR + 2.35], // lower pass-through
+    [0.9, 0.9, REAR + 1.0 - MIDX, FLOOR + 2.2], // rear, under the shroud
   ];
   for (const [w, h, cx, cy] of plateWithHoles(
     DEPTH - COL * 2,
     HEIGHT - 0.38,
     trayHoles,
   ))
-    put(frame, slab([w, h, 0.085], steelInner, 0.012), [MIDX + cx, cy, TRAY]);
+    put(frame, sheet([w, h, 0.085], steelInner), [MIDX + cx, cy, TRAY]);
   for (const [w, h, cx, cy] of trayHoles) {
     for (const sx of [-1, 1])
       put(frame, slab([0.09, h + 0.14, 0.19], rubber, 0.03), [
@@ -270,29 +338,47 @@ export function buildChassis(
       ]);
   }
 
-  // Floor, with the supply's intake cut through it, and the roof.
+  // Floor, with the supply's intake cut through it under its fan, and the
+  // roof. The cut used to be offset toward the front, so half of it opened on
+  // to nothing, a hole in the floor beside the supply.
+  const psuIntake: Rect = [
+    s.psu.across - 1.1,
+    s.psu.across - 1.1,
+    s.psuX - MIDX,
+    s.psu.z - MIDZ,
+  ];
   for (const [w, h, cx, cz] of plateWithHoles(
     DEPTH - COL * 2,
     WIDTH - COL * 2,
-    [[3.6, 3.1, -1.9, 0.35]],
+    [psuIntake],
   ))
-    put(frame, slab([w, 0.1, h], steel, 0.014), [
-      MIDX + cx,
-      FLOOR + 0.05,
-      MIDZ + cz,
-    ]);
-  // The roof is a frame, not a lid: the mesh panel drops into the opening.
-  // Laying a solid plate here and the mesh under it is what buried the lid.
+    put(frame, sheet([w, 0.1, h], steel), [MIDX + cx, FLOOR + 0.05, MIDZ + cz]);
+  /**
+   * The roof is a frame, not a lid: the mesh panel drops into the opening.
+   * Laying a solid plate here and the mesh under it is what buried the lid.
+   *
+   * The opening stops short of the front, leaving a solid band across the
+   * top front edge. That band is where the front I/O lives on a case with a
+   * mesh face, and it used to be missing: the buttons and ports were inside
+   * the case, under the roof, where nobody could reach or see them.
+   */
+  const ROOF_OPEN = {
+    width: DEPTH - COL * 2 - 0.45 - FRONT_BAND,
+    depth: WIDTH - COL * 2 - 0.9,
+    x: MIDX + (0.45 - FRONT_BAND) / 2,
+  };
+  // The front I/O module drops through its own cut-out in the band.
+  const frontIo = buildFrontIo();
+  const IO_X = FRONT - COL - FRONT_BAND / 2;
   for (const [w, h, cx, cz] of plateWithHoles(
     DEPTH - COL * 2,
     WIDTH - COL * 2,
-    [[DEPTH - COL * 2 - 0.9, WIDTH - COL * 2 - 0.9, 0, 0]],
+    [
+      [ROOF_OPEN.width, ROOF_OPEN.depth, ROOF_OPEN.x - MIDX, 0],
+      [frontIo.depth, frontIo.length, IO_X - MIDX, 0],
+    ],
   ))
-    put(frame, slab([w, 0.09, h], steel, 0.014), [
-      MIDX + cx,
-      ROOF - 0.05,
-      MIDZ + cz,
-    ]);
+    put(frame, sheet([w, 0.09, h], steel), [MIDX + cx, ROOF - 0.05, MIDZ + cz]);
   // The back side, closing the cable chamber.
   put(frame, slab([DEPTH - COL * 2, HEIGHT - 0.38, 0.09], steel, 0.014), [
     MIDX,
@@ -313,55 +399,174 @@ export function buildChassis(
       put(frame, foot, [fx, FLOOR - 0.2, fz]);
     }
 
-  // The filter in the floor, below the supply's intake.
-  const filter = buildPerforation(material, 3.5, 3.0, 0.03, 0.1, '#1a1e21');
-  filter.rotation.x = Math.PI / 2;
-  put(frame, filter, [MIDX - 1.9, FLOOR - 0.07, MIDZ + 0.35]);
+  add('chassis', frame, [0, 0, 0], [0, 0, -2.4]);
+
+  // ── Front I/O ───────────────────────────────────────────────────────────
+  // Fixed to the frame, so it travels with it.
+  add('frontio', frontIo.io, [IO_X, ROOF, MIDZ], [0, 0, -2.4]);
 
   /**
-   * The intake channel: a perforated column behind the front glass.
+   * The front I/O: one row of controls on a brushed plate set into the roof's
+   * front band, where a mesh-fronted case puts it.
    *
-   * The front of a case like this is glass, so air cannot come through it.
-   * It comes in down the front edge instead, through a full-height perforated
-   * strip inboard of the corner column, and that is the wall the front fans
-   * actually pull through.
+   * Every item is centred on one line, and the gaps between them are equal
+   * edge to edge rather than centre to centre, because that is what reads as
+   * aligned: a 15 mm power button and a 6 mm jack spaced on equal centres look
+   * as if they had drifted. The row is laid out from the items' real widths
+   * and centred on the plate, so nothing here is a hand-placed offset.
+   *
+   * Left to right as you face the front (the case's +Z to −Z): power, reset,
+   * two USB-A, one USB-C, and the headset jack. The ports are cut through the
+   * plate and sit with their shells flush with its face; the buttons and the
+   * jack stand proud in their own bezels, as they do on a real panel.
    */
-  const intake = buildPerforation(
-    material,
-    HEIGHT - 1.1,
-    2.4,
-    0.05,
-    0.135,
-    '#1e2225',
-  );
-  intake.rotation.y = Math.PI / 2;
-  intake.rotation.x = Math.PI / 2;
-  put(frame, intake, [FRONT - 0.34, 0, BACK + 1.5]);
-  for (const cz of [BACK + 0.32, BACK + 2.68])
-    put(frame, slab([0.14, HEIGHT - 0.9, 0.1], alu, 0.02), [
-      FRONT - 0.34,
-      0,
-      cz,
-    ]);
-
-  // Front I/O, on the top rail where a tower like this puts it.
-  const io = new T.Group();
-  put(io, slab([0.5, 0.14, 0.5], aluBright, 0.05), [0, 0, 0]);
-  const power = new T.Mesh(
-    new T.CircleGeometry(0.09, 20),
-    glowMaterial(s.accent, 1.6),
-  );
-  power.rotation.x = -Math.PI / 2;
-  put(io, power, [0, 0.08, 0]);
-  for (let i = 0; i < 3; i++)
-    put(io, slab([0.3, 0.1, 0.13], finish('plasticGloss'), 0.02), [
-      0,
-      0.02,
-      -0.5 - i * 0.34,
-    ]);
-  put(frame, io, [FRONT - 0.75, ROOF - 0.34, GLASS - 0.62]);
-
-  add('chassis', frame, [0, 0, 0], [0, 0, -2.4]);
+  function buildFrontIo() {
+    const u = (v: number) => v / 35;
+    const io = new T.Group();
+    const THICK = u(1.6);
+    const items = [
+      { kind: 'power', width: u(17) },
+      { kind: 'reset', width: u(8) },
+      { kind: 'usba', width: u(14.6), open: [u(14.6), u(6.6)] },
+      { kind: 'usba', width: u(14.6), open: [u(14.6), u(6.6)] },
+      { kind: 'usbc', width: u(9.4), open: [u(9.4), u(3.9)] },
+      { kind: 'audio', width: u(9) },
+    ] as const;
+    const GAP = u(7);
+    const row =
+      items.reduce((sum, item) => sum + item.width, 0) +
+      GAP * (items.length - 1);
+    const plateLength = row + u(18);
+    const plateDepth = u(26);
+    // Centre of each item along the row, from +Z (left, facing the front).
+    const centres: number[] = [];
+    let cursor = row / 2;
+    for (const item of items) {
+      centres.push(cursor - item.width / 2);
+      cursor -= item.width + GAP;
+    }
+    // The plate, with the port openings cut through it: one extruded outline
+    // with real holes, so the brushed grain runs unbroken across it. Built
+    // from strips, as the case's big sheets are, it showed a hairline at
+    // every strip edge through the grain.
+    const outline = new T.Shape();
+    outline.moveTo(-plateDepth / 2, -plateLength / 2);
+    outline.lineTo(plateDepth / 2, -plateLength / 2);
+    outline.lineTo(plateDepth / 2, plateLength / 2);
+    outline.lineTo(-plateDepth / 2, plateLength / 2);
+    outline.closePath();
+    items.forEach((item, i) => {
+      if (!('open' in item)) return;
+      const [along, across] = item.open;
+      // The shape's +Y becomes the case's −Z once it is laid flat.
+      const y = -centres[i];
+      const hole = new T.Path();
+      hole.moveTo(-across / 2, y - along / 2);
+      hole.lineTo(-across / 2, y + along / 2);
+      hole.lineTo(across / 2, y + along / 2);
+      hole.lineTo(across / 2, y - along / 2);
+      hole.closePath();
+      outline.holes.push(hole);
+    });
+    const plate = new T.Mesh(
+      new T.ExtrudeGeometry(outline, { depth: THICK, bevelEnabled: false }),
+      finish('brushed', '#3a4147', 0.3),
+    );
+    plate.rotation.x = -Math.PI / 2;
+    io.add(plate);
+    // A chamfered border so the plate reads as set into the roof, not laid on it.
+    for (const sx of [-1, 1])
+      put(
+        io,
+        slab([u(1.2), THICK * 1.2, plateLength + u(2.4)], aluFrame, 0.006),
+        [sx * (plateDepth / 2 + u(0.6)), THICK * 0.55, 0],
+      );
+    for (const sz of [-1, 1])
+      put(io, slab([plateDepth, THICK * 1.2, u(1.2)], aluFrame, 0.006), [
+        0,
+        THICK * 0.55,
+        sz * (plateLength / 2 + u(0.6)),
+      ]);
+    const ring = (outer: number, inner: number, mat: T.Material, y: number) => {
+      const mesh = new T.Mesh(new T.RingGeometry(inner, outer, 40), mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = y;
+      return mesh;
+    };
+    const disc = (radius: number, height: number, mat: T.Material) =>
+      new T.Mesh(new T.CylinderGeometry(radius, radius, height, 40), mat);
+    const bezel = finish('anodizedLight', '#a9b1b6', 0.28);
+    const black = finish('plasticGloss', '#0d0f10');
+    items.forEach((item, i) => {
+      const z = centres[i];
+      const top = THICK;
+      if (item.kind === 'power') {
+        // A machined bezel, the cap inside it, and the lit ring between them.
+        const outer = put(io, disc(u(8.5), u(1.4), bezel), [
+          0,
+          top + u(0.7),
+          z,
+        ]);
+        outer.castShadow = true;
+        put(io, disc(u(6.6), u(2.2), finish('anodized', '#2b3136', 0.24)), [
+          0,
+          top + u(1.1),
+          z,
+        ]);
+        put(
+          io,
+          ring(u(7.6), u(6.7), glowMaterial(s.accent, 1.8), top + u(1.45)),
+          [0, 0, z],
+        );
+        // The power symbol: a ring broken toward the back of the case, which
+        // is "up" to someone standing at the front, and a bar through the
+        // break.
+        const ink = finish('plasticGloss', '#aeb6bb');
+        const gap = 1.2;
+        const symbol = new T.Mesh(
+          new T.RingGeometry(
+            u(2.2),
+            u(2.9),
+            28,
+            1,
+            Math.PI + gap / 2,
+            Math.PI * 2 - gap,
+          ),
+          ink,
+        );
+        symbol.rotation.x = -Math.PI / 2;
+        put(io, symbol, [0, top + u(2.25), z]);
+        put(io, new T.Mesh(new T.BoxGeometry(u(3.4), u(0.2), u(0.7)), ink), [
+          -u(1.7),
+          top + u(2.26),
+          z,
+        ]);
+      } else if (item.kind === 'reset') {
+        put(io, disc(u(4), u(0.9), bezel), [0, top + u(0.45), z]);
+        put(io, disc(u(2.8), u(1.5), black), [0, top + u(0.75), z]);
+      } else if (item.kind === 'audio') {
+        put(io, disc(u(4.5), u(0.9), black), [0, top + u(0.45), z]);
+        put(io, ring(u(3.2), u(2.2), bezel, top + u(0.92)), [0, 0, z]);
+        put(io, disc(u(1.8), u(0.2), finish('rubber', '#050606')), [
+          0,
+          top + u(0.93),
+          z,
+        ]);
+      } else {
+        // A connector shell dropped through its cut-out, mouth up, its rim
+        // level with the plate. USB-A ports are wide side across the row.
+        const [w, h] = item.open;
+        const depth = u(11);
+        const port = buildPort(material, [w, h, depth], '#8d969b');
+        port.rotation.x = -Math.PI / 2;
+        const holder = new T.Group();
+        holder.add(port);
+        holder.rotation.y = Math.PI / 2;
+        put(io, holder, [0, top - depth / 2 + u(0.2), z]);
+      }
+    });
+    return { io, length: plateLength, depth: plateDepth };
+  }
 
   // ── Expansion slot covers ───────────────────────────────────────────────
   const covers = new T.Group();
@@ -386,6 +591,13 @@ export function buildChassis(
 
   // ── Panels ──────────────────────────────────────────────────────────────
   const glassMaterial = temperedGlass();
+  /**
+   * How tall an opening in the frame is: between the top and bottom rails,
+   * not between the roof and the floor. The glass and the mesh front used to
+   * be the full height of the case, so their top and bottom edges ran through
+   * the rails behind them.
+   */
+  const PANEL_H = HEIGHT - 0.38 * 2 - 0.04;
 
   /**
    * A glass panel in its frame: the pane, its polished edge trim and the four
@@ -441,18 +653,155 @@ export function buildChassis(
   // this size does not park itself in front of everything it was covering.
   add(
     'sidepanel',
-    pane(DEPTH - COL * 2 - 0.06, HEIGHT - 0.44, 'x'),
+    pane(DEPTH - COL * 2 - 0.06, PANEL_H, 'x'),
     [MIDX, 0, GLASS - 0.035],
     [0, 3.2, 3.6],
   );
 
-  // Front glass, the other half of the corner.
-  add(
-    'frontpanel',
-    pane(WIDTH - COL * 2 - 0.06, HEIGHT - 0.44, 'z'),
-    [FRONT - 0.035, 0, MIDZ],
-    [4.4, 1.4, 0],
-  );
+  /**
+   * The front: perforated steel in an aluminium frame, straight in front of
+   * the intake fans.
+   *
+   * This was a second sheet of glass, with the fans pressed against it and a
+   * narrow perforated strip down one edge as the only way in. Three 120 mm
+   * fans drawing through a strip a third of their width is not a layout any
+   * front-intake case uses. The mesh is cut in four tiles with a rib at each
+   * seam, which is how a panel this tall is stiffened, and it is real holes:
+   * the fans and their light show through it.
+   */
+  const meshFront = () => {
+    const panel = new T.Group();
+    const w = WIDTH - COL * 2 - 0.06,
+      h = PANEL_H,
+      rail = 0.26,
+      tiles = 4;
+    const tileH = (h - rail * 2) / tiles;
+    for (let i = 0; i < tiles; i++) {
+      // Open enough that the fans and their light read through it, as they
+      // do through a real mesh front.
+      const tile = buildPerforation(
+        material,
+        w - rail * 2,
+        tileH,
+        0.03,
+        0.16,
+        '#1b1f22',
+        0.4,
+      );
+      tile.rotation.y = Math.PI / 2;
+      put(panel, tile, [0, -h / 2 + rail + tileH * (i + 0.5), 0]);
+      if (i)
+        put(panel, sheet([0.06, 0.07, w - rail * 2], aluFrame), [
+          -0.02,
+          -h / 2 + rail + tileH * i,
+          0,
+        ]);
+    }
+    for (const sign of [-1, 1]) {
+      put(panel, slab([0.08, rail, w], aluFrame, 0.02), [
+        0,
+        (sign * (h - rail)) / 2,
+        0,
+      ]);
+      put(panel, slab([0.08, h - rail * 2, rail], aluFrame, 0.02), [
+        0,
+        0,
+        (sign * (w - rail)) / 2,
+      ]);
+    }
+    // A bright chamfer round the opening, as on the columns.
+    for (const sign of [-1, 1]) {
+      put(panel, sheet([0.02, 0.03, w - rail * 2], aluBright), [
+        0.04,
+        sign * (h / 2 - rail),
+        0,
+      ]);
+      put(panel, sheet([0.02, h - rail * 2, 0.03], aluBright), [
+        0.04,
+        0,
+        sign * (w / 2 - rail),
+      ]);
+    }
+    // Ball studs on the inside, which is how a panel like this is held.
+    for (const sy of [-1, 1])
+      for (const sz of [-1, 1])
+        put(panel, slab([0.17, 0.17, 0.17], rubber, 0.07), [
+          -0.1,
+          (sy * (h - 0.8)) / 2,
+          (sz * (w - 0.8)) / 2,
+        ]);
+    return panel;
+  };
+  add('frontpanel', meshFront(), [FRONT - 0.045, 0, MIDZ], [4.4, 1.4, 0]);
+
+  // ── Dust filters ────────────────────────────────────────────────────────
+  //
+  // Fine nylon mesh in a thin frame, over every opening that draws air in.
+  // The weave is a map rather than holes (see `filterWeaveTexture`), and it
+  // is kept faint enough that the picker looks through it to the fan behind.
+  const weave = (w: number, h: number) =>
+    new T.MeshStandardMaterial({
+      color: '#0c0e0f',
+      roughness: 0.9,
+      metalness: 0,
+      alphaMap: filterWeaveTexture([w / 0.05, h / 0.05]),
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      side: T.DoubleSide,
+    });
+  /** A filter in its own frame, lying in the X-Z plane, face up. */
+  const filter = (w: number, d: number, border: number) => {
+    const group = new T.Group();
+    const cloth = new T.Mesh(new T.PlaneGeometry(w, d), weave(w, d));
+    cloth.rotation.x = -Math.PI / 2;
+    group.add(cloth);
+    const edge = finish('plastic', '#101315');
+    for (const sign of [-1, 1]) {
+      put(group, slab([w, 0.035, border], edge, 0.01), [
+        0,
+        0,
+        (sign * (d - border)) / 2,
+      ]);
+      put(group, slab([border, 0.035, d - border * 2], edge, 0.01), [
+        (sign * (w - border)) / 2,
+        0,
+        0,
+      ]);
+    }
+    return group;
+  };
+
+  // Front: between the mesh and the fans, and wide enough to cover all three
+  // but not so wide that it runs into the panel's studs.
+  const frontFilter = filter(HEIGHT - 1.1, 5.1, 0.1);
+  frontFilter.rotation.z = Math.PI / 2;
+  add('dustfilter', frontFilter, [FRONT - 0.13, 0, MIDZ], [4.0, 1.2, 0]);
+
+  // Bottom: a slide-out tray under the supply's intake, run in two rails and
+  // drawn out of the back by its tab, which is where a supply filter is
+  // reached from with the case against a wall. It sits between the feet,
+  // which is what lets it slide past them.
+  const bottom = new T.Group();
+  const bottomLength = s.psu.across + 0.5,
+    bottomWidth = s.psu.across + 0.2;
+  put(bottom, filter(bottomLength, bottomWidth, 0.12), [0, 0, 0]);
+  put(bottom, slab([0.16, 0.05, 1.4], finish('plastic', '#15181a'), 0.02), [
+    -bottomLength / 2 - 0.06,
+    -0.01,
+    0,
+  ]);
+  const bottomX = REAR + 0.1 + bottomLength / 2;
+  add('dustfilter', bottom, [bottomX, FLOOR - 0.05, s.psu.z], [-4.2, 0, 0]);
+  // The rails it runs in, fixed to the floor.
+  const rails = new T.Group();
+  for (const sz of [-1, 1])
+    put(rails, sheet([bottomLength, 0.06, 0.08], steelInner), [
+      0,
+      0,
+      (sz * (bottomWidth + 0.1)) / 2,
+    ]);
+  add('chassis', rails, [bottomX, FLOOR - 0.03, s.psu.z], [0, 0, -2.4]);
 
   // The solid side, behind the tray. Steel, with the thumbscrews that hold it.
   const backPanel = new T.Group();
@@ -480,47 +829,41 @@ export function buildChassis(
    * slab floating above it. The gap between a panel and its frame is the
    * detail that tells you whether a case was assembled or approximated, so
    * this one sits in its opening with the frame proud around it.
+   *
+   * Everything on it is under the roof sheet or inside the opening. Its
+   * screws, a trim strip and a label used to sit where the roof sheet is, so
+   * they came through it.
    */
   const top = new T.Group();
-  const lidWidth = DEPTH - COL * 2 - 0.16;
-  const lidDepth = WIDTH - COL * 2 - 0.16;
-  // Open ventilation, with a folded perimeter and real rails underneath.
+  const lidWidth = ROOF_OPEN.width + 0.7;
+  const lidDepth = ROOF_OPEN.depth + 0.7;
   for (const [w, d, x, z] of plateWithHoles(lidWidth, lidDepth, [
-    [lidWidth - 0.55, lidDepth - 0.55, 0, 0],
+    [ROOF_OPEN.width + 0.14, ROOF_OPEN.depth + 0.14, 0, 0],
   ]))
-    put(top, slab([w, 0.09, d], alu, 0.02), [x, 0, z]);
-  for (const x of [-4.6, 0, 4.6]) {
-    put(top, slab([0.14, 0.1, lidDepth - 0.35], steelInner), [x, -0.09, 0]);
-    for (const z of [-1, 1])
-      put(top, buildScrew(material, 0.065), [
-        x,
-        0.08,
-        z * (lidDepth / 2 - 0.16),
-      ]);
-  }
+    put(top, sheet([w, 0.09, d], alu), [x, 0, z]);
+  // Two rails, near the ends: one down the middle came within a few
+  // millimetres of the cooler's heat pipes.
+  for (const x of [-(lidWidth / 2 - 1.1), lidWidth / 2 - 1.1])
+    put(top, slab([0.14, 0.1, lidDepth - 0.35], steelInner), [x, -0.095, 0]);
   const lid = buildPerforation(
     material,
-    DEPTH - COL * 2 - 0.7,
-    WIDTH - COL * 2 - 0.7,
+    ROOF_OPEN.width + 0.12,
+    ROOF_OPEN.depth + 0.12,
     0.05,
     0.17,
     '#23282c',
   );
   lid.rotation.x = -Math.PI / 2;
-  put(top, lid, [0, 0.06, 0]);
-  put(top, slab([DEPTH - COL * 2 - 0.16, 0.05, 0.1], aluBright, 0.01), [
-    0,
-    0.04,
-    (WIDTH - COL * 2 - 0.26) / 2,
-  ]);
-  label(
-    top,
-    'ATX',
-    [(DEPTH - COL * 2) / 2 - 0.9, 0.1, -(WIDTH - COL * 2) / 2 + 0.5],
-    0.9,
-    '#6f787e',
+  put(top, lid, [0, 0.02, 0]);
+  add('toppanel', top, [ROOF_OPEN.x, ROOF - 0.14, MIDZ], [0, 4.4, 0]);
+
+  // Top: a magnetic sheet lying in the opening, on the lid's mesh.
+  add(
+    'dustfilter',
+    filter(ROOF_OPEN.width - 0.04, ROOF_OPEN.depth - 0.04, 0.09),
+    [ROOF_OPEN.x, ROOF - 0.055, MIDZ],
+    [0, 5.8, 0],
   );
-  add('toppanel', top, [MIDX, ROOF - 0.14, MIDZ], [0, 4.4, 0]);
 
   return { COL, MIDX, MIDZ, WIDTH, DEPTH, HEIGHT };
 }

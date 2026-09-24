@@ -28,6 +28,37 @@ export function surfaceTexture(kind: 'brushed' | 'molded' | 'ceramic') {
   return texture;
 }
 
+/**
+ * The weave of a dust filter, as an alpha map: fine dark threads with open
+ * square gaps between them.
+ *
+ * A filter's mesh is well under a millimetre, so modelling the holes would
+ * cost tens of thousands of them for a part that reads, from any distance a
+ * viewer stands at, as a faint tight grid you can see the fan through. White
+ * is thread, black is gap.
+ */
+export function filterWeaveTexture(repeat: [number, number]) {
+  const size = 64,
+    thread = 3;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const pixels = ctx.createImageData(size, size);
+  const pitch = size / 8;
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const on = x % pitch < thread || y % pitch < thread;
+      const value = on ? 255 : 18;
+      pixels.data.set([value, value, value, 255], (y * size + x) * 4);
+    }
+  ctx.putImageData(pixels, 0, 0);
+  const texture = new T.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = T.RepeatWrapping;
+  texture.repeat.set(...repeat);
+  texture.anisotropy = 8;
+  return texture;
+}
+
 export function boardTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;

@@ -63,6 +63,8 @@ const BOARD_Y = BOARD_Y0 + BOARD_H / 2;
 
 /** The primary ×16 slot, and the card installed in it. */
 const SLOT1_Y = BOARD_Y - mm(32);
+/** The 8-pin processor power connector, near the board's top rear corner. */
+const EPS_X = BOARD_X - mm(73);
 
 /**
  * Lighting colours, swept front to back rather than scattered. Addressable
@@ -72,6 +74,13 @@ const SLOT1_Y = BOARD_Y - mm(32);
  */
 const RGB = ['#2f6bff', '#7a3cff', '#c62ce0', '#ff3aa0'] as const;
 const ACCENT = '#37d6ff';
+
+/**
+ * The rear exhaust fan's centre. Its frame sits against the inside of the rear
+ * panel, behind the panel's own grille: it used to be half a frame further
+ * out, through the steel.
+ */
+const EXHAUST: Vec3 = [REAR + 0.64, 4.0, 0.75];
 
 /** The inspection model installed vertically at the tower's physical scale. */
 export function buildMotherboardAssembly(tools: ModelTools) {
@@ -84,7 +93,7 @@ export function buildMotherboardAssembly(tools: ModelTools) {
 }
 
 export function buildMachine(tools: ModelTools, root: T.Group) {
-  const { add, airflow, instances, box, material, label } = tools;
+  const { add, airflow, instances, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -161,37 +170,18 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
       up: mm(86) + 0.1,
       across: mm(150) + 0.1,
     },
+    psuX: REAR + mm(100),
+    exhaust: { y: EXHAUST[1], z: EXHAUST[2], size: mm(120) },
+    // Above the board's top edge, over the 8-pin connector it feeds.
+    eps: {
+      x: EPS_X + 0.1,
+      y: BOARD_Y + BOARD_H / 2 + 0.26,
+      width: 1.3,
+      height: 0.32,
+    },
     accent: ACCENT,
   };
   buildChassis(tools, finish, shell);
-
-  // Rear I/O shield: the stamped plate the board's port stack sits behind.
-  const aperture = new T.Group();
-  const apY = shell.io.y;
-  place(aperture, box([0.05, APERTURE_W, APERTURE_H], '#575f65', 0.9), [
-    0,
-    apY,
-    shell.io.z,
-  ]);
-  for (let i = 0; i < 9; i++)
-    place(aperture, box([0.09, 0.34, 0.26], '#0b0d0e', 0.3), [
-      0.04,
-      apY + APERTURE_W / 2 - 0.5 - i * 0.44,
-      shell.io.z + ((i % 2) - 0.5) * 0.46,
-    ]);
-  for (const s of [-1, 1])
-    place(aperture, box([0.07, 0.14, APERTURE_H + 0.24], '#79828a', 0.9), [
-      0,
-      apY + s * (APERTURE_W / 2 + 0.07),
-      shell.io.z,
-    ]);
-  for (const s of [-1, 1])
-    place(aperture, box([0.07, APERTURE_W + 0.24, 0.14], '#79828a', 0.9), [
-      0,
-      apY,
-      shell.io.z + s * (APERTURE_H / 2 + 0.07),
-    ]);
-  add('ioshield', aperture, [REAR + 0.14, 0, 0], [-1.8, 0, 0]);
 
   const standoffs: Vec3[] = [];
   for (const gx of [-mm(100), mm(6), mm(112)])
@@ -231,8 +221,18 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     [5.0, 2.0, -1.4, -0.2], // vent under the graphics card
     [1.1, 1.5, 3.9, 1.4], // cable pass-through
   ];
-  for (const [w, h, cx, cz] of plateWithHoles(SHROUD_W, SHROUD_D, deckHoles))
-    place(shroud, slab([w, 0.12, h], 'steel'), [cx, 0, cz]);
+  // The deck stops at the tray. It used to be centred on the shroud and so
+  // ran a few millimetres back through the tray into the cable chamber.
+  const SHROUD_Z = -0.2;
+  const deckBack = TRAY + 0.06 - SHROUD_Z,
+    deckFront = SHROUD_D / 2;
+  const deckMid = (deckBack + deckFront) / 2;
+  for (const [w, h, cx, cz] of plateWithHoles(
+    SHROUD_W,
+    deckFront - deckBack,
+    deckHoles.map(([w, h, x, z]) => [w, h, x, z - deckMid]),
+  ))
+    place(shroud, slab([w, 0.12, h], 'steel'), [cx, 0, cz + deckMid]);
   // A grommet round the cable hole and a returned lip round the vent, so both
   // openings have an edge instead of stopping dead in the sheet.
   for (const [index, [w, h, cx, cz]] of deckHoles.entries()) {
@@ -285,8 +285,10 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   add(
     'psushroud',
     shroud,
-    [(FRONT + REAR) / 2 - 0.2, FLOOR + 3.0, -0.2],
-    [0, 2.6, 0],
+    [(FRONT + REAR) / 2 - 0.2, FLOOR + 3.0, SHROUD_Z],
+    // Out toward the window, and only a little up: lifting it straight up
+    // drove it into the underside of the graphics card on its way out.
+    [0, 0.3, 4.2],
   );
 
   // Compact 2.5-inch SSD tray, stood back from the intake fans with its keyed
@@ -485,26 +487,29 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     0.16,
     '#16191b',
   );
-  // 8-pin EPS: up the narrow gap behind the rear edge of the board, over the
-  // top edge and down onto the connector in the corner. This is the run a
-  // build hides, so it is routed where a builder would hide it.
+  // 8-pin EPS: the run a build hides. Back along the supply under the
+  // shroud, through the tray into the cable chamber, up the back of the tray,
+  // and forward through the grommet above the board's top edge onto the
+  // connector. It used to climb the gap behind the board's rear edge instead,
+  // in front of the tray, and pass straight through the I/O shield.
+  const EPS_TOP = BOARD_Y + BOARD_H / 2 + 0.26;
+  const CHAMBER_Z = (TRAY + BACK) / 2;
   loom(
     [
       [REAR + 5.19, FLOOR + 1.75, -0.55],
-      [REAR + 5.32, FLOOR + 2.45, -0.75],
-      [REAR + 5.28, FLOOR + 2.72, -1.25],
-      [REAR + 3.3, FLOOR + 2.72, -2.1],
-      [REAR + 1.1, FLOOR + 2.73, -2.5],
-      [REAR + 0.45, FLOOR + 3.15, -2.6],
-      [REAR + 0.3, FLOOR + 3.7, -2.64],
-      [REAR + 0.28, -2.0, -2.66],
-      [REAR + 0.26, 1.0, -2.66],
-      [REAR + 0.26, 3.6, -2.66],
-      [REAR + 0.28, ROOF - 0.6, -2.62],
-      [REAR + 0.46, ROOF - 0.42, -2.58],
-      [BOARD_X - mm(73) + 0.6, BOARD_Y + BOARD_H / 2 + 0.3, -2.54],
-      [BOARD_X - mm(73), BOARD_Y + BOARD_H / 2 - mm(8), -2.48],
-      [BOARD_X - mm(73), BOARD_Y + mm(145), BOARD_Z + mm(10)],
+      [REAR + 5.34, FLOOR + 2.1, -1.4],
+      [REAR + 5.0, FLOOR + 2.22, -2.62],
+      [REAR + 3.0, FLOOR + 2.2, -2.72],
+      [REAR + 1.45, FLOOR + 2.2, -2.72],
+      [REAR + 1.0, FLOOR + 2.2, TRAY],
+      [REAR + 0.95, FLOOR + 2.6, CHAMBER_Z],
+      [REAR + 1.0, 0, CHAMBER_Z],
+      [EPS_X + 0.35, EPS_TOP - 0.9, CHAMBER_Z],
+      [EPS_X + 0.2, EPS_TOP, CHAMBER_Z + 0.1],
+      [EPS_X + 0.1, EPS_TOP, TRAY],
+      [EPS_X + 0.05, EPS_TOP, BOARD_Z + 0.2],
+      [EPS_X, BOARD_Y + BOARD_H / 2 - mm(8), BOARD_Z + mm(12)],
+      [EPS_X, BOARD_Y + mm(145), BOARD_Z + mm(10)],
     ],
     0.1,
     '#1f2325',
@@ -525,12 +530,69 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   add('psucable', cables, [0, 0, 0], [0, -1.4, 1.2], 0);
 
   // ── Motherboard ─────────────────────────────────────────────────────────
-  add(
-    'motherboard',
-    buildMotherboardAssembly(tools),
-    [BOARD_X, BOARD_Y, BOARD_Z],
-    [0, 0, -3.2],
+  const motherboard = buildMotherboardAssembly(tools);
+  add('motherboard', motherboard, [BOARD_X, BOARD_Y, BOARD_Z], [0, 0, -3.2]);
+
+  /**
+   * The rear I/O shield, cut to the board's own port stack.
+   *
+   * This was a solid plate with nine dark blocks on it, a few millimetres
+   * behind the aperture and a few in front of the ports, so from behind the
+   * machine the board had no ports at all. The holes are now taken from the
+   * connectors themselves once the board is in place, so each shell sits in
+   * its own opening with its face level with the plate, and a pressed flange
+   * carries the plate back out to the rear panel.
+   */
+  motherboard.updateMatrixWorld(true);
+  const board = motherboard.children[0];
+  const ports = (board.userData.rearPorts as T.Box3[]).map((b) =>
+    b.clone().applyMatrix4(board.matrixWorld),
   );
+  // The plane most connector faces share. The antenna posts stand proud of
+  // it, through their holes, as they do on a real shield.
+  const faces = ports.map((b) => b.min.x).sort((a, b) => a - b);
+  const face = faces[Math.floor(faces.length / 2)];
+  const shield = new T.Group();
+  const shieldX = face + 0.012;
+  const shieldHoles: [number, number, number, number][] = ports.map((b) => [
+    b.max.z - b.min.z + 0.02,
+    b.max.y - b.min.y + 0.02,
+    (b.max.z + b.min.z) / 2 - shell.io.z,
+    (b.max.y + b.min.y) / 2 - shell.io.y,
+  ]);
+  const shieldFinish = finish('nickel', '#8f989d', 0.42);
+  for (const [w, h, cz, cy] of plateWithHoles(
+    APERTURE_H,
+    APERTURE_W,
+    shieldHoles,
+  ))
+    place(shield, new T.Mesh(new T.BoxGeometry(0.024, h, w), shieldFinish), [
+      shieldX,
+      shell.io.y + cy,
+      shell.io.z + cz,
+    ]);
+  // The flange: four walls from the plate back to the panel's inner face.
+  const flangeDepth = REAR + 0.1 - shieldX;
+  const flangeX = (REAR + 0.1 + shieldX) / 2;
+  for (const s of [-1, 1]) {
+    place(
+      shield,
+      new T.Mesh(
+        new T.BoxGeometry(Math.abs(flangeDepth), 0.02, APERTURE_H),
+        shieldFinish,
+      ),
+      [flangeX, shell.io.y + s * (APERTURE_W / 2 - 0.01), shell.io.z],
+    );
+    place(
+      shield,
+      new T.Mesh(
+        new T.BoxGeometry(Math.abs(flangeDepth), APERTURE_W, 0.02),
+        shieldFinish,
+      ),
+      [flangeX, shell.io.y, shell.io.z + s * (APERTURE_H / 2 - 0.01)],
+    );
+  }
+  add('ioshield', shield, [0, 0, 0], [-1.8, 0, 0]);
 
   // ── Processor cooler ────────────────────────────────────────────────────
   // A tower air cooler, bolted to the socket, which is the build this machine
@@ -648,7 +710,6 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   // path they share, so their heights are named here rather than computed
   // twice.
   const INTAKE_Y = [0, 1, 2].map((i) => -3.0 + i * mm(125));
-  const EXHAUST: Vec3 = [REAR + 0.32, 4.0, 0.75];
   for (let i = 0; i < 3; i++) {
     // No cable tail on these three. `buildFan` sweeps it out past the frame
     // corner, which on a stacked wall of fans means through the front panel
@@ -666,8 +727,8 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     fan.add(spill);
     add('casefan', fan, [FRONT - 0.55, INTAKE_Y[i], 0], [3.4, 0, 0]);
   }
-  // Rear exhaust. It sits beside the I/O aperture in the depth of the rear
-  // panel, above the graphics card, so the front intakes and tower cooler all
+  // Rear exhaust. It sits beside the I/O aperture against the inside of the
+  // rear panel, above the graphics card, so the front intakes and tower cooler all
   // share one straight front-to-back path.
   const exhaust = buildFan(material, {
     size: mm(120),
@@ -680,7 +741,9 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   exhaustSpill.position.set(0, -0.5, 0);
   exhaust.add(exhaustSpill);
   exhaust.rotation.z = Math.PI / 2;
-  add('casefan', exhaust, EXHAUST, [-3.4, 0, 0]);
+  // It comes out inward and across, as it is taken out: back through the
+  // grille is not a way a fan leaves a case.
+  add('casefan', exhaust, EXHAUST, [1.2, 0, 3.4]);
 
   // ── Graphics card, in the primary slot ──────────────────────────────────
   //

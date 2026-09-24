@@ -12,7 +12,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 327 catalogue entries are authored in source, and each one
+any kind. The 329 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -62,7 +62,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              327 entries, each with a globally unique id
+      │              329 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -88,13 +88,13 @@ state.
 
 ## The scale tree
 
-28 scales, 327 concepts. `physical` scales are lit like hardware and keep real
+28 scales, 329 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
 | Scale | Parent | Menu | Kind | Concepts |
 | --- | --- | --- | --- | ---: |
-| `pc` | — | root | physical | 16 |
+| `pc` | — | root | physical | 18 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
 | `ryzen` | `motherboard` | Motherboard | logical | 6 |
 | `ryzenio` | `ryzen` | Motherboard | logical | 5 |
@@ -154,7 +154,8 @@ subsystems stop touching.
 | `lib/explorer-state.ts` | `ExplorerState` — what the viewer is looking at — plus `initialState` and `selectSearch`. |
 | `lib/models.ts` | The `builders` registry, the `Piece` type, the shared `material()` cache, and `buildModel(level)`. |
 | `lib/hardware.ts` | `ModelTools`, the interface every builder is handed, and the RTX 5090 card assembly. |
-| `lib/machine.ts` | The tower itself: ATX constants, chassis, cable routing, RGB palette. |
+| `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
+| `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
 | `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
@@ -179,7 +180,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 58 tests: catalogue integrity, layout, picking, geometry presence, airflow, and comparison state/data/pane/bounds behaviour. |
+| `tests/*.test.ts` | 61 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, and comparison state/data/pane/bounds behaviour. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 
@@ -244,6 +245,19 @@ they believed. Air that followed the geometry would leave the tower through the
 front panel. The chevrons carry `contextFrame`, refuse raycasts outright, and
 fade out over the first tenth of the disassembly, because a path through a
 machine is a claim about a machine that is closed.
+
+**Covers come off first.** A concept marked `opensFirst` — the glass and mesh
+panels, the lid, the dust filters — finishes its travel in the first fifth of
+the disassembly, before anything else starts to move. Without it the front
+fans set off forward while the mesh in front of them was still shut, and went
+through it. Anything that closes over other parts should carry the flag.
+
+**Case openings are measured, not styled.** `buildChassis` is handed the rear
+I/O window, the slot pitch, the supply's opening, the exhaust fan and the
+processor-power grommet as numbers taken from the parts that need them, and
+the I/O shield's holes are cut from the board's own connector positions,
+which the motherboard builder records on its root as `userData.rearPorts`
+before its meshes are merged. Move a connector and the shield follows it.
 
 **Shine is contrast, not brightness.** High `envMapIntensity` and low roughness
 on metals, restrained key light. Raising overall exposure washes everything to
@@ -357,7 +371,7 @@ timeline. Do not add a second hand-written route table.
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 327 concepts currently cite at least one
+and vendor documentation first. All 329 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -374,11 +388,11 @@ cites the same source twice. It does not check that a citation is appropriate.
 Nothing here claims a specific product's bill of materials. Every physical
 concept carries a `physicalAccuracy` string saying so, and they are not
 decorative — read one before adding a component that implies more precision than
-the model has. 229 concepts are physical, 98 are logical diagrams.
+the model has. 231 concepts are physical, 98 are logical diagrams.
 
 ## Tests
 
-58 tests, all through Node's built-in runner.
+61 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
@@ -404,6 +418,10 @@ production build on every push and pull request with Node.js 22.
   and over by a tenth, that the chevrons march and stop on command, that no
   stream strays far from the hardware it describes, and that the tower's air
   enters at the front and leaves at the back.
+- `tests/case.test.ts` (3) — that no case fan runs into the front mesh or
+  its filter anywhere in the first half of the disassembly, that every rear
+  connector can be seen from behind the machine through the I/O shield, and
+  that the front I/O sits on the outside of the roof.
 - `tests/comparison.test.ts` (6) — metadata-driven discovery, valid distinct
   state and group transitions, complete catalogue-backed spec rows, pane-local
   pointer coordinates at desktop and mobile widths, and common bounds that

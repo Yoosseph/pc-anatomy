@@ -4,7 +4,7 @@ Reviewed 2026-09-19. PC Anatomy is independent of the manufacturers cited here. 
 
 ## Current component reference audit
 
-All 327 component entries now have references in their detail panels. The complete
+All 329 component entries now have references in their detail panels. The complete
 [component-to-document index](docs/component-references.md) records those mappings.
 The registry in `lib/sources.ts` is authoritative for current app links; older notes
 below preserve the research history.

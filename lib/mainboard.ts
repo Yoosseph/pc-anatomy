@@ -6,9 +6,9 @@ import {
   buildChip,
   buildChoke,
   buildHeader,
-  buildPort,
   buildScrew,
   buildSlot,
+  glowMaterial,
 } from './parts.ts';
 
 // Reference-led ATX layout, in millimetres: X across, Z down, Y above the PCB.
@@ -16,7 +16,7 @@ import {
 const mm = (n: number) => n / 22;
 const vector = (x: number, y: number, z: number): Vec3 => [mm(x), mm(y), mm(z)];
 
-export function buildMotherboard(tools: ModelTools, _root: T.Group) {
+export function buildMotherboard(tools: ModelTools, root: T.Group) {
   const { pcb, material, label } = tools;
   const occupied: T.Box3[] = [];
   const put = (g: T.Group, o: T.Object3D, x = 0, y = 0, z = 0) => {
@@ -536,8 +536,6 @@ export function buildMotherboard(tools: ModelTools, _root: T.Group) {
   // Rear ports face outward (-X), under a roof clear of their metal shells.
   const io = new T.Group();
   put(io, block(1, 2, 151), -17, 1, 0);
-  put(io, block(1, 7, 151), -17, 29.5, 0);
-  for (let i = 0; i < 7; i++) put(io, block(1, 24, 4), -17, 14, -70 + i * 22);
   put(
     io,
     plate(
@@ -558,21 +556,153 @@ export function buildMotherboard(tools: ModelTools, _root: T.Group) {
   const ioArt = new T.Group();
   branding(ioArt, 107, 26, 0, true);
   put(io, ioArt, -1, 36.4, 4);
-  for (let i = 0; i < 6; i++) {
-    const port = buildPort(
-      material,
-      vector(14, i === 4 ? 13 : 7, 13),
-      '#62696e',
-    );
-    port.rotation.y = -Math.PI / 2;
-    put(io, port, -10, 8, -59 + i * 22);
-    if (i < 3) {
-      const upper = buildPort(material, vector(14, 7, 13), '#62696e');
-      upper.rotation.y = -Math.PI / 2;
-      put(io, upper, -10, 19, -59 + i * 22);
+
+  /**
+   * The connectors, as a board of this class carries them: Wi-Fi antenna
+   * sockets, the BIOS flashback and clear-CMOS buttons, display outputs, USB-A
+   * and USB-C, 2.5 GbE over two USB ports, and the audio jacks with an
+   * optical output. They used to be nine identical USB blocks, which read as
+   * nothing in particular from behind the case.
+   *
+   * Every face is on one plane, `FACE` millimetres out from the stack's back
+   * wall and a few past the board edge, as on a real board, so the case's
+   * I/O shield can sit flush against all of them. Each connector is built
+   * mouth toward -X around its own centre; `z` runs along the stack and `y`
+   * up off the board.
+   */
+  const FACE = -20;
+  // The stack sits centred in the ATX aperture rather than hard against one
+  // end of it.
+  const STACK_SHIFT = 12;
+  const steelShell = material('#8d969b', 0.88, 0.27);
+  const darkMouth = material('#07090a', 0.1, 0.85);
+  const rearPorts: T.Object3D[] = [];
+  const connector = (
+    z: number,
+    y: number,
+    depth: number,
+    build: (g: T.Group) => void,
+  ) => {
+    const g = new T.Group();
+    build(g);
+    rearPorts.push(g);
+    put(io, g, FACE + depth / 2, y, z + STACK_SHIFT);
+    return g;
+  };
+  /** A shell with a dark mouth and a tongue, facing -X. */
+  const jack = (
+    z: number,
+    y: number,
+    w: number,
+    h: number,
+    depth: number,
+    tongue: string,
+  ) =>
+    connector(z, y, depth, (g) => {
+      put(g, new T.Mesh(new T.BoxGeometry(...vector(depth, h, w)), steelShell));
+      put(
+        g,
+        new T.Mesh(
+          new T.BoxGeometry(...vector(depth * 0.4, h * 0.72, w * 0.84)),
+          darkMouth,
+        ),
+        -depth * 0.31,
+      );
+      put(
+        g,
+        new T.Mesh(
+          new T.BoxGeometry(...vector(depth * 0.36, h * 0.2, w * 0.62)),
+          material(tongue, 0.3, 0.6),
+        ),
+        -depth * 0.33,
+        -h * 0.1,
+      );
+    });
+  const usbA = (z: number, y: number) => jack(z, y, 14.5, 7, 14, '#2a4fa0');
+  const usbC = (z: number, y: number) => jack(z, y, 9, 3.6, 9, '#1a1d1f');
+  // Wi-Fi: two threaded gold posts on a plastic base.
+  connector(-68, 17, 9, (g) => {
+    put(g, block(4, 26, 8, material('#16191b', 0.1, 0.6)), 2.5);
+    for (const y of [-6.5, 6.5]) {
+      const post = new T.Mesh(
+        new T.CylinderGeometry(mm(3.1), mm(3.1), mm(9), 16),
+        material('#c9a456', 0.9, 0.3),
+      );
+      post.rotation.z = Math.PI / 2;
+      put(g, post, -1.5, y);
+      const pin = new T.Mesh(
+        new T.CylinderGeometry(mm(1.1), mm(1.1), mm(1), 10),
+        darkMouth,
+      );
+      pin.rotation.z = Math.PI / 2;
+      put(g, pin, -6.1, y);
     }
-  }
+  });
+  // BIOS flashback and clear CMOS: two small buttons in one housing.
+  connector(-55, 12, 8, (g) => {
+    put(g, block(8, 17, 9, material('#16191b', 0.1, 0.6)));
+    for (const [y, colour] of [
+      [4, '#d0d4d6'],
+      [-4, '#b8342c'],
+    ] as const)
+      put(g, block(2, 5, 5, material(colour, 0.1, 0.5)), -4.8, y);
+  });
+  // Display outputs: DisplayPort over HDMI, each keyed differently.
+  jack(-41, 8, 15, 6, 12, '#101213');
+  jack(-41, 18, 16, 6.5, 12, '#101213');
+  // Two columns of USB-A with a USB-C on top.
+  usbA(-24, 6);
+  usbA(-24, 15);
+  usbC(-24, 23);
+  usbA(-6, 6);
+  usbA(-6, 15);
+  usbC(-6, 23);
+  // 2.5 GbE over two USB-A: the jack, and its two link lights.
+  usbA(12, 6);
+  usbA(12, 15);
+  connector(12, 26, 21, (g) => {
+    put(g, new T.Mesh(new T.BoxGeometry(...vector(21, 13, 16)), steelShell));
+    put(g, block(8, 9, 12, darkMouth), -7);
+    for (const [z, colour] of [
+      [-5.5, '#3fd46a'],
+      [5.5, '#f2a93b'],
+    ] as const)
+      put(g, block(0.6, 2, 3, glowMaterial(colour, 1.2)), -10.6, 5.2, z);
+  });
+  // Two more USB-A and a second USB-C.
+  usbA(30, 6);
+  usbA(30, 15);
+  usbC(30, 23);
+  // Audio: line out and mic in, colour-coded, over an optical output.
+  connector(51, 15, 14, (g) => {
+    put(g, block(14, 26, 13, material('#16191b', 0.1, 0.6)));
+    for (const [y, colour] of [
+      [7, '#6cc04a'],
+      [-2, '#e07aa6'],
+    ] as const) {
+      const ring = new T.Mesh(
+        new T.CylinderGeometry(mm(3.4), mm(3.4), mm(1), 20),
+        material(colour, 0.1, 0.5),
+      );
+      ring.rotation.z = Math.PI / 2;
+      put(g, ring, -7.2, y);
+      const hole = new T.Mesh(
+        new T.CylinderGeometry(mm(1.8), mm(1.8), mm(1.2), 16),
+        darkMouth,
+      );
+      hole.rotation.z = Math.PI / 2;
+      put(g, hole, -7.4, y);
+    }
+    put(g, block(1, 5, 7, material('#2a2d30', 0.1, 0.5)), -7.2, -9);
+  });
   add('reario', io, -104, 1.2, -76, [-2.2, 1.2, 0]);
+  // Where each connector shell is, in the board's own frame. The meshes are
+  // merged once the build finishes, so this is the last moment they can be
+  // told apart; the case cuts its I/O shield from these.
+  io.updateWorldMatrix(true, true);
+  root.userData.rearPorts = rearPorts.map((port) =>
+    new T.Box3().setFromObject(port),
+  );
 
   // Derive passive keep-outs from actual component bounds, including sockets,
   // connectors and screw holes. This stays correct when large parts move.

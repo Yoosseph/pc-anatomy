@@ -115,7 +115,7 @@ The PSU exteriors follow published dimensions and visible product features; thei
 
 ## Contributing
 
-Issues and focused pull requests are welcome, and the [roadmap and Kanban board](https://github.com/users/Yoosseph/projects/1) lists what is open. Start with [ARCHITECTURE.md](ARCHITECTURE.md), keep written claims cited, preserve the distinction between physical models and logical diagrams, and run the full local checks before opening a change:
+Issues and focused pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. The [roadmap and Kanban board](https://github.com/users/Yoosseph/projects/1) lists what is open. Start with [ARCHITECTURE.md](ARCHITECTURE.md), keep written claims cited, preserve the distinction between physical models and logical diagrams, and run the full local checks before opening a change:
 
 ```bash
 npm run check

@@ -4,7 +4,7 @@ Reviewed 2026-09-19. PC Anatomy is independent of the manufacturers cited here. 
 
 ## Current component reference audit
 
-All 402 component entries now have references in their detail panels. The complete
+All 421 component entries now have references in their detail panels. The complete
 [component-to-document index](docs/component-references.md) records those mappings.
 The registry in `lib/sources.ts` is authoritative for current app links; older notes
 below preserve the research history.
@@ -62,8 +62,10 @@ difference between them is the generation: the Kingston FURY Beast DDR5-6000
 16 GB (KF560C36BBE-16), which is the module installed in the motherboard's
 slots, and the FURY Beast DDR4-3200 16 GB (KF432C16BB/16). Both are single-rank
 modules built from eight 2G × 8 (16 Gb) FBGA packages, per their data sheets.
-The DDR5 branch dives module → package → die → bank → cell; the DDR4 branch
-dives to the die, where the generations differ. The two modules also form the
+Both branches dive module → package → die → bank → cell. The generations
+differ most at the module and the die; a DDR4 bank and cell are built the same
+way as DDR5's, with 131,072 rows per bank instead of 65,536 and wordlines
+boosted to 2.5 V (VPP) instead of 1.8 V, and the comparison sheet says so. The two modules also form the
 Memory group of the comparison workbench.
 
 **Module.** Length (133.35 mm), board height (31.25 mm), the 288 contacts at

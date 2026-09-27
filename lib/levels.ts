@@ -18,6 +18,8 @@ export type LevelId =
   | 'ddr4'
   | 'ddr4dram'
   | 'ddr4banks'
+  | 'ddr4array'
+  | 'ddr4cell'
   | 'ryzen'
   | 'ryzenio'
   | 'corei9'
@@ -191,7 +193,7 @@ export const levels: Record<LevelId, LevelDef> = {
     parent: 'banks',
     name: 'Bank',
     title: 'One bank.',
-    caption: 'BANK · SUBARRAYS AND MATS',
+    caption: 'DDR5 BANK · SUBARRAYS AND MATS',
     summary: 'Mats, sense-amplifier stripes, decoders and global lines',
     kind: 'logical',
     concept: 'drambank',
@@ -203,7 +205,7 @@ export const levels: Record<LevelId, LevelDef> = {
     parent: 'bank',
     name: 'Cells',
     title: 'One transistor, one capacitor.',
-    caption: 'MAT · 1T1C CELLS',
+    caption: 'DDR5 MAT · 1T1C CELLS',
     summary: 'Wordlines, bitlines, capacitors and sense amplifiers',
     kind: 'logical',
     concept: 'drammat',
@@ -250,6 +252,30 @@ export const levels: Record<LevelId, LevelDef> = {
     summary: 'Bank groups, banks and the centre-stripe periphery',
     kind: 'logical',
     concept: 'ddr4die',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  ddr4array: {
+    id: 'ddr4array',
+    parent: 'ddr4banks',
+    name: 'Bank',
+    title: 'One bank.',
+    caption: 'DDR4 BANK · SUBARRAYS AND MATS',
+    summary: 'Twice the rows of a DDR5 bank, built the same way',
+    kind: 'logical',
+    concept: 'ddr4bank',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  ddr4cell: {
+    id: 'ddr4cell',
+    parent: 'ddr4array',
+    name: 'Cells',
+    title: 'One transistor, one capacitor.',
+    caption: 'DDR4 MAT · 1T1C CELLS',
+    summary: 'The same cell as DDR5, its wordlines boosted to 2.5 V',
+    kind: 'logical',
+    concept: 'ddr4mat',
     phases: dissectionPhases,
     detailed: true,
   },

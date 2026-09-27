@@ -12,7 +12,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 402 catalogue entries are authored in source, and each one
+any kind. The 421 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -62,7 +62,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              402 entries, each with a globally unique id
+      │              421 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -88,7 +88,7 @@ state.
 
 ## The scale tree
 
-36 scales, 402 concepts. `physical` scales are lit like hardware and keep real
+38 scales, 421 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
@@ -104,6 +104,8 @@ lit flat.
 | `ddr4` | `motherboard` | Memory · DDR4 | physical | 10 |
 | `ddr4dram` | `ddr4` | Memory · DDR4 | physical | 8 |
 | `ddr4banks` | `ddr4dram` | Memory · DDR4 | logical | 9 |
+| `ddr4array` | `ddr4banks` | Memory · DDR4 | logical | 9 |
+| `ddr4cell` | `ddr4array` | Memory · DDR4 | logical | 10 |
 | `ryzen` | `motherboard` | Motherboard | logical | 6 |
 | `ryzenio` | `ryzen` | Motherboard | logical | 5 |
 | `corei9` | `motherboard` | Motherboard | logical | 9 |
@@ -168,7 +170,7 @@ subsystems stop touching.
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
 | `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
-| `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies, one bank and one mat of cells. |
+| `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies and, for each generation, one bank and one mat of cells; the DDR4 bank and cell concepts are the DDR5 ones under `ddr4` ids with the numbers that differ swapped in. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
@@ -192,7 +194,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 83 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, and comparison state/data/pane/bounds behaviour. |
+| `tests/*.test.ts` | 84 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, and comparison state/data/pane/bounds behaviour. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 
@@ -383,7 +385,7 @@ timeline. Do not add a second hand-written route table.
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 402 concepts currently cite at least one
+and vendor documentation first. All 421 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -400,11 +402,11 @@ cites the same source twice. It does not check that a citation is appropriate.
 Nothing here claims a specific product's bill of materials. Every physical
 concept carries a `physicalAccuracy` string saying so, and they are not
 decorative — read one before adding a component that implies more precision than
-the model has. 267 concepts are physical, 135 are logical diagrams.
+the model has. 267 concepts are physical, 154 are logical diagrams.
 
 ## Tests
 
-83 tests, all through Node's built-in runner.
+84 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
@@ -440,8 +442,9 @@ production build on every push and pull request with Node.js 22.
   pointer coordinates at desktop and mobile widths, and common bounds that
   contain both posed models at assembled, half-disassembled, and inventory
   positions.
-- `tests/ram.test.ts` (19) — both generations' menus and open chains down
-  to the cell, the dive being at least as deep and as populated as the GPU
+- `tests/ram.test.ts` (20) — both generations' menus and open chains down
+  to the cell, the DDR4 bank and cell matching DDR5's parts with their own
+  row count and wordline voltage, the dive being at least as deep and as populated as the GPU
   chains, bank × row × page multiplying out to 16 Gb on both dies, bank-group
   ownership, ECC on DDR5 and a DLL on DDR4, no two diagram parts sharing
   space, the JEDEC outline and the data-sheet height and thickness, 288

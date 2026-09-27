@@ -11,9 +11,10 @@ import type { SourceId } from '../sources.ts';
  * DDR4-3200 16 GB (KF432C16BB/16) beside it for comparison. Both are single
  * rank, built from eight 16 Gb x8 packages.
  *
- * The DDR5 branch dives five scales: module, package, die, bank and cell.
- * The DDR4 branch dives to the die, where the two generations differ; below
- * that a bank and a cell work the same way, and the DDR5 branch shows them.
+ * Each branch dives five scales: module, package, die, bank and cell.
+ * The generations differ most at the module and the die; a DDR4 bank and
+ * cell are the DDR5 ones with the numbers that differ swapped in (see the end
+ * of this file).
  *
  * Kingston builds the modules; it buys the DRAM from the chip makers and does
  * not name them, so the package and die scales follow Micron's data sheets
@@ -34,7 +35,7 @@ const packageAccuracy =
 const dieAccuracy =
   'Counts and features are the data sheet’s. Block sizes and positions are illustrative: a real die is laid out by the vendor and is not published.';
 const bankAccuracy =
-  'The hierarchy follows published DRAM architecture research. A real 16 Gb bank holds 65,536 rows in roughly a hundred subarrays; six subarrays of six mats are drawn.';
+  'The hierarchy follows published DRAM architecture research. A real 16 Gb bank holds 65,536 rows in subarrays of about 512 rows each; six subarrays of six mats are drawn.';
 const cellAccuracy =
   'Schematic, not a layout: modern cells are packed in a staggered pattern with buried wordlines and tall cylindrical capacitors. Forty-eight cells of a mat holding hundreds of thousands are drawn.';
 
@@ -499,7 +500,7 @@ function dieParts(gen: Gen): Concept[] {
       name: 'Banks',
       shortName: 'Bank',
       category: 'Memory',
-      open: five ? 'bank' : undefined,
+      open: five ? 'bank' : 'ddr4array',
       description: x(
         '32 independent arrays of cells. Each can have one row open at a time, so up to 32 rows can be open across the die at once.',
         '16 independent arrays of cells, each able to hold one row open.',
@@ -835,7 +836,7 @@ export const ramConcepts: Concept[] = [
     purpose:
       'Take a global wordline and drive the short local wordline in each mat up to the boosted VPP level that fully turns the access transistors on.',
     quantity: '42 stripes drawn',
-    specifications: { Drives: 'Local wordlines at VPP' },
+    specifications: { Drives: 'Local wordlines at VPP, 1.8 V' },
     sources: bankSources,
     searchTerms: ['wordline driver', 'swd', 'vpp'],
   }),
@@ -963,7 +964,7 @@ export const ramConcepts: Concept[] = [
     purpose:
       'Raising one to VPP opens every cell in that row onto its bitline at once — which is why DRAM always opens a whole row.',
     quantity: '6 drawn',
-    specifications: { Level: 'Boosted to VPP when selected' },
+    specifications: { Level: 'Boosted to VPP, 1.8 V, when selected' },
     sources: cellSources,
     searchTerms: ['wordline', 'row', 'gate'],
   }),
@@ -1002,7 +1003,7 @@ export const ramConcepts: Concept[] = [
     description: 'The sub-wordline drivers at the edge of the mat.',
     purpose: 'Pull the chosen wordline to VPP, and every other one firmly off.',
     quantity: '1 stripe',
-    specifications: { Supply: 'VPP' },
+    specifications: { Supply: 'VPP, 1.8 V' },
     sources: cellSources,
     searchTerms: ['wordline driver', 'driver'],
   }),
@@ -1091,6 +1092,8 @@ export const ramConcepts: Concept[] = [
       'Power delivery': 'Regulated on the motherboard',
       Voltage: 'VDD/VDDQ 1.2 V · VPP 2.5 V (JEDEC)',
       'On-die ECC': 'None',
+      'Bank and cell':
+        'Same design as DDR5 — mats, sense amplifiers, one transistor and one capacitor per bit — with 131,072 rows per bank and wordlines boosted to 2.5 V',
       Dimensions: '133.35 × 34 × 7.2 mm',
       Contacts: '288-pin',
     },
@@ -1133,3 +1136,45 @@ export const ramConcepts: Concept[] = [
   ...packageParts('ddr4'),
   ...dieParts('ddr4'),
 ];
+
+// ── DDR4 bank and cell (logical) ──────────────────────────────────────────
+//
+// A DDR4 bank and cell are built the same way as DDR5's, so these scales are
+// the DDR5 ones under DDR4 ids, with the numbers that differ swapped in: a
+// 17-bit row address and twice the rows, 64 bits per column access instead
+// of 128, and wordlines boosted to 2.5 V instead of 1.8 V.
+
+const ddr4Text = (text: string) =>
+  text
+    .replaceAll('65,536', '131,072')
+    .replaceAll('R0–R15', 'A0–A16')
+    .replaceAll('C0–C9', 'A0–A9')
+    .replaceAll('16-bit row address', '17-bit row address')
+    .replaceAll('128 of them per access', '64 of them per access')
+    .replaceAll('1.8 V', '2.5 V');
+const ddr4Id = (id: string) => id.replace(/^dram/, 'ddr4');
+
+ramConcepts.push(
+  ...ramConcepts
+    .filter((c) => c.level === 'bank' || c.level === 'cell')
+    .map((c) =>
+      concept({
+        ...c,
+        id: ddr4Id(c.id),
+        parent: c.parent && ddr4Id(c.parent),
+        children: [],
+        level: c.level === 'bank' ? 'ddr4array' : 'ddr4cell',
+        open: c.open === 'cell' ? 'ddr4cell' : undefined,
+        description: ddr4Text(c.description),
+        purpose: ddr4Text(c.purpose),
+        specifications: Object.fromEntries(
+          Object.entries(c.specifications).map(([k, v]) => [k, ddr4Text(v)]),
+        ),
+        physicalAccuracy: ddr4Text(c.physicalAccuracy),
+        sources: c.sources.map((s) =>
+          s === 'micron16gbddr5' ? 'micron16gbddr4' : s,
+        ),
+        searchTerms: [...c.searchTerms, 'ddr4'],
+      }),
+    ),
+);

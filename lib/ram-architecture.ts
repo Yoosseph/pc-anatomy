@@ -9,10 +9,10 @@ import { diagramKit, put, type DiagramPalette } from './diagram-kit.ts';
  * - `banks` / `ddr4banks`: the whole 16 Gb x8 die, DDR5 and DDR4. Bank arrays
  *   fill both halves; the periphery runs down the centre stripe, under the
  *   bond pads, which is where a centre-pad DRAM die keeps it.
- * - `bank`: one DDR5 bank opened up — a grid of subarrays (mats), each with
+ * - `bank` / `ddr4array`: one bank opened up — a grid of subarrays (mats), each with
  *   its own local sense amplifiers, driven by a global row decoder and read
  *   out through global bitlines.
- * - `cell`: a corner of one mat — wordlines, bitlines, access transistors,
+ * - `cell` / `ddr4cell`: a corner of one mat — wordlines, bitlines, access transistors,
  *   storage capacitors under a common plate, and the sense amplifiers at the
  *   end of the bitlines.
  *
@@ -22,7 +22,10 @@ import { diagramKit, put, type DiagramPalette } from './diagram-kit.ts';
  * a real bank holds 64 Ki rows, drawn here as a handful of subarrays.
  */
 
-type Level = 'banks' | 'ddr4banks' | 'bank' | 'cell';
+type Level = 'banks' | 'ddr4banks' | 'bank' | 'ddr4array' | 'cell' | 'ddr4cell';
+type Gen = 'ddr5' | 'ddr4';
+/** Concept ids on the bank and cell scales are the generation's prefix plus the part. */
+const prefix: Record<Gen, string> = { ddr5: 'dram', ddr4: 'ddr4' };
 
 /** Cool blue-greys with the Memory category accent. */
 const palette: DiagramPalette = {
@@ -101,8 +104,9 @@ export function buildRamArchitecture(
   root: T.Group,
 ) {
   if (level === 'banks' || level === 'ddr4banks') buildDie(level, tools, root);
-  else if (level === 'bank') buildBank(tools, root);
-  else buildCells(tools, root);
+  else if (level === 'bank' || level === 'ddr4array')
+    buildBank(level === 'bank' ? 'ddr5' : 'ddr4', tools, root);
+  else buildCells(level === 'cell' ? 'ddr5' : 'ddr4', tools, root);
 }
 
 function buildDie(
@@ -204,10 +208,15 @@ export const BANK = {
   sa: 0.22,
 } as const;
 
-function buildBank(tools: ModelTools, root: T.Group) {
+function buildBank(gen: Gen, tools: ModelTools, root: T.Group) {
+  const id = (part: string) => prefix[gen] + part;
   const { instances } = tools;
   const { backdrop, block } = diagramKit(tools, palette);
-  backdrop(root, [13.4, 10.2], 'ONE BANK · SUBARRAYS × MATS');
+  backdrop(
+    root,
+    [13.4, 10.2],
+    gen === 'ddr5' ? 'DDR5 BANK · 65,536 ROWS' : 'DDR4 BANK · 131,072 ROWS',
+  );
 
   const { subarrays, mats, matW, matD, swd, sa } = BANK;
   const pitchX = matW + swd;
@@ -236,7 +245,7 @@ function buildBank(tools: ModelTools, root: T.Group) {
   for (let s = 0; s <= subarrays; s++)
     saPos.push([x0 + arrayW / 2, 0.13, z0 + sa / 2 + s * pitchZ]);
 
-  instances('drammat', matPos, [matW, 0.22, matD], 0, color.mat).forEach(
+  instances(id('mat'), matPos, [matW, 0.22, matD], 0, color.mat).forEach(
     (p, i) =>
       p.delta.set(
         ((i % mats) - (mats - 1) / 2) * 0.28,
@@ -244,11 +253,11 @@ function buildBank(tools: ModelTools, root: T.Group) {
         (Math.floor(i / mats) - (subarrays - 1) / 2) * 0.28,
       ),
   );
-  instances('dramswd', swdPos, [swd * 0.9, 0.16, matD], 0, color.swd).forEach(
+  instances(id('swd'), swdPos, [swd * 0.9, 0.16, matD], 0, color.swd).forEach(
     (p) => p.delta.set(0, 0.7, 0),
   );
   instances(
-    'dramlocalsa',
+    id('localsa'),
     saPos,
     [arrayW, 0.16, sa * 0.9],
     0,
@@ -260,7 +269,7 @@ function buildBank(tools: ModelTools, root: T.Group) {
   const gwl: Vec3[] = [];
   for (let s = 0; s < subarrays; s++)
     gwl.push([x0 + arrayW / 2, 0.34, z0 + sa + matD / 2 + s * pitchZ]);
-  instances('dramgwl', gwl, [arrayW, 0.05, 0.06], 0, color.wire).forEach((p) =>
+  instances(id('gwl'), gwl, [arrayW, 0.05, 0.06], 0, color.wire).forEach((p) =>
     p.delta.set(0, 2.1, 0),
   );
   const gbl: Vec3[] = [];
@@ -271,13 +280,13 @@ function buildBank(tools: ModelTools, root: T.Group) {
         0.4,
         z0 + arrayD / 2 + 0.55,
       ]);
-  instances('dramgbl', gbl, [0.05, 0.05, arrayD + 1.1], 0, '#a7d7c4').forEach(
+  instances(id('gbl'), gbl, [0.05, 0.05, arrayD + 1.1], 0, '#a7d7c4').forEach(
     (p) => p.delta.set(0, 2.6, 0),
   );
 
   const left = x0 - 0.55;
   block(
-    'dramrowdec',
+    id('rowdec'),
     [0.9, 0.24, arrayD],
     [left, 0.15, z0 + arrayD / 2],
     color.rowdec,
@@ -286,7 +295,7 @@ function buildBank(tools: ModelTools, root: T.Group) {
   );
   const below = z0 + arrayD;
   block(
-    'dramgsa',
+    id('gsa'),
     [arrayW, 0.2, 0.5],
     [x0 + arrayW / 2, 0.13, below + 0.42],
     color.gsa,
@@ -294,7 +303,7 @@ function buildBank(tools: ModelTools, root: T.Group) {
     [0, 0.9, 0.7],
   );
   block(
-    'dramcoldec',
+    id('coldec'),
     [arrayW, 0.2, 0.5],
     [x0 + arrayW / 2, 0.13, below + 1.02],
     color.coldec,
@@ -302,7 +311,7 @@ function buildBank(tools: ModelTools, root: T.Group) {
     [0, 0.8, 1.2],
   );
   block(
-    'drambankctl',
+    id('bankctl'),
     [0.9, 0.2, 1.1],
     [left, 0.13, below + 0.72],
     color.ctl,
@@ -314,10 +323,17 @@ function buildBank(tools: ModelTools, root: T.Group) {
 /** A corner of one mat, cell by cell. */
 export const CELLS = { wordlines: 6, bitlines: 8, pitch: 1.0 } as const;
 
-function buildCells(tools: ModelTools, root: T.Group) {
+function buildCells(gen: Gen, tools: ModelTools, root: T.Group) {
+  const id = (part: string) => prefix[gen] + part;
   const { add, instances, label } = tools;
   const { backdrop, block } = diagramKit(tools, palette);
-  backdrop(root, [12.4, 11.2], 'ONE MAT · 1T1C CELLS');
+  backdrop(
+    root,
+    [12.4, 11.2],
+    gen === 'ddr5'
+      ? 'DDR5 MAT · 1T1C · VPP 1.8 V'
+      : 'DDR4 MAT · 1T1C · VPP 2.5 V',
+  );
 
   const { wordlines, bitlines, pitch } = CELLS;
   const bx = (i: number) => (i - (bitlines - 1) / 2) * pitch + 0.5;
@@ -327,7 +343,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
 
   // Bitlines run along Z, buried lowest; wordlines cross over them along X.
   instances(
-    'drambitline',
+    id('bitline'),
     Array.from(
       { length: bitlines },
       (_, i) => [bx(i) - 0.28, 0.06, (top + end) / 2] as Vec3,
@@ -337,7 +353,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     '#7fc4d4',
   ).forEach((p) => p.delta.set(0, -0.3, 0));
   instances(
-    'dramwordline',
+    id('wordline'),
     Array.from(
       { length: wordlines },
       (_, j) =>
@@ -365,7 +381,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
         wz(j),
       ]);
     }
-  instances('dramaccess', fets, [0.34, 0.2, 0.34], 0, '#6f8796').forEach((p) =>
+  instances(id('access'), fets, [0.34, 0.2, 0.34], 0, '#6f8796').forEach((p) =>
     p.delta.set(0, 0.9, 0),
   );
   // Custom instance geometry carries its colour in the vertices: the scene
@@ -392,7 +408,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     [empty, '#2c4f5c'],
   ] as const)
     instances(
-      'dramcapacitor',
+      id('capacitor'),
       set,
       [0.3, 0.98, 0.3],
       0,
@@ -425,7 +441,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     palette.caption,
   );
   add(
-    'dramplate',
+    id('plate'),
     plate,
     [bx(0) - 0.5 + (bitlines * pitch) / 2 - 0.15, 1.52, (top + end) / 2],
     [0, 3.4, 0],
@@ -433,7 +449,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
 
   // Wordline drivers at the mat's edge.
   block(
-    'dramwldriver',
+    id('wldriver'),
     [0.8, 0.26, end - top],
     [bx(0) - 1.6, 0.17, (top + end) / 2],
     color.swd,
@@ -445,7 +461,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
   // bitline, then the column switches onto the local I/O pair.
   const midX = bx(0) - 0.5 + (bitlines * pitch) / 2;
   block(
-    'dramprecharge',
+    id('precharge'),
     [bitlines * pitch, 0.18, 0.34],
     [midX, 0.12, end + 0.35],
     '#4d6b62',
@@ -453,7 +469,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     [0, 0.7, 0.5],
   );
   instances(
-    'dramcellsa',
+    id('cellsa'),
     Array.from(
       { length: bitlines },
       (_, i) => [bx(i) - 0.14, 0.17, end + 1.05] as Vec3,
@@ -463,7 +479,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     '#3d8a82',
   ).forEach((p) => p.delta.set(0, 1.0, 0.6));
   instances(
-    'dramcolsel',
+    id('colsel'),
     Array.from(
       { length: bitlines },
       (_, i) => [bx(i) - 0.14, 0.13, end + 1.7] as Vec3,
@@ -473,7 +489,7 @@ function buildCells(tools: ModelTools, root: T.Group) {
     '#6e7f99',
   ).forEach((p) => p.delta.set(0, 0.8, 0.9));
   instances(
-    'dramlio',
+    id('lio'),
     [0, 1].map((k) => [midX - 0.14, 0.1, end + 2.1 + k * 0.28] as Vec3),
     [bitlines * pitch, 0.08, 0.12],
     0,

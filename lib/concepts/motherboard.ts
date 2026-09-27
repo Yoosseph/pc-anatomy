@@ -113,6 +113,8 @@ export const motherboardConcepts: Concept[] = [
       'Power delivery': 'PMIC on the module, fed 5 V',
       Voltage: 'VDD/VDDQ 1.1 V · VPP 1.8 V (JEDEC)',
       'On-die ECC': 'Yes · corrects single-bit errors inside the DRAM',
+      'Bank and cell':
+        'Same design as DDR4 — mats, sense amplifiers, one transistor and one capacitor per bit — with 65,536 rows per bank and wordlines boosted to 1.8 V',
       Dimensions: '133.35 × 34.9 × 6.62 mm',
       Contacts: '288-pin',
     },

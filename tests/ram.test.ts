@@ -41,7 +41,13 @@ after(() => {
 });
 
 const ddr5Levels: LevelId[] = ['dimm', 'dram', 'banks', 'bank', 'cell'];
-const ddr4Levels: LevelId[] = ['ddr4', 'ddr4dram', 'ddr4banks'];
+const ddr4Levels: LevelId[] = [
+  'ddr4',
+  'ddr4dram',
+  'ddr4banks',
+  'ddr4array',
+  'ddr4cell',
+];
 const ramLevels = [...ddr5Levels, ...ddr4Levels];
 const models = new Map(ramLevels.map((l) => [l, buildModel(l)]));
 const motherboard = buildModel('motherboard');
@@ -123,6 +129,8 @@ await test('each dive step opens from a concept on the scale above it', () => {
     ['drammat', 'bank', 'cell'],
     ['ddr4chip', 'ddr4', 'ddr4dram'],
     ['ddr4die', 'ddr4dram', 'ddr4banks'],
+    ['ddr4bank', 'ddr4banks', 'ddr4array'],
+    ['ddr4mat', 'ddr4array', 'ddr4cell'],
   ];
   for (const [id, at, opens] of chain) {
     assert.equal(byId[id].level, at, id);
@@ -139,6 +147,7 @@ await test('the RAM dive is as deep and as full as the graphics card dive', () =
   const count = (scales: LevelId[]) =>
     manifest.filter((c) => scales.includes(c.level)).length;
   assert.ok(ddr5Levels.length >= 5, 'five scales, like the RTX 5090 chain');
+  assert.equal(ddr4Levels.length, ddr5Levels.length, 'DDR4 dives as deep');
   for (const level of ramLevels)
     assert.ok(
       new Set(models.get(level)!.pieces.map((p) => p.concept)).size >= 8,
@@ -545,6 +554,8 @@ await test('search reaches every memory scale at its own depth', () => {
   assert.equal(selectSearch(initialState, 'dramcapacitor').level, 'cell');
   assert.equal(selectSearch(initialState, 'ddr4term').level, 'ddr4');
   assert.equal(selectSearch(initialState, 'ddr4dll').level, 'ddr4banks');
+  assert.equal(selectSearch(initialState, 'ddr4mat').level, 'ddr4array');
+  assert.equal(selectSearch(initialState, 'ddr4capacitor').level, 'ddr4cell');
   assert.ok(searchConcepts('ddr4').some((c) => c.id === 'ddr4module'));
   assert.ok(searchConcepts('capacitor').some((c) => c.id === 'dramcapacitor'));
   const found = selectSearch(
@@ -553,4 +564,28 @@ await test('search reaches every memory scale at its own depth', () => {
   );
   assert.equal(found.level, 'motherboard');
   assert.equal(found.selection?.concept, 'ram');
+});
+
+await test('the DDR4 bank and cell match DDR5 in build and differ only in their numbers', () => {
+  for (const [five, four] of [
+    ['bank', 'ddr4array'],
+    ['cell', 'ddr4cell'],
+  ] as const) {
+    const parts = (level: LevelId, prefix: string) =>
+      [...new Set(models.get(level)!.pieces.map((p) => p.concept))]
+        .map((id) => id.slice(prefix.length))
+        .sort();
+    assert.deepEqual(parts(four, 'ddr4'), parts(five, 'dram'));
+    assert.equal(
+      models.get(four)!.pieces.length,
+      models.get(five)!.pieces.length,
+    );
+  }
+  assert.equal(byId.ddr4rowdec.specifications.Rows, '131,072');
+  assert.equal(byId.dramrowdec.specifications.Rows, '65,536');
+  assert.match(byId.ddr4wordline.specifications.Level, /2\.5 V/);
+  assert.match(byId.dramwordline.specifications.Level, /1\.8 V/);
+  assert.equal(byId.ddr4mat.parent, 'ddr4bank');
+  assert.equal(byId.ddr4capacitor.parent, 'ddr4mat');
+  assert.ok(byId.ddr4rowdec.sources.includes('micron16gbddr4'));
 });

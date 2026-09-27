@@ -94,6 +94,7 @@ export const comparisonGroups = {
       { id: 'power', label: 'Power delivery', keys: ['Power delivery'] },
       { id: 'voltage', label: 'Voltage', keys: ['Voltage'] },
       { id: 'ecc', label: 'On-die ECC', keys: ['On-die ECC'] },
+      { id: 'inside', label: 'Bank and cell', keys: ['Bank and cell'] },
       { id: 'dimensions', label: 'Dimensions', keys: ['Dimensions'] },
     ],
   },

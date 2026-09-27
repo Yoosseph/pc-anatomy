@@ -32,6 +32,8 @@ Desktop PC
 │   └── Kingston FURY Beast DDR4-3200
 │       └── DRAM package
 │           └── DRAM die
+│               └── Bank
+│                   └── Cells
 ├── Power supply
 │   ├── ASUS TUF Gaming 850W Gold · modular
 │   └── ASUS TUF Gaming 750W Bronze · non-modular

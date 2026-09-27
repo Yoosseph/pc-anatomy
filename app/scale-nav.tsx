@@ -36,6 +36,8 @@ const levelIcon: Record<LevelId, typeof Box> = {
   ddr4: CircuitBoard,
   ddr4dram: Box,
   ddr4banks: Layers3,
+  ddr4array: Microscope,
+  ddr4cell: Microscope,
   ryzen: Cpu,
   ryzenio: CircuitBoard,
   corei9: Cpu,

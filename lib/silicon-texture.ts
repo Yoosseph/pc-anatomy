@@ -40,6 +40,7 @@ export const siliconColor: Record<string, string> = {
   drambank: '#3f8ea3',
   ddr4bank: '#4a8596',
   drammat: '#3a8599',
+  ddr4mat: '#44818f',
 };
 
 /** Original diagram textures encode resource identity, not transistor placement. */
@@ -170,7 +171,13 @@ export function resourceTexture(id: string) {
     for (let i = 0; i < 16; i++) tile(45 + i * 59, 158, 42, 284);
   } else if (id === 'xeslice') {
     for (let i = 0; i < 4; i++)
-      tile(45 + (i % 2) * 470, 140 + Math.floor(i / 2) * 150, 450, 130, 'XE-CORE');
+      tile(
+        45 + (i % 2) * 470,
+        140 + Math.floor(i / 2) * 150,
+        450,
+        130,
+        'XE-CORE',
+      );
     c.fillStyle = '#8fb6d0';
     c.fillRect(45, 438, 920, 22);
   } else if (id === 'xecore') {
@@ -202,7 +209,13 @@ export function resourceTexture(id: string) {
     c.fillStyle = '#78909e';
     c.font = '34px monospace';
     c.textAlign = 'left';
-    c.fillText(id.endsWith('gddr7') || id.endsWith('gddr6') ? 'MEMORY PACKAGE' : 'POWER DELIVERY', 58, 188);
+    c.fillText(
+      id.endsWith('gddr7') || id.endsWith('gddr6')
+        ? 'MEMORY PACKAGE'
+        : 'POWER DELIVERY',
+      58,
+      188,
+    );
     for (let i = 0; i < 28; i++) {
       c.fillStyle = '#84959c';
       c.fillRect(55 + i * 32, 350, 12 + (i % 3) * 3, 80);

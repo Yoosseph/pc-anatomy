@@ -468,34 +468,45 @@ export function buildMemoryModule(gen: Generation, tools: ModelTools) {
   const bevel = 0.25;
   const top = -MODULE.height / 2 + spec.outerHeight - bevel;
 
+  // Every pad stops a hair short of the plate above it. A face shared with
+  // the plate's underside, or with a neighbouring pad, is two surfaces at one
+  // depth, and the renderer flickers between them as the camera moves.
+  const gap = 0.02;
   const pads = new T.Group();
   const padMat = material('#3b4046', 0.05, 0.9);
+  const padTop = frontInner - gap;
   for (const sign of [-1, 1]) {
     const pad = new T.Mesh(
-      new T.BoxGeometry(mm(52), mm(frontInner - chipTop), mm(pd - 1)),
+      new T.BoxGeometry(mm(51), mm(padTop - chipTop), mm(pd - 1)),
       padMat,
     );
-    pad.position.set(mm(sign * 36), mm((frontInner + chipTop) / 2), mm(CHIP_Z));
+    pad.position.set(mm(sign * 36.5), mm((padTop + chipTop) / 2), mm(CHIP_Z));
     pads.add(pad);
   }
   if (gen === 'ddr5') {
     // A separate blue pad over the regulator in the middle, clear of the
-    // inductors' tops, so the PMIC also sheds its heat into the plate.
+    // inductors' tops and of the strips either side, so the PMIC also sheds
+    // its heat into the plate.
     const coilTop = t + 0.55 + 0.55;
     const centre = new T.Mesh(
-      new T.BoxGeometry(mm(22), mm(frontInner - coilTop), mm(12)),
+      new T.BoxGeometry(mm(20), mm(padTop - coilTop), mm(12)),
       material('#3d6f9e', 0.05, 0.85),
     );
-    centre.position.set(0, mm((frontInner + coilTop) / 2), mm(5.5));
+    centre.position.set(0, mm((padTop + coilTop) / 2), mm(5.5));
     pads.add(centre);
   }
-  const tape = new T.Mesh(
-    new T.BoxGeometry(mm(118), mm(frontInner - chipTop), mm(12)),
+  add(ids.pad, pads, [0, 0, 0], [0, 1.8, -1.2]);
+  // The adhesive tape on the bare secondary face, from the laminate to the
+  // back plate. It leaves downward with that plate rather than up through the
+  // board with the pads.
+  const tape = new T.Group();
+  const tapeBody = new T.Mesh(
+    new T.BoxGeometry(mm(118), mm(frontInner - gap - t), mm(12)),
     padMat,
   );
-  tape.position.set(0, -mm((frontInner + chipTop) / 2), mm(CHIP_Z));
-  pads.add(tape);
-  add(ids.pad, pads, [0, 0, 0], [0, 1.8, -1.2]);
+  tapeBody.position.set(0, -mm((frontInner - gap + t) / 2), mm(CHIP_Z));
+  tape.add(tapeBody);
+  add(ids.pad, tape, [0, 0, 0], [0, -1.5, 0]);
 
   const brush = surfaceTexture('brushed');
   const finish = new T.MeshStandardMaterial({
@@ -557,7 +568,8 @@ export function buildMemoryModule(gen: Generation, tools: ModelTools) {
       );
       g.add(new T.Mesh(band, ridge));
     }
-    const y = face * mm(outer + 0.02);
+    // Printed on the plate itself, not floating at the height of the ridges.
+    const y = face * mm(frontInner + plate + 0.03);
     const wordmark = printed('KINGSTON FURY', mm(58), '#d3d8dc', face, 700);
     wordmark.position.set(0, y, mm(4));
     g.add(wordmark);
@@ -585,17 +597,16 @@ export function buildMemoryModule(gen: Generation, tools: ModelTools) {
       });
     } else {
       // The top interlock: the front plate folds over the edge to meet the back.
-      const lip = box(
-        [mm(126), mm(frontInner * 2 + plate * 2), mm(0.8)],
-        '#1a1d20',
-        0.8,
-      );
+      const skin = frontInner + plate;
+      const lip = box([mm(126), mm(skin * 2 - 0.1), mm(0.8)], '#1a1d20', 0.8);
       lip.position.set(0, 0, mm(top - 0.4));
       g.add(lip);
-      // Two locking clips over the top edge hold the halves together.
+      // Two locking clips hold the halves together along the top edge. They
+      // sit inside the plates' outline, so they read as part of the edge
+      // instead of as tabs standing off it.
       for (const x of [-40, 40]) {
-        const clip = box([mm(5), mm(outer * 2), mm(2.4)], '#2e3338', 0.6);
-        clip.position.set(mm(x), 0, mm(top - 1.2));
+        const clip = box([mm(5), mm(skin * 2 - 0.1), mm(1.4)], '#1a1d20', 0.8);
+        clip.position.set(mm(x), 0, mm(top - 1.5));
         g.add(clip);
       }
     }

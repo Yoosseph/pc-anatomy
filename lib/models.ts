@@ -106,6 +106,8 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ddr4: buildDdr4,
   ddr4dram: buildDdr4Dram,
   ddr4banks: (tools, root) => buildRamArchitecture('ddr4banks', tools, root),
+  ddr4array: (tools, root) => buildRamArchitecture('ddr4array', tools, root),
+  ddr4cell: (tools, root) => buildRamArchitecture('ddr4cell', tools, root),
   ryzen: buildRyzen,
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,
@@ -323,6 +325,7 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
         'drambank',
         'ddr4bank',
         'drammat',
+        'ddr4mat',
       ].includes(concept)
     ) {
       const top = new T.MeshStandardMaterial({

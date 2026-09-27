@@ -8,6 +8,9 @@ import { buildArcCard } from './arc-card.ts';
 import { buildArcArchitecture } from './arc-architecture.ts';
 import { buildMachine } from './machine.ts';
 import { buildMotherboard } from './mainboard.ts';
+import { buildDimm } from './dimm.ts';
+import { buildDram } from './dram.ts';
+import { buildRamArchitecture } from './ram-architecture.ts';
 import { buildPowerSupply } from './power-supply.ts';
 import { buildFanUnit } from './fan-unit.ts';
 import { buildCooler } from './cooler.ts';
@@ -95,6 +98,10 @@ function turnExtent(extent: T.Vector3, q: T.Quaternion) {
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   pc: buildMachine,
   motherboard: buildMotherboard,
+  dimm: buildDimm,
+  dram: buildDram,
+  banks: (tools, root) => buildRamArchitecture('banks', tools, root),
+  bank: (tools, root) => buildRamArchitecture('bank', tools, root),
   ryzen: buildRyzen,
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,

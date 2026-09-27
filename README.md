@@ -1,6 +1,6 @@
 # PC Anatomy
 
-PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor.
+PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor — and a DDR5 module down to its storage cells.
 
 ## [**Explore the live demo →**](https://pc-anatomy.com/)
 
@@ -8,7 +8,7 @@ Ideas worth building are collected on the [**roadmap and Kanban board →**](htt
 
 Before changing any code, read [**ARCHITECTURE.md →**](ARCHITECTURE.md). It is the full technical picture of the project — the scale tree, where every module lives, the conventions behind the geometry, and the traps that are not obvious from reading the source. It is written to be read start to finish by whoever is doing the work, person or language model.
 
-Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 300 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
+Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 340 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
 
 ![An assembled ATX tower in PC Anatomy: a dual-glass aluminium case with the motherboard, graphics card, cooler and power supply visible through the window](docs/screenshots/pc-assembled.png)
 
@@ -23,6 +23,11 @@ Desktop PC
 │   │   └── Ryzen I/O die
 │   └── Core Ultra 9 285K
 │       └── Core Ultra I/O tile
+├── Memory
+│   └── DDR5 module
+│       └── DRAM package
+│           └── DRAM banks
+│               └── Bank
 ├── Power supply
 │   ├── ASUS TUF Gaming 850W Gold · modular
 │   └── ASUS TUF Gaming 750W Bronze · non-modular

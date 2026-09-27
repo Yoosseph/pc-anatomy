@@ -28,6 +28,10 @@ import {
 const levelIcon: Record<LevelId, typeof Box> = {
   pc: PcCase,
   motherboard: CircuitBoard,
+  dimm: CircuitBoard,
+  dram: Box,
+  banks: Layers3,
+  bank: Microscope,
   ryzen: Cpu,
   ryzenio: CircuitBoard,
   corei9: Cpu,

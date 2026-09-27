@@ -96,6 +96,7 @@ export const motherboardConcepts: Concept[] = [
     category: 'Memory',
     parent: 'dimmslot',
     level: 'motherboard',
+    open: 'dimm',
     description:
       'DDR5 modules: rows of memory chips on a small board, with their own power management on board.',
     purpose:

@@ -96,6 +96,10 @@ lit flat.
 | --- | --- | --- | --- | ---: |
 | `pc` | — | root | physical | 18 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
+| `dimm`        | `motherboard` | Memory           | physical |        6 |
+| `dram` | `dimm` | Memory | physical | 3 |
+| `banks` | `dram` | Memory | logical | 2 |
+| `bank` | `banks` | Memory | logical | 5 |
 | `ryzen` | `motherboard` | Motherboard | logical | 6 |
 | `ryzenio` | `ryzen` | Motherboard | logical | 5 |
 | `corei9` | `motherboard` | Motherboard | logical | 9 |
@@ -149,7 +153,7 @@ subsystems stop touching.
 | `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
 | `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
-| `lib/sources.ts` | Every citable reference, keyed by id. 56 of them. |
+| `lib/sources.ts` | Every citable reference, keyed by id. 63 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
 | `lib/explorer-state.ts` | `ExplorerState` — what the viewer is looking at — plus `initialState` and `selectSearch`. |
 | `lib/models.ts` | The `builders` registry, the `Piece` type, the shared `material()` cache, and `buildModel(level)`. |
@@ -157,6 +161,7 @@ subsystems stop touching.
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
 | `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
+| `lib/dimm.ts`, `lib/dram.ts`, `lib/ram-architecture.ts` | Builders for the memory dive: the DDR5 module and one DRAM package as physical scales, the bank array and one bank as logical diagrams. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
@@ -427,6 +432,14 @@ production build on every push and pull request with Node.js 22.
   pointer coordinates at desktop and mobile widths, and common bounds that
   contain both posed models at assembled, half-disassembled, and inventory
   positions.
+- `tests/ram.test.ts` (11) — the Memory menu order and the open chain down to
+  the cell array, bank counts multiplying out to the 16 Gb x8 organisation,
+  diagram blocks not overlapping, the module outline with its keyed contact
+  edge, the empty key cutout, the 288-pin finger count and face clearance,
+  bank-group membership, the spreader cladding with a clear contact field,
+  pad seating between chips and plate, the package stack order, named geometry
+  on every new scale, and search reaching the module and the cells at their
+  own scales.
 
 The suite builds every scale, so a geometry regression usually surfaces as a
 failing assertion rather than a silent visual change.

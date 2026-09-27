@@ -1,6 +1,6 @@
 # PC Anatomy
 
-PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor — and a DDR5 module down to its storage cells.
+PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor — and a DDR5 memory module down to the transistor and capacitor that hold one bit.
 
 ## [**Explore the live demo →**](https://pc-anatomy.com/)
 
@@ -8,7 +8,7 @@ Ideas worth building are collected on the [**roadmap and Kanban board →**](htt
 
 Before changing any code, read [**ARCHITECTURE.md →**](ARCHITECTURE.md). It is the full technical picture of the project — the scale tree, where every module lives, the conventions behind the geometry, and the traps that are not obvious from reading the source. It is written to be read start to finish by whoever is doing the work, person or language model.
 
-Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 340 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
+Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 400 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
 
 ![An assembled ATX tower in PC Anatomy: a dual-glass aluminium case with the motherboard, graphics card, cooler and power supply visible through the window](docs/screenshots/pc-assembled.png)
 
@@ -24,10 +24,14 @@ Desktop PC
 │   └── Core Ultra 9 285K
 │       └── Core Ultra I/O tile
 ├── Memory
-│   └── DDR5 module
+│   ├── Kingston FURY Beast DDR5-6000
+│   │   └── DRAM package
+│   │       └── DRAM die
+│   │           └── Bank
+│   │               └── Cells
+│   └── Kingston FURY Beast DDR4-3200
 │       └── DRAM package
-│           └── DRAM banks
-│               └── Bank
+│           └── DRAM die
 ├── Power supply
 │   ├── ASUS TUF Gaming 850W Gold · modular
 │   └── ASUS TUF Gaming 750W Bronze · non-modular
@@ -66,7 +70,7 @@ Descending into a part rebuilds it at its own scale with its own timeline, so th
 
 ## The interface
 
-The rail on the left carries the scale tree and per-system visibility. The GPU menu holds three cards, the RTX 5090, Radeon RX 9070 XT and Arc B580, each with its own dropdown of scales. The Power supply menu lists two TUF Gaming units directly: an 850W Gold with modular sockets and a 750W Bronze with fixed cables. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen.
+The rail on the left carries the scale tree and per-system visibility. The GPU menu holds three cards, the RTX 5090, Radeon RX 9070 XT and Arc B580, each with its own dropdown of scales. The Memory menu holds the installed DDR5 module and a DDR4 module from the same line, so the two generations can be taken apart side by side or compared in the comparison workbench. The Power supply menu lists two TUF Gaming units directly: an 850W Gold with modular sockets and a 750W Bronze with fixed cables. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen.
 
 | Workbench                                                                                                              | On a phone                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |

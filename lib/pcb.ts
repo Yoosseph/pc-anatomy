@@ -200,7 +200,7 @@ function genericPcbTexture(variant: BoardVariant) {
       ? DARK
       : variant === 'graphics'
         ? { ...BLACK, pad: '#909183', silk: '#92978e', traceBright: '#292d30' }
-        : variant === 'motherboard'
+        : variant === 'motherboard' || variant === 'memory'
           ? BLACK
           : GREEN;
   const rand = rng(

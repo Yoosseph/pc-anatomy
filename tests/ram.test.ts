@@ -2,9 +2,19 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import { buildModel, type Piece } from '../lib/models.ts';
-import { byId, searchConcepts } from '../lib/manifest.ts';
+import { byId, manifest, searchConcepts } from '../lib/manifest.ts';
 import { initialState, selectSearch } from '../lib/explorer-state.ts';
 import { branches, levelPath, levels, type LevelId } from '../lib/levels.ts';
+import {
+  chipCenters,
+  contactPositions,
+  edgeBottom,
+  generations,
+  keyCenter,
+  MODULE,
+  type Generation,
+} from '../lib/memory-module.ts';
+import { FBGA, packageIds, STACK } from '../lib/dram-package.ts';
 
 // Same canvas stub as the model tests: geometry only, no WebGL.
 const previousDocument = globalThis.document;
@@ -30,287 +40,486 @@ after(() => {
   globalThis.document = previousDocument;
 });
 
-const ramLevels: LevelId[] = ['dimm', 'dram', 'banks', 'bank'];
+const ddr5Levels: LevelId[] = ['dimm', 'dram', 'banks', 'bank', 'cell'];
+const ddr4Levels: LevelId[] = ['ddr4', 'ddr4dram', 'ddr4banks'];
+const ramLevels = [...ddr5Levels, ...ddr4Levels];
 const models = new Map(ramLevels.map((l) => [l, buildModel(l)]));
+const motherboard = buildModel('motherboard');
 const family = (level: LevelId, id: string) =>
   models.get(level)!.pieces.filter((p) => p.concept === id);
+const moduleLevel: Record<Generation, LevelId> = { ddr5: 'dimm', ddr4: 'ddr4' };
+const packageLevel: Record<Generation, LevelId> = {
+  ddr5: 'dram',
+  ddr4: 'ddr4dram',
+};
+const U = 1 / 6; // module scene units per millimetre
 
-await test('the Memory menu holds the module-to-cell dive in order', () => {
+/** World-space bounds of a piece at its assembled position. */
+function bounds(p: Piece) {
+  p.object.position.copy(p.base);
+  p.object.updateMatrixWorld(true);
+  const box = new T.Box3();
+  p.object.traverse((o) => {
+    if (!(o instanceof T.Mesh) || o.material instanceof T.MeshBasicMaterial)
+      return;
+    if (o instanceof T.InstancedMesh) {
+      const m = new T.Matrix4();
+      o.geometry.computeBoundingBox();
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, m);
+        box.union(
+          o.geometry
+            .boundingBox!.clone()
+            .applyMatrix4(m)
+            .applyMatrix4(o.matrixWorld),
+        );
+      }
+    } else box.expandByObject(o);
+  });
+  return box;
+}
+
+/** Instanced pieces carry their own extent rather than a mesh of their own. */
+const footprint = (p: Piece) =>
+  p.batch ? new T.Box3().setFromCenterAndSize(p.base, p.extent) : bounds(p);
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+
+await test('the Memory menu holds both generations, each in its own dropdown', () => {
+  const memory = branches().find((b) => b.label === 'Memory')!;
   assert.deepEqual(
-    branches().find((b) => b.label === 'Memory')?.levels,
-    ramLevels,
+    memory.submenus.map((s) => s.label),
+    ['DDR5 · FURY Beast', 'DDR4 · FURY Beast'],
   );
-  assert.deepEqual(levelPath('dimm'), ['pc', 'motherboard', 'dimm']);
-  assert.deepEqual(levelPath('bank'), [
+  assert.deepEqual(memory.submenus[0].levels, ddr5Levels);
+  assert.deepEqual(memory.submenus[1].levels, ddr4Levels);
+  assert.deepEqual(levelPath('cell'), [
     'pc',
     'motherboard',
     'dimm',
     'dram',
     'banks',
     'bank',
+    'cell',
   ]);
+  assert.deepEqual(levelPath('ddr4banks'), [
+    'pc',
+    'motherboard',
+    'ddr4',
+    'ddr4dram',
+    'ddr4banks',
+  ]);
+  // The board carries DDR5; DDR4 is a real alternative it cannot take.
+  assert.equal(levels.ddr4.alternative, true);
+  assert.notEqual(levels.dimm.alternative, true);
 });
 
-await test('each dive step opens from a concept on its parent scale', () => {
-  assert.equal(byId.ram.open, 'dimm');
-  assert.equal(byId.ram.level, 'motherboard');
-  assert.equal(byId.dramchip.open, 'dram');
-  assert.equal(byId.dramchip.level, 'dimm');
-  assert.equal(byId.dramdie.open, 'banks');
-  assert.equal(byId.dramdie.level, 'dram');
-  assert.equal(byId.drambank.open, 'bank');
-  assert.equal(byId.drambank.level, 'banks');
-  assert.equal(levels.dimm.branchLabel, 'Memory');
-  assert.equal(levels.dimm.kind, 'physical');
-  assert.equal(levels.dram.kind, 'physical');
-  assert.equal(levels.banks.kind, 'logical');
-  assert.equal(levels.bank.kind, 'logical');
+await test('each dive step opens from a concept on the scale above it', () => {
+  const chain: [string, LevelId, LevelId][] = [
+    ['ram', 'motherboard', 'dimm'],
+    ['dramchip', 'dimm', 'dram'],
+    ['dramdie', 'dram', 'banks'],
+    ['drambank', 'banks', 'bank'],
+    ['drammat', 'bank', 'cell'],
+    ['ddr4chip', 'ddr4', 'ddr4dram'],
+    ['ddr4die', 'ddr4dram', 'ddr4banks'],
+  ];
+  for (const [id, at, opens] of chain) {
+    assert.equal(byId[id].level, at, id);
+    assert.equal(byId[id].open, opens, id);
+    assert.equal(levels[opens].concept, id, opens);
+    // The concept that opens a scale is drawn on the scale above it.
+    if (at !== 'motherboard')
+      assert.ok(family(at, id).length > 0, `${id} is not drawn at ${at}`);
+  }
+  assert.equal(byId.ddr4module.open, 'ddr4');
 });
 
-await test('bank counts multiply out to the 16 Gb x8 organisation', () => {
-  assert.equal(family('banks', 'drambank').length, 32);
-  assert.equal(family('banks', 'dramio').length, 1);
-  assert.equal(
-    byId.drambank.specifications.Banks,
-    '32 on 16 Gb or larger x8 die',
-  );
-  assert.equal(byId.drambank.specifications.Groups, '8 bank groups × 4 banks');
-  assert.equal(family('bank', 'dramcell').length, 128);
-  assert.equal(family('bank', 'dramrow').length, 16);
-  assert.equal(family('bank', 'dramcolumn').length, 8);
-  assert.equal(family('bank', 'dramrowdec').length, 1);
-  assert.equal(family('bank', 'dramsenseamp').length, 1);
+await test('the RAM dive is as deep and as full as the graphics card dive', () => {
+  const count = (scales: LevelId[]) =>
+    manifest.filter((c) => scales.includes(c.level)).length;
+  assert.ok(ddr5Levels.length >= 5, 'five scales, like the RTX 5090 chain');
+  for (const level of ramLevels)
+    assert.ok(
+      new Set(models.get(level)!.pieces.map((p) => p.concept)).size >= 8,
+      `${level} draws fewer than eight distinct parts`,
+    );
+  assert.ok(count(ddr5Levels) >= 45, 'the DDR5 catalogue is too thin');
 });
 
-await test('RAM diagram blocks do not overlap one another', () => {
+// ── Organisation arithmetic ─────────────────────────────────────────────────
+
+await test('bank, row and page counts multiply out to 16 Gb on both dies', () => {
+  const dies = [
+    ['banks', 'drambank', 'drambankgroup', 32, 8, 65536],
+    ['ddr4banks', 'ddr4bank', 'ddr4bankgroup', 16, 4, 131072],
+  ] as const;
+  for (const [level, bank, group, banks, groups, rows] of dies) {
+    assert.equal(family(level, bank).length, banks);
+    assert.equal(family(level, group).length, groups);
+    const spec = byId[bank].specifications;
+    assert.match(spec.Banks, new RegExp(`^${banks} `));
+    assert.equal(spec.Groups, `${groups} bank groups × 4 banks`);
+    assert.match(spec.Rows, new RegExp(rows.toLocaleString('en-US')));
+    const pageBits = 1024 * 8;
+    assert.equal(
+      banks * rows * pageBits,
+      16 * 2 ** 30,
+      `${level} is not 16 Gb`,
+    );
+    // Eight x8 packages of 16 Gb make the 16 GB module.
+    assert.equal((8 * 16 * 2 ** 30) / 8, 16 * 2 ** 30);
+  }
+  // A burst fills one 64-byte cache line on both generations.
+  assert.equal((32 * 16) / 8, 64); // DDR5: 32-bit subchannel × BL16
+  assert.equal((64 * 8) / 8, 64); // DDR4: 64-bit channel × BL8
+});
+
+await test('each bank group owns exactly four banks, on its own side of the stripe', () => {
+  for (const [level, bank, group] of [
+    ['banks', 'drambank', 'drambankgroup'],
+    ['ddr4banks', 'ddr4bank', 'ddr4bankgroup'],
+  ] as const) {
+    const banks = family(level, bank);
+    for (const g of family(level, group)) {
+      const gb = footprint(g);
+      const mine = banks.filter(
+        (b) =>
+          b.base.x > gb.min.x &&
+          b.base.x < gb.max.x &&
+          Math.sign(b.base.z) === Math.sign(g.base.z),
+      );
+      assert.equal(mine.length, 4, `${level}: ${g.key} owns ${mine.length}`);
+    }
+  }
+});
+
+await test('DDR5 adds on-die ECC; DDR4 keeps a DLL', () => {
+  assert.equal(family('banks', 'dramecc').length, 1);
+  assert.equal(family('ddr4banks', 'ddr4dll').length, 1);
+  assert.ok(!byId.ddr4ecc);
+  assert.equal(byId.dramecc.specifications.Code, '128 data + 8 check bits');
+});
+
+await test('diagram parts never occupy the same space', () => {
   for (const level of ramLevels.filter((l) => levels[l].kind === 'logical')) {
     const pieces = models.get(level)!.pieces;
-    const footprint = (p: Piece) => ({
-      x0: p.base.x + p.center.x - p.extent.x / 2,
-      x1: p.base.x + p.center.x + p.extent.x / 2,
-      z0: p.base.z + p.center.z - p.extent.z / 2,
-      z1: p.base.z + p.center.z + p.extent.z / 2,
-    });
+    const boxes = pieces.map(footprint);
     for (let i = 0; i < pieces.length; i++)
       for (let j = i + 1; j < pieces.length; j++) {
-        const a = footprint(pieces[i]),
-          b = footprint(pieces[j]);
-        const overlap =
-          Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0.01 &&
-          Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0) > 0.01;
+        const overlap = boxes[i].clone().intersect(boxes[j]);
+        const size = overlap.getSize(new T.Vector3());
+        const solid =
+          !overlap.isEmpty() && size.x > 0.01 && size.y > 0.01 && size.z > 0.01;
         assert.ok(
-          !overlap,
+          !solid,
           `${level}: ${pieces[i].key} overlaps ${pieces[j].key}`,
         );
       }
   }
 });
 
-await test('each bank group frame holds exactly four banks', () => {
-  const banks = family('banks', 'drambank');
-  assert.equal(banks.length, 32);
-  for (let g = 0; g < 8; g++) {
-    const gx = ((g % 4) - 1.5) * 2.7;
-    const gz = g < 4 ? -1.9 : 1.1;
-    const inside = banks.filter(
-      (p) => Math.abs(p.base.x - gx) <= 1.28 && Math.abs(p.base.z - gz) <= 1.46,
-    );
-    assert.equal(inside.length, 4, `bank group ${g} holds ${inside.length}`);
-  }
-});
+// ── The module ──────────────────────────────────────────────────────────────
 
-await test('the spreader clads the module but clears the contact field', () => {
-  const spreaders = family('dimm', 'dimmspreader');
-  assert.equal(spreaders.length, 1);
-  const spreader = spreaders[0];
-  // Brushed dark metal, not board green or bare plastic. (Same-finish
-  // submeshes merge at build, so count the finish, then the assembly extent.)
-  const dark = new T.Color('#202326').getHex();
-  let clad = 0;
-  spreader.object.traverse((o) => {
-    if (!(o instanceof T.Mesh)) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    if (
-      mats.some(
-        (m) => m instanceof T.MeshStandardMaterial && m.color.getHex() === dark,
-      )
-    )
-      clad++;
-  });
-  assert.ok(clad >= 1, 'spreader must wear the dark finish');
-  assert.ok(
-    spreader.extent.x >= 128 / 6 && spreader.extent.y >= 4.6 / 6,
-    'spreader assembly must span plates and caps',
-  );
-  // Plates stop above the contact field: the extruded profile runs z -10 to
-  // 15 mm with a 0.6 mm bevel, so the real silhouette boundary is -10.6 mm —
-  // clear of the key band and the finger rows — while spanning the chip row.
-  const z0 = spreader.base.z + spreader.center.z - spreader.extent.z / 2;
-  assert.ok(z0 > -10.7 / 6, 'spreader must clear the contact field');
-  const x0 = spreader.base.x + spreader.center.x - spreader.extent.x / 2;
-  const x1 = spreader.base.x + spreader.center.x + spreader.extent.x / 2;
-  let chipX0 = Infinity,
-    chipX1 = -Infinity;
-  for (const chip of family('dimm', 'dramchip')) {
-    chipX0 = Math.min(chipX0, chip.base.x + chip.center.x - chip.extent.x / 2);
-    chipX1 = Math.max(chipX1, chip.base.x + chip.center.x + chip.extent.x / 2);
-  }
-  assert.ok(x0 <= chipX0 && x1 >= chipX1, 'spreader must span the chip row');
-});
-
-await test('the thermal pads seat between chip tops and plate', () => {
-  // Pads are the '#2a2d30' meshes inside the spreader group: bottom faces
-  // touch the 2.0 mm chip tops without entering the bodies, tops meet the
-  // 2.05 mm plate underside. Both bounds use >= with epsilon.
-  const pad = new T.Color('#2a2d30').getHex();
-  const eps = 0.001;
-  let found = 0;
-  family('dimm', 'dimmspreader')[0].object.traverse((o) => {
-    if (!(o instanceof T.Mesh)) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    if (
-      !mats.some(
-        (m) => m instanceof T.MeshStandardMaterial && m.color.getHex() === pad,
-      )
-    )
-      return;
-    found++;
-    o.updateWorldMatrix(true, false);
-    o.geometry.computeBoundingBox();
-    const bb = o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld);
-    // Spreader group sits at the origin, so world units are group units.
+await test('both modules keep the JEDEC outline and the data sheet envelope', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const level = moduleLevel[gen];
+    const { ids, outerHeight, outerThickness } = generations[gen];
+    const board = bounds(family(level, ids.board)[0]);
+    const size = board.getSize(new T.Vector3());
+    assert.ok(Math.abs(size.x - MODULE.length * U) < 0.01, `${gen} length`);
+    assert.ok(Math.abs(size.z - MODULE.height * U) < 0.02, `${gen} height`);
+    assert.ok(Math.abs(size.y - MODULE.thickness * U) < 0.01, `${gen} board`);
+    const all = new T.Box3();
+    for (const p of models.get(level)!.pieces) all.union(bounds(p));
+    const outer = all.getSize(new T.Vector3());
     assert.ok(
-      bb.min.y >= 2.0 / 6 - eps,
-      'pad enters the chip bodies below 2.0 mm',
+      Math.abs(outer.z - outerHeight * U) < 0.15 * U + 0.01,
+      `${gen} height with spreader is ${outer.z / U} mm`,
     );
     assert.ok(
-      bb.max.y >= 2.05 / 6 - eps,
-      'pad stops short of the plate underside',
+      Math.abs(outer.y - outerThickness * U) < 0.1 * U + 0.01,
+      `${gen} thickness with spreader is ${outer.y / U} mm`,
     );
-  });
-  assert.ok(found > 0, 'no thermal pads drawn');
+    assert.equal(family(level, ids.chip).length, 8);
+  }
 });
 
-await test('the module keeps the DDR5 outline with a keyed contact edge', () => {
-  const f = (id: string) => family('dimm', id);
-  assert.equal(f('dimmboard').length, 1);
-  assert.equal(f('dramchip').length, 8);
-  assert.equal(f('dimmpmic').length, 1);
-  assert.equal(f('dimmspd').length, 1);
-  assert.equal(f('dimmcontacts').length, 1);
-  const board = f('dimmboard')[0];
-  assert.ok(
-    Math.abs(board.base.x + board.center.x) + board.extent.x / 2 <=
-      133.35 / 6 + 0.05,
-    'module exceeds the 133.35 mm DDR5 length',
-  );
-  for (const chip of f('dramchip')) {
-    const outerX = Math.abs(chip.base.x + chip.center.x) + chip.extent.x / 2;
-    assert.ok(outerX <= 133.35 / 6 / 2 + 0.05, chip.key + ' leaves the board');
+await test('288 contacts at 0.85 mm pitch, 144 per face, none across the key', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const xs = contactPositions(gen);
+    assert.equal(xs.length, 144);
+    for (let i = 1; i < xs.length; i++) {
+      const step = xs[i] - xs[i - 1];
+      assert.ok(
+        Math.abs(step - MODULE.pitch) < 1e-9 ||
+          Math.abs(step - MODULE.keyGap) < 1e-9,
+        `${gen}: contact ${i} is off pitch`,
+      );
+    }
+    // Equal margins at both ends.
+    assert.ok(Math.abs(xs[0] + xs[143]) < 1e-9, `${gen} is lopsided`);
+    const k = keyCenter(gen);
+    assert.ok(
+      xs.every((x) => Math.abs(x - k) >= MODULE.keyWidth / 2 + 0.3),
+      `${gen}: a contact runs into the key`,
+    );
+    const contacts = family(moduleLevel[gen], generations[gen].ids.contacts)[0];
+    const fingers = contacts.object.userData.fingers as T.InstancedMesh;
+    assert.equal(fingers.count, 288);
   }
-  // The key cutout is real geometry: across the full keyed edge band
-  // (x in [-7, 1] mm, z below -12 mm) there are no vertices at all — no
-  // board, no backing strip, no finger. (Submeshes sharing a material are
-  // merged at build, so read the baked geometry rather than individual
-  // meshes, skipping label planes.)
-  const keyPieces = [f('dimmboard')[0], f('dimmcontacts')[0]];
-  const inBand: number[] = [];
-  for (const piece of keyPieces)
-    piece.object.traverse((o) => {
+});
+
+await test('the key is a real cut, and the generations key in different places', () => {
+  const gap = Math.abs(keyCenter('ddr5') - keyCenter('ddr4'));
+  assert.ok(gap > MODULE.keyWidth, 'a DDR4 module would drop into a DDR5 slot');
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const level = moduleLevel[gen];
+    const { ids } = generations[gen];
+    const k = keyCenter(gen) * U;
+    const z = (edgeBottom(gen, keyCenter(gen)) + 1.5) * U;
+    for (const piece of models.get(level)!.pieces) {
+      piece.object.position.copy(piece.base);
+      piece.object.updateMatrixWorld(true);
+    }
+    const ray = (x: number) =>
+      new T.Raycaster(new T.Vector3(x, 5, z), new T.Vector3(0, -1, 0))
+        .intersectObjects(
+          [ids.board, ids.contacts].map((id) => family(level, id)[0].object),
+          true,
+        )
+        .filter(
+          (h) =>
+            !(h.object as T.Mesh).isMesh ||
+            !((h.object as T.Mesh).material instanceof T.MeshBasicMaterial),
+        );
+    assert.equal(ray(k).length, 0, `${gen}: the key is filled`);
+    assert.ok(
+      ray(k + 3 * U).length > 0,
+      `${gen}: the board beside the key is missing`,
+    );
+  }
+});
+
+await test('DDR4 bows its contact edge; DDR5 keeps it straight', () => {
+  const ends = (gen: Generation) =>
+    edgeBottom(gen, MODULE.length / 2) - edgeBottom(gen, 0);
+  assert.equal(ends('ddr5'), 0);
+  assert.ok(ends('ddr4') >= 0.4, 'the DDR4 edge must rise toward its ends');
+  // The fingers follow the edge they sit on.
+  const fingers = family('ddr4', 'ddr4contacts')[0].object.userData
+    .fingers as T.InstancedMesh;
+  const m = new T.Matrix4();
+  const z = (i: number) => {
+    fingers.getMatrixAt(i, m);
+    return new T.Vector3().setFromMatrixPosition(m).z;
+  };
+  assert.ok(
+    z(0) > z(72) + 0.3 * U,
+    'end fingers must sit higher than middle ones',
+  );
+});
+
+await test('DDR5 regulates on the module; DDR4 terminates its fly-by bus there instead', () => {
+  assert.equal(family('dimm', 'dimmpmic').length, 1);
+  assert.equal(family('dimm', 'dimminductor').length, 1);
+  assert.equal(family('ddr4', 'ddr4term').length, 1);
+  assert.ok(
+    !models.get('ddr4')!.pieces.some((p) => /pmic|inductor/.test(p.concept)),
+  );
+  assert.ok(
+    !models.get('dimm')!.pieces.some((p) => p.concept.includes('term')),
+  );
+  // The regulator sits in the gap at the centre of the chip row.
+  const pmic = bounds(family('dimm', 'dimmpmic')[0]);
+  const inner = Math.min(...chipCenters.map(Math.abs)) - 7.5 / 2;
+  assert.ok(pmic.max.x < inner * U && pmic.min.x > -inner * U);
+});
+
+await test('components stay on the board, off each other and above the contacts', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const level = moduleLevel[gen];
+    const { ids } = generations[gen];
+    const skip = new Set<string>([
+      ids.board,
+      ids.contacts,
+      ids.pad,
+      ids.spreaderFront,
+      ids.spreaderBack,
+      ids.decap,
+    ]);
+    const parts = models.get(level)!.pieces.filter((p) => !skip.has(p.concept));
+    const top = MODULE.thickness / 2;
+    // Mesh by mesh, so a part spread over the board (the inductors) is not
+    // mistaken for one block covering whatever sits between its pieces.
+    const solids: { key: string; box: T.Box3 }[] = [];
+    for (const p of parts) {
+      p.object.position.copy(p.base);
+      p.object.updateMatrixWorld(true);
+      p.object.traverse((o) => {
+        if (
+          o instanceof T.Mesh &&
+          !(o.material instanceof T.MeshBasicMaterial) &&
+          !(o instanceof T.InstancedMesh)
+        ) {
+          const pos = o.geometry.getAttribute('position');
+          // Merged meshes hold several parts: split them back by connectivity
+          // is overkill here, so take each merged mesh's unmerged children
+          // where they exist and the whole mesh otherwise.
+          const box = new T.Box3()
+            .setFromBufferAttribute(pos as T.BufferAttribute)
+            .applyMatrix4(o.matrixWorld);
+          solids.push({ key: p.key, box });
+        }
+      });
+    }
+    for (const p of parts) {
+      const b = bounds(p);
+      assert.ok(b.min.y >= top * U - 1e-3, `${p.key} sinks into the board`);
+      assert.ok(
+        Math.abs(b.max.x) <= (MODULE.length / 2) * U,
+        `${p.key} leaves the board`,
+      );
+      assert.ok(
+        b.min.z > (-MODULE.height / 2 + MODULE.fingerHeight + 1) * U,
+        `${p.key} sits on the contact field`,
+      );
+    }
+    const chips = parts.filter((p) => p.concept === ids.chip).map(bounds);
+    for (const s of solids)
+      for (const [i, chip] of chips.entries()) {
+        if (s.key === family(level, ids.chip)[i].key) continue;
+        const o = s.box.clone().intersect(chip).getSize(new T.Vector3());
+        assert.ok(
+          s.box.clone().intersect(chip).isEmpty() || o.x < 1e-3 || o.z < 1e-3,
+          `${s.key} overlaps a package`,
+        );
+      }
+  }
+});
+
+await test('the spreader clears the contacts and seats on its pads', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const level = moduleLevel[gen];
+    const { ids } = generations[gen];
+    for (const id of [ids.spreaderFront, ids.spreaderBack]) {
+      const plate = bounds(family(level, id)[0]);
+      assert.ok(
+        plate.min.z > (-MODULE.height / 2 + MODULE.fingerHeight + 1) * U,
+        `${gen}: ${id} covers the contacts`,
+      );
+      assert.ok(
+        byId[id].opensFirst,
+        `${id} must come off before the chips move`,
+      );
+    }
+    // Pad on the package tops, plate on the pad: touching, not overlapping.
+    const chipTop = Math.max(
+      ...family(level, ids.chip).map((c) => bounds(c).max.y),
+    );
+    const pad = bounds(family(level, ids.pad)[0]);
+    const front = bounds(family(level, ids.spreaderFront)[0]);
+    assert.ok(pad.max.y <= front.max.y);
+    // The front pad strips start exactly at the package tops. Same-material
+    // meshes merge at build, so read the baked vertices.
+    let lowest = Infinity;
+    family(level, ids.pad)[0].object.traverse((o) => {
       if (!(o instanceof T.Mesh)) return;
-      if (o.material instanceof T.MeshBasicMaterial) return;
       const pos = o.geometry.getAttribute('position');
       for (let i = 0; i < pos.count; i++)
-        if (pos.getZ(i) < -12 / 6 - 0.05) inBand.push(pos.getX(i));
+        if (pos.getY(i) > 0)
+          lowest = Math.min(lowest, pos.getY(i) + o.position.y);
     });
-  assert.ok(inBand.length > 0, 'no keyed-edge geometry drawn at all');
-  assert.ok(
-    inBand.every((x) => x <= -7 / 6 + 0.001 || x >= 1 / 6 - 0.001),
-    'geometry spans the key cutout',
-  );
-  assert.ok(
-    inBand.some((x) => x < -7 / 6) && inBand.some((x) => x >= 1 / 6),
-    'contacts must flank the key on both sides',
-  );
-  // 288 pins: 144 gold fingers per face at 0.8 mm pitch. Fingers are the
-  // only gold meshes, so snap every baked gold vertex to its finger column
-  // on the pitch grid: 72 per field, both faces sharing each column.
-  const gold = new T.Color('#d5b96b').getHex();
-  const columns = new Set<string>();
-  let goldYMin = Infinity,
-    goldYMax = -Infinity,
-    goldCount = 0;
-  f('dimmcontacts')[0].object.traverse((o) => {
-    if (!(o instanceof T.Mesh)) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    if (
-      !mats.some(
-        (m) => m instanceof T.MeshStandardMaterial && m.color.getHex() === gold,
-      )
-    )
-      return;
-    const pos = o.geometry.getAttribute('position');
-    for (let i = 0; i < pos.count; i++) {
-      goldCount++;
-      const x = pos.getX(i);
-      goldYMin = Math.min(goldYMin, pos.getY(i));
-      goldYMax = Math.max(goldYMax, pos.getY(i));
-      // Finger centers sit exactly on the grid; edges deviate by under a
-      // third of a pitch step, so rounding lands every vertex correctly.
-      const idx =
-        x < -1
-          ? Math.round((x + 64.55 / 6) / (0.8 / 6))
-          : Math.round((x - 1.75 / 6) / (0.8 / 6));
-      columns.add((x < -1 ? 'L' : 'R') + idx);
-    }
-  });
-  assert.ok(goldCount > 0, 'no contact fingers drawn');
-  assert.equal(columns.size, 144);
-  for (const key of columns) {
-    const n = Number(key.slice(1));
-    assert.ok(n >= 0 && n < 72, key + ' is off the finger grid');
-  }
-  assert.ok(goldYMin < 0 && goldYMax > 0, 'fingers must sit on both faces');
-  // Surface clearance: the 1.27 mm board slab reaches |y| = 0.635 mm, so no
-  // gold vertex may lie inside it — fingers sit on the faces, not in the board.
-  const slab = 0.635 / 6 - 0.001;
-  f('dimmcontacts')[0].object.traverse((o) => {
-    if (!(o instanceof T.Mesh)) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    if (
-      !mats.some(
-        (m) => m instanceof T.MeshStandardMaterial && m.color.getHex() === gold,
-      )
-    )
-      return;
-    const pos = o.geometry.getAttribute('position');
-    for (let i = 0; i < pos.count; i++)
-      assert.ok(
-        Math.abs(pos.getY(i)) >= slab,
-        'a gold finger is embedded in the board',
-      );
-  });
-});
-
-await test('the package scale shows substrate, die and balls', () => {
-  const f = (id: string) => family('dram', id);
-  assert.equal(f('dramsubstrate').length, 1);
-  assert.equal(f('dramdie').length, 1);
-  assert.ok(f('dramball').length > 40, 'ball grid is too sparse');
-  const die = f('dramdie')[0];
-  const substrate = f('dramsubstrate')[0];
-  assert.ok(
-    die.base.y > substrate.base.y,
-    'the die must sit above the substrate',
-  );
-  for (const ball of f('dramball'))
     assert.ok(
-      ball.base.y < substrate.base.y,
-      'balls must sit beneath the substrate',
+      Math.abs(lowest - chipTop) < 0.03 * U,
+      `${gen}: pad floats above the packages`,
     );
+  }
 });
 
-await test('every new piece belongs to a named concept', () => {
+await test('the motherboard carries the complete DDR5 module in each populated slot', () => {
+  const ram = motherboard.pieces.filter((p) => p.concept === 'ram');
+  assert.equal(ram.length, 2);
+  for (const installed of ram) {
+    let fingers = 0;
+    installed.object.traverse((o) => {
+      if (o instanceof T.InstancedMesh && o.count === 288) fingers++;
+    });
+    assert.equal(fingers, 1, 'the installed module is not the detailed one');
+    const b = bounds(installed).getSize(new T.Vector3());
+    // Standing up: 133 mm along the slot, 34.9 mm tall, at 1/22 scale.
+    assert.ok(Math.abs(b.z - MODULE.length / 22) < 0.05);
+    assert.ok(Math.abs(b.y - generations.ddr5.outerHeight / 22) < 0.05);
+  }
+});
+
+// ── The package ─────────────────────────────────────────────────────────────
+
+await test('78 balls: 13 rows of 3 + 3 at 0.8 mm, centre columns empty', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const ids = packageIds[gen];
+    const balls = family(packageLevel[gen], ids.ball);
+    assert.equal(balls.length, 78);
+    const xs = [...new Set(balls.map((b) => b.base.x.toFixed(3)))].map(Number);
+    assert.equal(xs.length, 6);
+    assert.ok(
+      xs.every((x) => Math.abs(x) >= 1.6 - 1e-6),
+      'a ball sits in the centre columns',
+    );
+    const zs = [...new Set(balls.map((b) => b.base.z.toFixed(3)))]
+      .map(Number)
+      .sort((a, b) => a - b);
+    assert.equal(zs.length, 13);
+    for (let i = 1; i < zs.length; i++)
+      assert.ok(Math.abs(zs[i] - zs[i - 1] - FBGA.pitch) < 1e-3);
+    // The grid fits the published 7.5 × 11 mm body.
+    assert.ok(Math.max(...xs) + FBGA.ballDiameter / 2 < FBGA.body[0] / 2);
+    assert.ok(Math.max(...zs) + FBGA.ballDiameter / 2 < FBGA.body[1] / 2);
+  }
+});
+
+await test('the package stacks balls, substrate, die and mold in order, die face down over the slot', () => {
+  for (const gen of ['ddr5', 'ddr4'] as const) {
+    const level = packageLevel[gen];
+    const ids = packageIds[gen];
+    const b = (id: string) => bounds(family(level, id)[0]);
+    const substrate = b(ids.substrate);
+    const die = b(ids.die);
+    const mold = b(ids.mold);
+    const encap = b(ids.encap);
+    const ballBottom = Math.min(
+      ...family(level, ids.ball).map((p) => p.base.y - p.extent.y / 2),
+    );
+    assert.ok(
+      ballBottom < encap.min.y,
+      'the encapsulant bead would hold the package off the board',
+    );
+    assert.ok(die.min.y >= substrate.max.y - 1e-6, 'die below the substrate');
+    assert.ok(mold.max.y > die.max.y, 'the mold must cover the die');
+    // The bead fits between the ball columns.
+    assert.ok(encap.max.x < 1.6 - FBGA.ballDiameter / 2);
+    // Every pad lies over the slot, and every wire passes through it.
+    for (const pad of family(level, ids.pads))
+      assert.ok(Math.abs(pad.base.x) < FBGA.slot, 'a pad is not over the slot');
+    const wires = family(level, ids.wire)[0].object;
+    wires.traverse((o) => {
+      if (!(o instanceof T.Mesh)) return;
+      const pos = o.geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i) / 2.5;
+        if (y > 0.02 && y < STACK.substrate - 0.02)
+          assert.ok(
+            Math.abs(pos.getX(i)) < FBGA.slot,
+            'a wire passes through the substrate',
+          );
+      }
+    });
+  }
+});
+
+// ── The whole dive ──────────────────────────────────────────────────────────
+
+await test('every rendered object on the memory scales belongs to a named part', () => {
   for (const level of ramLevels) {
     const { pieces, root } = models.get(level)!;
     assert.ok(pieces.length > 0, level + ' renders nothing');
@@ -328,13 +537,16 @@ await test('every new piece belongs to a named concept', () => {
   }
 });
 
-await test('search reaches the module and the cell array at their own scales', () => {
-  assert.ok(searchConcepts('dram').some((c) => c.id === 'dramchip'));
-  assert.ok(searchConcepts('cell').some((c) => c.id === 'dramcell'));
+await test('search reaches every memory scale at its own depth', () => {
   assert.equal(selectSearch(initialState, 'dramchip').level, 'dimm');
-  assert.equal(selectSearch(initialState, 'dramcell').level, 'bank');
+  assert.equal(selectSearch(initialState, 'dramball').level, 'dram');
   assert.equal(selectSearch(initialState, 'drambank').level, 'banks');
-  // The motherboard search for RAM still lands on the installed module.
+  assert.equal(selectSearch(initialState, 'drammat').level, 'bank');
+  assert.equal(selectSearch(initialState, 'dramcapacitor').level, 'cell');
+  assert.equal(selectSearch(initialState, 'ddr4term').level, 'ddr4');
+  assert.equal(selectSearch(initialState, 'ddr4dll').level, 'ddr4banks');
+  assert.ok(searchConcepts('ddr4').some((c) => c.id === 'ddr4module'));
+  assert.ok(searchConcepts('capacitor').some((c) => c.id === 'dramcapacitor'));
   const found = selectSearch(
     { ...initialState, level: 'sm' as const, visible: [] },
     'ram',

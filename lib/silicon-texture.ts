@@ -36,6 +36,10 @@ export const siliconColor: Record<string, string> = {
   arcgddr6: '#1d2731',
   arcvrm: '#59636b',
   arcpowerstage: '#18222b',
+  // Memory: the category's teal.
+  drambank: '#3f8ea3',
+  ddr4bank: '#4a8596',
+  drammat: '#3a8599',
 };
 
 /** Original diagram textures encode resource identity, not transistor placement. */

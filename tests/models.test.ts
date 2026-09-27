@@ -5,6 +5,7 @@ import { buildModel, refreshBatches, type Piece } from '../lib/models.ts';
 import { byId, isLevelRoot, manifest } from '../lib/manifest.ts';
 import { resolvePick, resolvePickNear } from '../lib/picking.ts';
 import { levelIds } from '../lib/levels.ts';
+import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
 
 // Geometry tests need the canvas texture API, but not a WebGL context. Browser
@@ -285,7 +286,11 @@ await test('installed DDR5 modules leave a real notch for the socket key', () =>
         new T.Vector3(ram.base.x - 1, 5.2 / 22, ram.base.z + z / 22),
         new T.Vector3(1, 0, 0),
       ).intersectObject(ram.object, true);
-    assert.equal(hitsAt(-8).length, 0, `${ram.key} blocks its slot key`);
+    assert.equal(
+      hitsAt(keyCenter('ddr5')).length,
+      0,
+      `${ram.key} blocks its slot key`,
+    );
     assert.ok(
       hitsAt(-15).length > 0,
       'the ray must cross the adjacent contact tab',

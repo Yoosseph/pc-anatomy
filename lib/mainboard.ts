@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
+import { keyCenter, MODULE } from './memory-module.ts';
 import {
   buildCapacitor,
   buildChip,
@@ -242,34 +243,30 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     const slot = buildSlot(material, mm(133), '#1d2023', {
       width: mm(6.5),
       height: mm(6),
-      notch: 0.56,
+      // The slot's key rib lines up with the module's key.
+      notch: 0.5 - keyCenter('ddr5') / 133,
       latch: true,
       latchColor: '#34383b',
     });
     slot.rotation.y = Math.PI / 2;
     add('dimmslot', slot, x, 4, -58, [0, 1, 0]);
   }
+  // The installed modules are the complete DDR5 model, stood on its contact
+  // edge: its length runs along the slot, its component face toward +X.
   for (const x of [73, 93]) {
     const ram = new T.Group();
-    put(ram, pcb(vector(1.3, 24, 131), 'memory'), 0, 2, 0);
-    // The physical key occupies Z=-8 mm after the slot's quarter-turn.
-    // Split the lower edge around it so the key never passes through the PCB.
-    for (const [z, length] of [
-      [-37.5, 56],
-      [29.5, 72],
-    ])
-      put(ram, pcb(vector(1.3, 4, length), 'memory'), 0, -12, z);
-    // Separate face plates leave the keyed PCB contacts clear of the slot walls.
-    for (const side of [-1, 1]) {
-      put(ram, block(0.8, 23, 129, edge), side * 1.1, 2.5, 0);
-      for (const [z, length] of [
-        [-37.5, 56],
-        [29.5, 72],
-      ])
-        put(ram, block(0.15, 3, length, pinMat), side * 0.75, -12, z);
-    }
-    put(ram, block(3, 1.5, 129), 0, 15, 0);
-    add('ram', ram, x, 18, -58, [0, 2.2, 0]);
+    const dimm = tools.assembly('dimm');
+    dimm.scale.setScalar(6 / 22);
+    dimm.quaternion.setFromRotationMatrix(
+      new T.Matrix4().makeBasis(
+        new T.Vector3(0, 0, 1),
+        new T.Vector3(1, 0, 0),
+        new T.Vector3(0, 1, 0),
+      ),
+    );
+    ram.add(dimm);
+    // Contact edge seated at the slot floor, 4 mm above the board.
+    add('ram', ram, x, 4 + MODULE.height / 2, -58, [0, 2.2, 0]);
   }
 
   const vrm = new T.Group();

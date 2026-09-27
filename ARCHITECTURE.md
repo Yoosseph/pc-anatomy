@@ -12,7 +12,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 329 catalogue entries are authored in source, and each one
+any kind. The 402 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -62,7 +62,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              329 entries, each with a globally unique id
+      │              402 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -88,7 +88,7 @@ state.
 
 ## The scale tree
 
-28 scales, 329 concepts. `physical` scales are lit like hardware and keep real
+36 scales, 402 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
@@ -96,10 +96,14 @@ lit flat.
 | --- | --- | --- | --- | ---: |
 | `pc` | — | root | physical | 18 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
-| `dimm`        | `motherboard` | Memory           | physical |        6 |
-| `dram` | `dimm` | Memory | physical | 3 |
-| `banks` | `dram` | Memory | logical | 2 |
-| `bank` | `banks` | Memory | logical | 5 |
+| `dimm` | `motherboard` | Memory · DDR5 | physical | 10 |
+| `dram` | `dimm` | Memory · DDR5 | physical | 8 |
+| `banks` | `dram` | Memory · DDR5 | logical | 9 |
+| `bank` | `banks` | Memory · DDR5 | logical | 9 |
+| `cell` | `bank` | Memory · DDR5 | logical | 10 |
+| `ddr4` | `motherboard` | Memory · DDR4 | physical | 10 |
+| `ddr4dram` | `ddr4` | Memory · DDR4 | physical | 8 |
+| `ddr4banks` | `ddr4dram` | Memory · DDR4 | logical | 9 |
 | `ryzen` | `motherboard` | Motherboard | logical | 6 |
 | `ryzenio` | `ryzen` | Motherboard | logical | 5 |
 | `corei9` | `motherboard` | Motherboard | logical | 9 |
@@ -130,12 +134,15 @@ lit flat.
 Menus are grouped by `branchLabel`, not by branch root, which is why the case
 fan, the tower cooler and the AIO share one Cooling heading instead of nesting.
 The GPU menu has sub-menus: each card declares `submenu`, and every scale beneath
-it is listed under that card. The Power supply menu lists its two models directly.
+it is listed under that card. The Memory menu does the same for its two
+generations, the installed DDR5 module and a DDR4 one from the same product
+line. The Power supply menu lists its two models directly.
 
-Five scales are marked `alternative: true`: the second processor, the liquid
-cooler, the two graphics cards and the fixed-cable PSU the tower does not carry.
-Only one cooler bolts to one socket, only one processor sits in it, one card is
-installed and the tower carries one supply —
+Six scales are marked `alternative: true`: the second processor, the liquid
+cooler, the two graphics cards, the fixed-cable PSU the tower does not carry and
+the DDR4 module the board's DDR5 slots cannot take. Only one cooler bolts to one
+socket, only one processor sits in it, one card is installed, the tower carries
+one supply and a slot is keyed for one generation —
 so these are real scales with real content that simply have nothing to click on
 at the scale above. They are reached from their subsystem menu instead. The flag
 is what keeps the "every scale is reachable" test honest without forcing the
@@ -153,7 +160,7 @@ subsystems stop touching.
 | `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
 | `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
-| `lib/sources.ts` | Every citable reference, keyed by id. 63 of them. |
+| `lib/sources.ts` | Every citable reference, keyed by id. 73 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
 | `lib/explorer-state.ts` | `ExplorerState` — what the viewer is looking at — plus `initialState` and `selectSearch`. |
 | `lib/models.ts` | The `builders` registry, the `Piece` type, the shared `material()` cache, and `buildModel(level)`. |
@@ -161,7 +168,7 @@ subsystems stop touching.
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
 | `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
-| `lib/dimm.ts`, `lib/dram.ts`, `lib/ram-architecture.ts` | Builders for the memory dive: the DDR5 module and one DRAM package as physical scales, the bank array and one bank as logical diagrams. |
+| `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies, one bank and one mat of cells. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
@@ -185,7 +192,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 61 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, and comparison state/data/pane/bounds behaviour. |
+| `tests/*.test.ts` | 83 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, and comparison state/data/pane/bounds behaviour. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 
@@ -201,7 +208,7 @@ subsystems stop touching.
 | `pcb(size, variant?)` | A circuit board: routed faces, bare laminate on the cut edges. |
 | `material(color, metal?, rough?)` | The cached standard material. |
 | `label(parent, text, pos, width, color?)` | 3-D text, sized to a width rather than a font size. |
-| `assembly(level)` | Reuses a detailed scale as one installed, selectable assembly — how the motherboard and the card appear inside the tower. |
+| `assembly(level)` | Reuses a detailed scale as one installed, selectable assembly — how the motherboard and the card appear inside the tower, and the DDR5 module in the motherboard's slots. |
 | `airflow(streams)` | Chevrons marching along the paths this build moves air along. Scenery, not parts: see the convention below. |
 
 `delta` is the direction a piece travels as the machine comes apart. `reveal` is
@@ -376,7 +383,7 @@ timeline. Do not add a second hand-written route table.
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 329 concepts currently cite at least one
+and vendor documentation first. All 402 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -393,11 +400,11 @@ cites the same source twice. It does not check that a citation is appropriate.
 Nothing here claims a specific product's bill of materials. Every physical
 concept carries a `physicalAccuracy` string saying so, and they are not
 decorative — read one before adding a component that implies more precision than
-the model has. 231 concepts are physical, 98 are logical diagrams.
+the model has. 267 concepts are physical, 135 are logical diagrams.
 
 ## Tests
 
-61 tests, all through Node's built-in runner.
+83 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
 production build on every push and pull request with Node.js 22.
@@ -427,19 +434,24 @@ production build on every push and pull request with Node.js 22.
   its filter anywhere in the first half of the disassembly, that every rear
   connector can be seen from behind the machine through the I/O shield, and
   that the front I/O sits on the outside of the roof.
-- `tests/comparison.test.ts` (6) — metadata-driven discovery, valid distinct
+- `tests/comparison.test.ts` (6) — metadata-driven discovery (including the
+  DDR5/DDR4 memory pair), valid distinct
   state and group transitions, complete catalogue-backed spec rows, pane-local
   pointer coordinates at desktop and mobile widths, and common bounds that
   contain both posed models at assembled, half-disassembled, and inventory
   positions.
-- `tests/ram.test.ts` (11) — the Memory menu order and the open chain down to
-  the cell array, bank counts multiplying out to the 16 Gb x8 organisation,
-  diagram blocks not overlapping, the module outline with its keyed contact
-  edge, the empty key cutout, the 288-pin finger count and face clearance,
-  bank-group membership, the spreader cladding with a clear contact field,
-  pad seating between chips and plate, the package stack order, named geometry
-  on every new scale, and search reaching the module and the cells at their
-  own scales.
+- `tests/ram.test.ts` (19) — both generations' menus and open chains down
+  to the cell, the dive being at least as deep and as populated as the GPU
+  chains, bank × row × page multiplying out to 16 Gb on both dies, bank-group
+  ownership, ECC on DDR5 and a DLL on DDR4, no two diagram parts sharing
+  space, the JEDEC outline and the data-sheet height and thickness, 288
+  contacts at 0.85 mm with none across the key, a real key cut at a different
+  offset per generation, DDR4's curved edge, the PMIC on DDR5 and the
+  termination on DDR4, components clear of the contacts and of each other,
+  spreaders clear of the contacts and seated on their pads, the detailed
+  module standing in both populated motherboard slots, the 78-ball grid with
+  its empty centre columns, the package stack with the die face down over the
+  slot, named geometry everywhere, and search reaching every memory scale.
 
 The suite builds every scale, so a geometry regression usually surfaces as a
 failing assertion rather than a silent visual change.

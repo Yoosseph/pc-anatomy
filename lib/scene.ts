@@ -210,6 +210,10 @@ export function createViewer(
           'dram',
           'banks',
           'bank',
+          'cell',
+          'ddr4',
+          'ddr4dram',
+          'ddr4banks',
         ].includes(state.level) && camera.aspect < 1
         ? 1.05
         : 0.8;

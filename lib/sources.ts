@@ -168,6 +168,50 @@ export const sources = {
     name: 'APH Networks (independent review) · Kingston FURY Beast DDR5 construction',
     url: 'https://aphnetworks.com/reviews/kingston-fury-beast-ddr5-5200-2x16gb/2',
   },
+  jedecmo329: {
+    name: 'JEDEC · MO-329 288-pin DDR5 DIMM outline, 0.85 mm pitch',
+    url: 'https://www.jedec.org/standards-documents/docs/mo-329e',
+  },
+  micronudimm: {
+    name: 'Micron · 16 GB single-rank x8 DDR5 UDIMM data sheet (MTC8C1084S1UC)',
+    url: 'https://www.mouser.com/datasheet/2/671/mtc8c1084s1uc_srx8_udimm_diereva-3193802.pdf',
+  },
+  micron16gbddr5: {
+    name: 'Micron · 16Gb DDR5 SDRAM data sheet (die rev D)',
+    url: 'https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/7969/16gb-ddr5-sdram-dierevd.pdf',
+  },
+  micron16gbddr4: {
+    name: 'Micron · 16Gb DDR4 SDRAM data sheet',
+    url: 'https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/8827/16gb-ddr4-sdram.pdf',
+  },
+  micronddr4design: {
+    name: 'Micron · TN-40-40 DDR4 point-to-point design guide',
+    url: 'https://www.mouser.com/pdfDocs/Micron_DDR4_Design_Guide.pdf',
+  },
+  kingstonddr4: {
+    name: 'Kingston · DDR4 module overview',
+    url: 'https://www.kingston.com/en/memory/ddr4-overview',
+  },
+  kf560: {
+    name: 'Kingston · FURY Beast KF560C36BBE-16 data sheet',
+    url: 'https://www.kingston.com/datasheets/KF560C36BBE-16.pdf',
+  },
+  kf432: {
+    name: 'Kingston · FURY Beast KF432C16BB/16 data sheet',
+    url: 'https://www.kingston.com/dataSheets/KF432C16BB_16.pdf',
+  },
+  // A Micron patent: the clearest public description of the board-on-chip
+  // package DRAM uses, with the die face down over a slot in the substrate.
+  bocpackage: {
+    name: 'Micron patent US 2003/0211660 · Board-on-chip BGA package',
+    url: 'https://patents.google.com/patent/US20030211660A1/en',
+  },
+  // Peer-reviewed architecture paper, for the subarray hierarchy inside a
+  // bank that no data sheet describes.
+  salp: {
+    name: 'Kim et al., ISCA 2012 · Subarray-level parallelism in DRAM',
+    url: 'https://users.ece.cmu.edu/~omutlu/pub/salp-dram_isca12.pdf',
+  },
   fanconstruction: {
     name: 'Noctua · Fan frame, impeller and bearing construction',
     url: 'https://cdn.noctua.at/media/noctua_nf_a12x25_pwm_infosheet_en_web.pdf',

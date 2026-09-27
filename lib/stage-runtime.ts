@@ -18,6 +18,13 @@ export function createStageRuntime(
   renderer.setPixelRatio(Math.min(devicePixelRatio, compact ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFShadowMap;
+  // Both stages switch `autoUpdate` off once shadows have faded out, which
+  // is every frame on a diagram and on a disassembled model. A stage that
+  // opens in that state — the explorer coming back from the comparison
+  // workbench at Inventory, say — would never draw its shadow map at all,
+  // and every lit material sampling the missing map rendered black: only the
+  // labels showed. Drawing it once on the first frame is enough.
+  renderer.shadowMap.needsUpdate = true;
   renderer.setClearColor(0, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;

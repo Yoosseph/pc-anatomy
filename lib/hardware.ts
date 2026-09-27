@@ -10,7 +10,7 @@ import { buildCapacitor, buildChip, buildHeader, buildScrew } from './parts.ts';
 
 export type ModelTools = {
   /** Reuse a detailed scale as a single installed, selectable assembly. */
-  assembly: (level: 'motherboard' | 'card') => T.Group;
+  assembly: (level: 'motherboard' | 'card' | 'dimm') => T.Group;
   /**
    * Where this build moves air, drawn as chevrons marching along the path.
    * Scenery rather than a part: never selected, never named, never pointed

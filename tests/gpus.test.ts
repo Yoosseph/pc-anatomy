@@ -70,11 +70,14 @@ await test('the GPU menu holds three cards, each in its own dropdown', () => {
     'xecore',
     'xve',
   ]);
-  // Every GPU scale is in exactly one dropdown, and no other menu grows one.
+  // Every GPU scale is in exactly one dropdown. Memory has its own two
+  // generations; no other menu grows one.
   const listed = gpu.submenus.flatMap((s) => s.levels);
   assert.deepEqual([...listed].sort(), [...gpu.levels].sort());
   assert.equal(new Set(listed).size, listed.length);
-  for (const b of branches().filter((b) => b.label !== 'GPU'))
+  for (const b of branches().filter(
+    (b) => b.label !== 'GPU' && b.label !== 'Memory',
+  ))
     assert.equal(b.submenus.length, 0, b.label);
 });
 

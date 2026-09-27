@@ -75,6 +75,7 @@ await test('comparison models and catalogue roots are discovered from canonical 
   assert.deepEqual(comparisonLevels('psu'), ['psu', 'psubronze']);
   assert.deepEqual(comparisonLevels('cpu'), ['ryzen', 'corei9']);
   assert.deepEqual(comparisonLevels('storage'), ['ssd', 'nvme']);
+  assert.deepEqual(comparisonLevels('memory'), ['dimm', 'ddr4']);
   for (const group of comparisonGroupIds)
     for (const level of comparisonLevels(group)) {
       assert.equal(levels[level].comparisonGroup, group);
@@ -125,16 +126,20 @@ await test('every comparison group resolves complete catalogue-backed specs', ()
     ['gpu', 'card', 'interface', 'PCI Express 5.0'],
     ['psu', 'psu', 'output', '850 W'],
     ['cpu', 'ryzen', 'architecture', 'Zen 5 · chiplet'],
-    [
-      'cpu',
-      'corei9',
-      'architecture',
-      'Arrow Lake · Lion Cove + Skymont',
-    ],
+    ['cpu', 'corei9', 'architecture', 'Arrow Lake · Lion Cove + Skymont'],
     ['cpu', 'corei9', 'socket', 'LGA 1851'],
     ['gpu', 'arcb580', 'exterior', 'Intel Arc B580 Limited Edition'],
     ['storage', 'ssd', 'interface', 'SATA 6 Gb/s'],
     ['storage', 'nvme', 'dimensions', '80 × 22 mm'],
+    ['memory', 'dimm', 'banks', '32 · 8 groups of 4'],
+    ['memory', 'ddr4', 'banks', '16 · 4 groups of 4'],
+    ['memory', 'ddr4', 'power', 'Regulated on the motherboard'],
+    [
+      'memory',
+      'ddr4',
+      'inside',
+      'Same design as DDR5 — mats, sense amplifiers, one transistor and one capacitor per bit — with 131,072 rows per bank and wordlines boosted to 2.5 V',
+    ],
   ] as const;
   for (const [group, level, id, expected] of cases)
     assert.equal(specValue(group, level, id), expected);

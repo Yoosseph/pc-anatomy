@@ -8,6 +8,9 @@ import { buildArcCard } from './arc-card.ts';
 import { buildArcArchitecture } from './arc-architecture.ts';
 import { buildMachine } from './machine.ts';
 import { buildMotherboard } from './mainboard.ts';
+import { buildDdr4, buildDimm } from './memory-module.ts';
+import { buildDdr4Dram, buildDram } from './dram-package.ts';
+import { buildRamArchitecture } from './ram-architecture.ts';
 import { buildPowerSupply } from './power-supply.ts';
 import { buildFanUnit } from './fan-unit.ts';
 import { buildCooler } from './cooler.ts';
@@ -95,6 +98,16 @@ function turnExtent(extent: T.Vector3, q: T.Quaternion) {
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   pc: buildMachine,
   motherboard: buildMotherboard,
+  dimm: buildDimm,
+  dram: buildDram,
+  banks: (tools, root) => buildRamArchitecture('banks', tools, root),
+  bank: (tools, root) => buildRamArchitecture('bank', tools, root),
+  cell: (tools, root) => buildRamArchitecture('cell', tools, root),
+  ddr4: buildDdr4,
+  ddr4dram: buildDdr4Dram,
+  ddr4banks: (tools, root) => buildRamArchitecture('ddr4banks', tools, root),
+  ddr4array: (tools, root) => buildRamArchitecture('ddr4array', tools, root),
+  ddr4cell: (tools, root) => buildRamArchitecture('ddr4cell', tools, root),
   ryzen: buildRyzen,
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,
@@ -252,9 +265,14 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     customGeometry?: T.BufferGeometry,
   ) {
     const physical = byId[concept].representationType === 'physical';
-    const metallic = ['heatsink', 'fastener', 'bga', 'standoff'].includes(
-      concept,
-    );
+    const metallic = [
+      'heatsink',
+      'fastener',
+      'bga',
+      'standoff',
+      'dramball',
+      'ddr4ball',
+    ].includes(concept);
     const baseMaterial = customGeometry
       ? new T.MeshStandardMaterial({
           vertexColors: true,
@@ -303,6 +321,11 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
         'arcgddr6',
         'arcvrm',
         'arcpowerstage',
+        // Memory
+        'drambank',
+        'ddr4bank',
+        'drammat',
+        'ddr4mat',
       ].includes(concept)
     ) {
       const top = new T.MeshStandardMaterial({

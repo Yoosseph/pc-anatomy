@@ -4,7 +4,7 @@ Reviewed 2026-09-19. PC Anatomy is independent of the manufacturers cited here. 
 
 ## Current component reference audit
 
-All 329 component entries now have references in their detail panels. The complete
+All 421 component entries now have references in their detail panels. The complete
 [component-to-document index](docs/component-references.md) records those mappings.
 The registry in `lib/sources.ts` is authoritative for current app links; older notes
 below preserve the research history.
@@ -54,6 +54,88 @@ also opens from the motherboard. Its nominal 22 × 80 mm module has a mounting
 notch, an M-key contact gap, a controller, DRAM and two NAND packages. BGA joints
 are beneath the chips. Package count, contact count and routing are illustrative.
 The model is an educational assembly, not a reproduction of the Samsung 990 PRO PCB.
+
+### Memory: DDR5 and DDR4 · September 27, 2026
+
+The Memory menu holds two retail modules from one line, chosen so that the only
+difference between them is the generation: the Kingston FURY Beast DDR5-6000
+16 GB (KF560C36BBE-16), which is the module installed in the motherboard's
+slots, and the FURY Beast DDR4-3200 16 GB (KF432C16BB/16). Both are single-rank
+modules built from eight 2G × 8 (16 Gb) FBGA packages, per their data sheets.
+Both branches dive module → package → die → bank → cell. The generations
+differ most at the module and the die; a DDR4 bank and cell are built the same
+way as DDR5's, with 131,072 rows per bank instead of 65,536 and wordlines
+boosted to 2.5 V (VPP) instead of 1.8 V, and the comparison sheet says so. The two modules also form the
+Memory group of the comparison workbench.
+
+**Module.** Length (133.35 mm), board height (31.25 mm), the 288 contacts at
+0.85 mm pitch, and the height and thickness with the spreader (34.9 × 6.62 mm
+DDR5, 34 × 7.2 mm DDR4) are published. Package placement, passives, the
+spreader facets and the key's exact offset are illustrative; the key sits at a
+different offset on each generation, as the standards require, and the DDR4
+contact edge is curved.
+
+- [JEDEC MO-329](https://www.jedec.org/standards-documents/docs/mo-329e) — the
+  288-pin DDR5 DIMM outline at 0.85 mm pitch.
+- [Micron 16 GB single-rank x8 DDR5 UDIMM data sheet](https://www.mouser.com/datasheet/2/671/mtc8c1084s1uc_srx8_udimm_diereva-3193802.pdf)
+  — eight packages on the primary side and none on the secondary, the
+  subchannel A/B split, the PMIC fed from 5 V, and the SPD5 hub with its
+  1,024-byte store and thermal sensor.
+- [Kingston KF560C36BBE-16](https://www.kingston.com/datasheets/KF560C36BBE-16.pdf)
+  and [KF432C16BB/16](https://www.kingston.com/dataSheets/KF432C16BB_16.pdf)
+  data sheets — organisation, JEDEC and XMP/EXPO timings and voltages,
+  dimensions, on-die ECC.
+- [Kingston DDR4 overview](https://www.kingston.com/en/memory/ddr4-overview) —
+  the curved contact edge and the DDR4 key.
+- [Micron TN-40-40](https://www.mouser.com/pdfDocs/Micron_DDR4_Design_Guide.pdf)
+  — fly-by command routing terminated to VTT at the end of the net, which is
+  why the DDR4 module carries resistor networks past its last package. The
+  DDR5 command bus is terminated on the die (the `CA_ODT` input in the DDR5
+  data sheet).
+
+**Package.** Both generations' x8 parts come in a 78-ball FBGA: 13 rows of
+3 + 3 balls on a 0.8 mm pitch with the three centre columns empty, in a
+7.5 × 11 mm body among the published options. The empty columns are there
+because of how the package is built: the die is mounted face down on a
+substrate with a slot under its centre pads, gold wires run through the slot,
+and a bead of encapsulant fills it. Thickness is drawn 2.5 × true; die size,
+pad and wire counts and layer thicknesses are illustrative. No vendor's die is
+claimed — Kingston does not name its DRAM supplier.
+
+- [Micron 16Gb DDR5 SDRAM data sheet](https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/7969/16gb-ddr5-sdram-dierevd.pdf)
+  and [Micron 16Gb DDR4 SDRAM data sheet](https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/8827/16gb-ddr4-sdram.pdf)
+  — ball count, pitch, matrix and body sizes.
+- [Micron patent US 2003/0211660](https://patents.google.com/patent/US20030211660A1/en)
+  — the board-on-chip construction: active face down, bond pads exposed
+  through a slot in the substrate, wires through the slot, encapsulant
+  filling it.
+
+**Die.** From the same two data sheets: 32 banks in 8 groups of 4, 65,536
+rows (R0–R15), 1,024 columns and a 1 KiB page on 16 Gb x8 DDR5; 16 banks in 4
+groups of 4, 131,072 rows (A0–A16) and a 1 KiB page on 16 Gb x8 DDR4. Both
+multiply out to 16 Gb, and the tests check it. Also sourced there: 16n
+prefetch and BL16 against 8n and BL8; refresh windows of 32 ms and 64 ms with
+tREFI 3.9 µs and 7.8 µs; same-bank refresh, on-die ECC, DFE, duty-cycle
+adjust, loopback and read/write CRC on DDR5; the DLL, DBI, CA parity, write
+CRC and fine-granularity refresh on DDR4. The periphery is drawn along a
+centre stripe beneath the pads; its layout is illustrative.
+
+**Bank and cell.** No data sheet describes a bank's inside. The subarray
+hierarchy — mats of about 512 × 512 cells, local sense amplifiers between
+subarrays forming the local row buffer, global wordlines from a shared row
+decoder, and global bitlines to a global row buffer — follows
+[Kim et al., ISCA 2012](https://users.ece.cmu.edu/~omutlu/pub/salp-dram_isca12.pdf).
+The 1T1C cell, the destructive read restored by the sense amplifier, and
+precharge follow the
+[Simon Fraser University course notes](https://www.cs.sfu.ca/~ashriram/Courses/CS7ARCH/assets/lectures/11_Memory_Consistency_DRAM.pdf).
+The cell scale is a schematic: real arrays stagger their cells, bury the
+wordlines and use tall cylindrical capacitors.
+
+**The spreader.** Kingston's product pages give the FURY Beast's colour,
+dimensions and low profile; [APH Networks](https://aphnetworks.com/reviews/kingston-fury-beast-ddr5-5200-2x16gb/2)
+and [Tom's Hardware](https://www.tomshardware.com/reviews/kingston-fury-beast-ddr5-5200-c40-review),
+both independent reviews, describe the two-plate construction. The facets are
+drawn in the line's style without reproducing its artwork or logo.
 
 ## Additional graphics cards · September 17, 2026
 

@@ -201,8 +201,22 @@ export function createViewer(
     // edge, even though the ordinary whole-model fit looked intentional.
     const padding = focus
       ? 1.16
-      : ['card', 'rx9070', 'arcb580', 'nvme'].includes(state.level) &&
-          camera.aspect < 1
+      : [
+            'card',
+            'rx9070',
+            'arcb580',
+            'nvme',
+            'dimm',
+            'dram',
+            'banks',
+            'bank',
+            'cell',
+            'ddr4',
+            'ddr4dram',
+            'ddr4banks',
+            'ddr4array',
+            'ddr4cell',
+          ].includes(state.level) && camera.aspect < 1
         ? 1.05
         : 0.8;
     fitCameraToBounds(

@@ -28,6 +28,16 @@ import {
 const levelIcon: Record<LevelId, typeof Box> = {
   pc: PcCase,
   motherboard: CircuitBoard,
+  dimm: CircuitBoard,
+  dram: Box,
+  banks: Layers3,
+  bank: Microscope,
+  cell: Microscope,
+  ddr4: CircuitBoard,
+  ddr4dram: Box,
+  ddr4banks: Layers3,
+  ddr4array: Microscope,
+  ddr4cell: Microscope,
   ryzen: Cpu,
   ryzenio: CircuitBoard,
   corei9: Cpu,
@@ -151,7 +161,7 @@ export default function ScaleNav({
                   {label}
                   <small>
                     {submenus.length > 0
-                      ? `${submenus.length} ${label === 'GPU' ? 'cards' : 'models'} · ${scales.length} scales`
+                      ? `${submenus.length} ${label === 'GPU' ? 'cards' : label === 'Memory' ? 'generations' : 'models'} · ${scales.length} scales`
                       : label === 'Power supply'
                         ? `${scales.length} models`
                         : `${scales.length} ${scales.length === 1 ? 'scale' : 'scales'} inside`}

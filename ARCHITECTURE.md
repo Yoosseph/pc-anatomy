@@ -20,7 +20,14 @@ no react-three-fiber. UI primitives under `components/ui/` are generated
 shadcn/Base UI files and are excluded from linting. The entry point is
 `index.html` → `app/main.tsx` → `app/page.tsx`. The 3D engine is imported
 dynamically inside `app/viewer.tsx`, so three.js lands in its own chunk and the
-interface paints before it arrives.
+interface paints before it arrives. That only holds while nothing the
+interface imports eagerly reaches a module that imports three: a single
+`import { hasAirflow } from '@/lib/airflow'` once pulled the whole engine into
+the entry chunk (1.2 MB, 340 KB gzipped) without any error. Questions the
+interface asks before the engine loads live in three-free modules
+(`airflow-policy.ts`, `deep-link.ts`, `pointer-intent.ts`,
+`inventory-labels.ts`), and `npm run size`, run in CI after the build, fails
+if three.js reappears in the entry chunk or it grows past its budget.
 
 ## Run it
 
@@ -35,6 +42,7 @@ npm run lint      # oxlint
 npm run format    # oxfmt
 npm test          # node --experimental-strip-types --test tests/*.test.ts
 npm run build     # tsc --noEmit && vite build
+npm run size      # after a build: entry chunk under budget, no three.js in it
 npm start         # preview the production build
 ```
 
@@ -174,7 +182,11 @@ subsystems stop touching.
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
-| `lib/airflow.ts` | Where the air goes: the chevron, the sampling and marching of a path, `cardAirflow` for the three cards, `airflowStrength`, the curve that takes it off screen as the machine opens, and `airflowShown`, which decides whether a scale draws it at all. |
+| `lib/airflow.ts` | Where the air goes: the chevron, the sampling and marching of a path, `cardAirflow` for the three cards, and `airflowStrength`, the curve that takes it off screen as the machine opens. Re-exports the policy below so builders keep one import. |
+| `lib/airflow-policy.ts` | `airflowLevels`, `hasAirflow`, `AirflowMode` and `airflowShown`, which decides whether a scale draws air at all. No three.js, so the interface can import it. |
+| `lib/deep-link.ts` | A place (scale, described part, disassembly) to and from the address bar's query string, and the page title for it. Unknown or contradictory links fall back rather than guess. |
+| `lib/pointer-intent.ts` | `tapIntent`: a mouse click opens, a tap describes first. |
+| `lib/inventory-labels.ts` | Which laid-out parts get a name on screen: biggest first, one per part, no overlaps, nothing off the stage. |
 | `lib/parts.ts` | Shared realistic parts: fans, grilles, fin stacks, capacitors, chokes, slots, ports, screws, `glowMaterial`, `buildLightStrip`. |
 | `lib/materials.ts` | The ten surface finishes and `temperedGlass`. |
 | `lib/surfaces.ts`, `pcb.ts`, `silicon-texture.ts` | Generated material maps. No downloaded textures. |
@@ -188,15 +200,19 @@ subsystems stop touching.
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
 | `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
 | `app/comparison-workbench.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx` | Comparison composition and controls, the React-to-Three bridge, and the responsive specification sheet. |
-| `app/use-explorer.ts` | All explorer state and every named move: navigate, dive, arrive, choose, isolate, hide, and the rest. |
+| `app/use-explorer.ts` | All explorer state and every named move: navigate, goTo, dive, arrive, choose, isolate, hide, and the rest. The first state is read from the address. |
+| `app/use-address.ts` | Keeps the address bar, title and canonical link on the place shown: a scale change pushes history, a selection or slider move replaces it, and the back button moves the explorer. |
+| `app/use-first-visit-hint.ts` | The one-time line under the heading that says what clicking or tapping does. |
 | `app/use-disassembly-playback.ts` | Shared request-animation-frame playback for explorer and comparison disassembly controls. |
 | `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx` | One panel each. |
-| `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, hover label, error state. |
+| `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 84 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, and comparison state/data/pane/bounds behaviour. |
+| `tests/*.test.ts` | 94 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
+| `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
+| `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
 
 ## The interfaces you will touch
 
@@ -302,7 +318,7 @@ itself. State that only one panel cares about lives in that panel — which syst
 is unfolded is inside `systems-list.tsx`, whether the window is fullscreen is
 inside `stage-tools.tsx`.
 
-Three interaction decisions are settled, and re-opening them has been tried:
+These interaction decisions are settled, and re-opening them has been tried:
 
 - **The dive is a zoom, not a scene change.** Clicking an explorable component
   scales the rest of the stage away while the camera closes on it, then swaps in
@@ -310,6 +326,16 @@ Three interaction decisions are settled, and re-opening them has been tried:
   `lib/scene.ts`, not by React timers — timers drifted against the render loop.
   `diveInto` is the whole record of a dive in flight, so cancelling one is just
   clearing it.
+- **A tap describes; a click opens.** A mouse opens on left-click and
+  inspects on right-click. A finger has no right button and iOS does not fire
+  `contextmenu` on a long press, so a tap selects the part and shows the card,
+  whose "Take apart" button opens it; tapping the selected part again also
+  opens it where the card leaves it in reach. `tapIntent` is the rule.
+- **The address is the place, not the view.** `?scale=`, `&part=` (with
+  `&n=` for the n-th identical part) and `&open=` for the disassembly. Camera,
+  hidden parts and the airflow preference stay out: they are how one person is
+  looking, not where. Scale changes are history steps; selections and slider
+  moves replace the current entry, the slider only once it has settled.
 - **The detail panel is suppressed mid-dive.** `selected` is null while
   `diveInto` is set, or the outer component's panel flashes for a few hundred
   milliseconds before the deeper scale replaces it.
@@ -354,7 +380,9 @@ A component joins the written catalogue to selectable geometry through its id.
    inventory layout and counting.
 3. Add any new reference to `lib/sources.ts` and document it in `SOURCES.md`,
    then regenerate the index:
-   `node --experimental-strip-types scripts/generate-reference-index.mjs`.
+   `node --experimental-strip-types scripts/generate-reference-index.mjs`,
+   and the sitemap:
+   `node --experimental-strip-types scripts/generate-sitemap.mjs`.
 4. If the concept lives in a new catalogue file, export its array and compose it
    into `lib/manifest.ts`.
 5. Run the checks. The tests reject anonymous geometry, duplicate ids, broken
@@ -406,10 +434,11 @@ the model has. 267 concepts are physical, 154 are logical diagrams.
 
 ## Tests
 
-84 tests, all through Node's built-in runner.
+94 tests, all through Node's built-in runner.
 
-`.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, and a
-production build on every push and pull request with Node.js 22.
+`.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
+production build and the bundle-size check on every push and pull request
+with Node.js 22.
 
 - `tests/manifest.test.ts` (16) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,
@@ -455,6 +484,12 @@ production build on every push and pull request with Node.js 22.
   module standing in both populated motherboard slots, the 78-ball grid with
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
+
+- `tests/discovery.test.ts` (10) — every scale and every part surviving a
+  round trip through a link, instances and disassembly kept, nonsense links
+  falling back to the nearest sensible place, titles, the committed sitemap
+  matching the catalogue, tap versus click, part names never overlapping or
+  leaving the stage, and the interface's own modules staying free of three.js.
 
 The suite builds every scale, so a geometry regression usually surfaces as a
 failing assertion rather than a silent visual change.

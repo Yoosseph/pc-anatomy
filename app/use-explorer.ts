@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { byId, categories, openLevel, type Category } from '@/lib/manifest';
-import { airflowShown } from '@/lib/airflow';
+import { airflowShown } from '@/lib/airflow-policy';
 import {
   initialState,
   selectSearch,
@@ -16,7 +16,9 @@ import {
   submenuRoot,
   type LevelId,
 } from '@/lib/levels';
+import { searchToPlace, type Place } from '@/lib/deep-link';
 import { useDisassemblyPlayback } from './use-disassembly-playback';
+import { useAddress } from './use-address';
 
 /** Graphics cards whose chip diagrams open directly, without a dive. */
 const gpuRoots = new Set<LevelId>(['card', 'rx9070', 'arcb580']);
@@ -29,7 +31,13 @@ const gpuRoots = new Set<LevelId>(['card', 'rx9070', 'arcb580']);
  * writing its own patch of explorer state at the button that triggers it.
  */
 export function useExplorer() {
-  const [state, setState] = useState<ExplorerState>(initialState);
+  // A shared link opens where it points. Read once, before the first render,
+  // so the viewer never builds the tower only to throw it away.
+  const [state, setState] = useState<ExplorerState>(() =>
+    typeof location === 'undefined'
+      ? initialState
+      : placeState(initialState, searchToPlace(location.search)),
+  );
   const [layers, setLayers] = useState(false);
   const [hiddenMenuOpen, setHiddenMenuOpen] = useState(false);
   // The subsystem whose menu is open. Follows wherever you are unless you
@@ -83,6 +91,21 @@ export function useExplorer() {
     },
     [stopDisassembly],
   );
+
+  /** Go straight to a place, as a link or the back button asks. */
+  const goTo = useCallback(
+    (place: Place) => {
+      stopDisassembly();
+      setHiddenMenuOpen(false);
+      setOpenMenu(null);
+      setOpenSubmenu(null);
+      setState((s) => placeState(s, place));
+      setLayers(false);
+    },
+    [stopDisassembly],
+  );
+
+  useAddress(state, goTo);
 
   const reset = useCallback(() => {
     stopDisassembly();
@@ -311,6 +334,7 @@ export function useExplorer() {
     shownSubmenu,
     showSubmenu: setOpenSubmenu,
     navigate,
+    goTo,
     reset,
     dive,
     arrive,
@@ -333,3 +357,23 @@ export function useExplorer() {
 }
 
 export type Explorer = ReturnType<typeof useExplorer>;
+
+/**
+ * The explorer arriving at a place: the same clean slate navigation gives,
+ * with the part described and the hardware opened as far as the place says.
+ */
+function placeState(s: ExplorerState, place: Place): ExplorerState {
+  return {
+    ...s,
+    level: place.level,
+    selection: place.selection,
+    explode: place.explode,
+    diveInto: null,
+    isolated: false,
+    visible: [...categories],
+    hidden: [],
+    view: 'perspective',
+    focusRevision: place.selection ? s.focusRevision + 1 : 0,
+    cameraRevision: s.cameraRevision + 1,
+  };
+}

@@ -1,7 +1,7 @@
 import { byId, isLevelRoot } from './manifest.ts';
 import { categories, type Category } from './concept.ts';
 import { isPhysical, rootLevel, type LevelId } from './levels.ts';
-import type { AirflowMode } from './airflow.ts';
+import type { AirflowMode } from './airflow-policy.ts';
 
 /**
  * What the explorer is currently showing, and the moves that change it.

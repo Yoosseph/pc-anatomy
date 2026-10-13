@@ -27,7 +27,8 @@
     "lint": "oxlint",
     "format": "oxfmt",
     "check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "size": "node scripts/check-bundle-size.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

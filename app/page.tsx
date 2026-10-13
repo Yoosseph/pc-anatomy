@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import { levelPath } from '@/lib/levels';
 import { useExplorer } from './use-explorer';
+import { useFirstVisitHint } from './use-first-visit-hint';
 import Viewer from './viewer';
 import PerformanceTip from './performance-tip';
 import Topbar from './topbar';
@@ -29,6 +30,11 @@ export default function Home() {
     // to say to the reader, and saying the wrong one was what put "No
     // structures visible" on screen for the whole of a cold load.
     [count, setCount] = useState<number | null>(null);
+
+  const { hint, dismissHint } = useFirstVisitHint(
+    state,
+    count !== null && count > 0,
+  );
 
   /** Jump to a component, closing the palette if that is where it came from. */
   const selectResult = useCallback(
@@ -137,19 +143,17 @@ export default function Home() {
         logical={logical}
         selected={selected}
         count={count}
+        hint={hint}
+        onDismissHint={dismissHint}
         onNavigate={navigate}
       />
       <Viewer
         state={state}
+        loading={count === null}
         onSelect={choose}
         onCount={setCount}
         onDived={explorer.arrive}
       />
-      {count === null && (
-        <div className="empty-scene loading">
-          <h3>Loading components for you…</h3>
-        </div>
-      )}
       {count === 0 && (
         <div className="empty-scene">
           <EyeOff size={27} />

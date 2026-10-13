@@ -33,8 +33,9 @@ export default function Topbar({
         title="PC Anatomy on GitHub"
       >
         <Code2 size={13} />
-        <span>
-          Created by <strong>Yoseph</strong>
+        <span className="byline-text">
+          <span className="byline-prefix">Created by </span>
+          <strong>Yoseph</strong>
         </span>
       </a>
       <div className="header-actions">

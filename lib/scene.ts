@@ -1,6 +1,13 @@
 import * as T from 'three';
 import { buildModel, refreshBatches, type Piece } from './models';
 import { resolvePickNear } from './picking.ts';
+import { tapIntent } from './pointer-intent.ts';
+import {
+  labelSignature,
+  placeLabels,
+  type LabelCandidate,
+  type PartLabel,
+} from './inventory-labels.ts';
 import { airflowShown, airflowStrength } from './airflow.ts';
 import { byId, openLevel } from './manifest';
 import type { ExplorerState, Selection } from './explorer-state.ts';
@@ -43,7 +50,12 @@ export type SceneCallbacks = {
   hover: (name: string | null, x: number, y: number, opens: boolean) => void;
   stats: (visible: number) => void;
   error: (message: string) => void;
+  /** Names for the laid-out parts, or an empty list when there are none. */
+  labels?: (labels: PartLabel[]) => void;
 };
+
+/** How far laid out the parts must be before they are named. */
+const LABELS_FROM = 0.97;
 
 export function createViewer(
   host: HTMLDivElement,
@@ -370,10 +382,57 @@ export function createViewer(
     if (pointerPosition && activePointer === null && changed)
       updateHover(pointerPosition);
     renderer.render(scene, camera);
+    reportLabels();
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
     host.dataset.explode = String(Math.round(amount * 100));
     return changed;
+  }
+  let labelsShown = '';
+  const projected = new T.Vector3(),
+    corner = new T.Vector3(),
+    labelBox = new T.Box3();
+  /**
+   * Name the parts once they are laid out. Measured after the frame is drawn,
+   * so the names sit where the parts are, and only reported when they move.
+   */
+  function reportLabels() {
+    if (!callbacks.labels) return;
+    let next: PartLabel[] = [];
+    if (
+      isPhysical(state.level) &&
+      !dive &&
+      !state.isolated &&
+      amount >= LABELS_FROM &&
+      state.explode >= 100
+    ) {
+      const w = host.clientWidth,
+        h = host.clientHeight;
+      const candidates: LabelCandidate[] = [];
+      for (const p of model.pieces) {
+        if (!p.visible) continue;
+        boxFor(p, labelBox);
+        labelBox.getCenter(projected).project(camera);
+        if (projected.z > 1) continue;
+        corner.copy(labelBox.max).project(camera);
+        candidates.push({
+          concept: p.concept,
+          instance: p.instance,
+          name: byId[p.concept].shortName,
+          x: ((projected.x + 1) / 2) * w,
+          y: ((1 - projected.y) / 2) * h,
+          size: Math.hypot(
+            ((corner.x - projected.x) * w) / 2,
+            ((corner.y - projected.y) * h) / 2,
+          ),
+        });
+      }
+      next = placeLabels(candidates, w, h);
+    }
+    const signature = labelSignature(next);
+    if (signature === labelsShown) return;
+    labelsShown = signature;
+    callbacks.labels(next);
   }
   const loop = createStageLoop(
     controls,
@@ -439,7 +498,7 @@ export function createViewer(
     const p = hit(e, e.pointerType === 'touch' ? TOUCH_AIM : MOUSE_AIM);
     callbacks.select(
       p ? { concept: p.concept, instance: p.instance } : null,
-      'open',
+      tapIntent(e.pointerType, p, state.selection),
     );
     wake();
   }

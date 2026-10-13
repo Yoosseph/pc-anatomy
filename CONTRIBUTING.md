@@ -61,6 +61,7 @@ npm run check   # type check
 npm run lint    # oxlint
 npm test        # Node's built-in test runner
 npm run build   # production build
+npm run size    # after the build: keeps three.js out of the first download
 ```
 
 Format with `npm run format`. GitHub Actions runs the same checks on every push

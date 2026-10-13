@@ -1,7 +1,6 @@
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { smoothstep, type Vec3 } from './layout.ts';
-import { rootLevel, type LevelId } from './levels.ts';
 
 /**
  * Where the air goes.
@@ -81,43 +80,12 @@ export function airflowStrength(explodeFraction: number) {
   return 1 - smoothstep(0.005, 0.085, explodeFraction);
 }
 
-/** The scales with a fan in them, and so with air to draw. */
-export const airflowLevels: readonly LevelId[] = [
-  'pc',
-  'fan',
-  'cooler',
-  'liquid',
-  'psu',
-  'psubronze',
-  'card',
-  'rx9070',
-  'arcb580',
-];
-
-export function hasAirflow(level: LevelId) {
-  return airflowLevels.includes(level);
-}
-
-/**
- * Whether the chevrons are drawn.
- *
- * `auto` is on wherever there are fans, with one exception: the assembled
- * machine you arrive on. A sealed tower is the one place the arrows have to
- * cross the whole case to say anything, and four streams over a machine
- * nobody has touched yet is a lot to meet first — but it is also the one
- * place a viewer might never think to look for them, so the control says its
- * own name there rather than hiding behind an icon.
- *
- * `on` and `off` are someone having said, and they hold on every scale for
- * the rest of the session. Coming back to the tower having asked to see the
- * air and finding it switched off again would be the machine overruling them.
- */
-export type AirflowMode = 'auto' | 'on' | 'off';
-
-export function airflowShown(mode: AirflowMode, level: LevelId) {
-  if (!hasAirflow(level)) return false;
-  return mode === 'auto' ? level !== rootLevel : mode === 'on';
-}
+export {
+  airflowLevels,
+  airflowShown,
+  hasAirflow,
+  type AirflowMode,
+} from './airflow-policy.ts';
 
 /**
  * One chevron, pointing along +Z, a unit long and centred on its own length.

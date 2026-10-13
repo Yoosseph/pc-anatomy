@@ -527,6 +527,41 @@ a {
   color: #fcfcfc;
   letter-spacing: -0.6px;
 }
+.first-visit-hint {
+  display: flex;
+  width: max-content;
+  max-width: min(520px, calc(100vw - 52px));
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 6px 6px 6px 11px;
+  border: 1px solid #3a4f5c;
+  border-radius: 6px;
+  background: #15202a;
+  color: #cfe3ef;
+  font-size: 12.5px;
+  line-height: 1.4;
+  animation: tip-appear 200ms ease-out;
+  /* The heading is not selectable; the hint is a control row like it. */
+  pointer-events: auto;
+}
+.first-visit-hint > svg {
+  flex-shrink: 0;
+  color: var(--accent-bright);
+}
+.first-visit-hint > button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: #9fb3c0;
+}
+.first-visit-hint > button:hover {
+  background: #22313d;
+  color: #e8ecf2;
+}
 .stage-meta {
   display: flex;
   align-items: center;
@@ -587,6 +622,43 @@ a {
 .viewport canvas {
   display: block;
   outline: none;
+}
+/* Names on the laid-out parts. The list itself lets the stage through; only
+   the names take a click, so the tray can still be orbited between them. */
+.part-labels {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+  z-index: 2;
+}
+.part-labels li {
+  position: absolute;
+  animation: tip-appear 160ms ease-out;
+}
+.part-labels button {
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid #3d4552;
+  border-radius: 11px;
+  background: #121519e6;
+  color: #d9dee5;
+  font-size: 11.5px;
+  line-height: 20px;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.part-labels button:hover,
+.part-labels button:focus-visible {
+  border-color: var(--accent-bright);
+  color: #fff;
+}
+.part-labels button[aria-pressed='true'] {
+  border-color: #eab878;
+  color: #ffd790;
 }
 .stage-tools {
   position: absolute;
@@ -1581,6 +1653,13 @@ a {
   .topbar {
     height: 65px;
     padding: 0 20px;
+    /* See the 600px rule: from here down the right-hand buttons can be wider
+       than a third of the bar, so the outer columns size to their contents. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .byline {
+    justify-self: center;
   }
   .brand {
     font-size: 17px;
@@ -1900,6 +1979,11 @@ a {
   .disassembly .play svg {
     width: 21px;
     height: 21px;
+  }
+}
+@media (max-width: 400px) {
+  .byline .byline-prefix {
+    display: none;
   }
 }
 @media (max-width: 359px) {
@@ -2532,9 +2616,24 @@ a {
   }
 }
 @media (max-width: 600px) {
+  /* Three equal-ish thirds stop working once the right-hand buttons are
+     wider than a third of a phone: they spill left over the byline and
+     cover "Toggle systems", the only way into the navigation. The outer
+     columns take what their contents need and the byline gets the rest. */
   .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding-inline: 12px;
     gap: 6px;
+  }
+  .byline {
+    justify-self: center;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .byline-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .brand {
     gap: 0;

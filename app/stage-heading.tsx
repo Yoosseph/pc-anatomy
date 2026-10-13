@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, MousePointerClick, X } from 'lucide-react';
 import type { Concept } from '@/lib/manifest';
 import { levelPath, levels, type LevelId } from '@/lib/levels';
 
@@ -10,8 +10,19 @@ type Props = {
   selected: Concept | null;
   /** `null` until the viewer has reported for the first time. */
   count: number | null;
+  /** Show the first-visit line about what clicking does. */
+  hint?: boolean;
+  onDismissHint?: () => void;
   onNavigate: (level: LevelId) => void;
 };
+
+/** A tap cannot right-click, so a phone is told the two-tap version. */
+function hintCopy() {
+  return typeof matchMedia !== 'undefined' &&
+    matchMedia('(pointer: coarse)').matches
+    ? 'Tap a part to see what it is and take it apart, or press Auto.'
+    : 'Click a part to open it, right-click to inspect it, or press Auto.';
+}
 
 export default function StageHeading({
   level,
@@ -19,6 +30,8 @@ export default function StageHeading({
   logical,
   selected,
   count,
+  hint = false,
+  onDismissHint,
   onNavigate,
 }: Props) {
   const scale = levels[level],
@@ -65,6 +78,15 @@ export default function StageHeading({
             )}
           </nav>
         </div>
+        {hint && (
+          <p className="first-visit-hint">
+            <MousePointerClick size={15} aria-hidden="true" />
+            <span>{hintCopy()}</span>
+            <button aria-label="Dismiss hint" onClick={onDismissHint}>
+              <X size={14} />
+            </button>
+          </p>
+        )}
       </div>
       {count !== null && (
         <output

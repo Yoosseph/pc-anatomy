@@ -3368,3 +3368,31 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* System roots are separate machines; their subsystem menus follow selection. */
+.system-picker {
+  display: grid;
+  gap: 5px;
+  margin: 8px 12px 16px;
+}
+.system-picker button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff16;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--muted-foreground);
+}
+.system-picker button[aria-pressed='true'] {
+  border-color: #79bfcc70;
+  background: #79bfcc14;
+  color: var(--foreground);
+}
+.system-picker small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}

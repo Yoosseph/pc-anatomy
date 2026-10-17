@@ -326,3 +326,9 @@ generic ring of cores around a shared cache with a memory interface, labelled as
 such in the interface and in every one of its concepts. It is not a floorplan
 and not a specific processor, and it is deliberately far below the level of
 detail the graphics branch reaches.
+
+## Notebook systems
+
+The new sources are indexed in docs/component-references.md. Lenovo PSREF and the generation-6 Legion maintenance manual identify the 15ACH6H configuration and service assemblies. The selected 80 Wh battery and 165 Hz FHD display are options, not universal specifications for every SKU. Apple specifications and the 2021 MacBook Pro 14-inch repair manual identify the M1 Pro notebook and its assemblies. Apple’s M1 Pro architecture overview supports its CPU/GPU and unified-memory organization. NVIDIA’s Ampere tuning guide supports functional SM concepts. Arm CPU principles and Apple’s Metal programming guide support generic execution diagrams, not undocumented vendor microarchitecture. Existing DRAM, flash, NVMe, power and cooling sources support general operating principles.
+
+The two outer footprints share one physical scale for comparison. Interior positions, package and fastener populations, battery pouches and keyboard artwork are illustrative. Onboard Mac flash is not a removable M.2 SSD, unified memory is not a SO-DIMM, and notebook CPU/GPU packages are soldered. The generic DRAM views do not assert a Mac memory die topology. Issue #33 tracks these first models; #31 remains open for further M-series models.

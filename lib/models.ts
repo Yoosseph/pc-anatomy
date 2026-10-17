@@ -1,3 +1,5 @@
+import { buildNotebook } from './notebooks.ts';
+import { notebookLevels, type NotebookLevel } from './notebook-levels.ts';
 import { resourceTexture, siliconColor } from './silicon-texture.ts';
 import { buildAirflow } from './airflow.ts';
 import { buildHardware, type ModelTools } from './hardware.ts';
@@ -95,7 +97,14 @@ function turnExtent(extent: T.Vector3, q: T.Quaternion) {
  * One builder per scale. Adding a branch to the machine means adding a line
  * here and an entry in `levels`; nothing else dispatches on the scale id.
  */
+const notebookBuilders = Object.fromEntries(
+  Object.keys(notebookLevels).map((id) => [
+    id,
+    (tools: ModelTools) => buildNotebook(id as NotebookLevel, tools),
+  ]),
+) as Record<NotebookLevel, (tools: ModelTools) => void>;
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
+  ...notebookBuilders,
   pc: buildMachine,
   motherboard: buildMotherboard,
   dimm: buildDimm,

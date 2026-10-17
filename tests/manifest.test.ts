@@ -21,7 +21,7 @@ import {
   branchRoot,
   levelIds,
   levels,
-  rootLevel,
+  systemRoot,
 } from '../lib/levels.ts';
 import { sources } from '../lib/sources.ts';
 
@@ -64,7 +64,10 @@ await test('M.2 is reachable from its motherboard and the Storage menu without d
   ]);
   const menus = branches().flatMap((b) => b.levels);
   assert.equal(new Set(menus).size, menus.length);
-  assert.equal(menus.length, levelIds.length - 1);
+  assert.equal(
+    menus.length,
+    levelIds.filter((id) => systemRoot(id) === 'pc').length - 1,
+  );
   assert.equal(selectSearch(initialState, 'nvmenand').level, 'nvme');
 });
 await test('power supply menu separates modular and fixed-cable models', () => {
@@ -180,7 +183,11 @@ await test('explosion stage interpolation clamps boundaries and progresses monot
 await test('every scale sits on a finite path back to the machine, and each has something to render', () => {
   for (const id of levelIds) {
     const path = levelPath(id);
-    assert.equal(path[0], rootLevel, id + ' does not descend from the machine');
+    assert.equal(
+      path[0],
+      systemRoot(id),
+      id + ' does not descend from its system',
+    );
     assert.equal(path.at(-1), id);
     assert.equal(new Set(path).size, path.length, 'cycle in path to ' + id);
     // A scale nobody can reach, or one with nothing on it, is a dead branch.
@@ -241,9 +248,9 @@ await test('branching does not strand the viewer: back always reaches the machin
   for (const id of levelIds) {
     let cursor = id,
       steps = 0;
-    while (cursor !== rootLevel && steps++ < levelIds.length)
+    while (cursor !== systemRoot(id) && steps++ < levelIds.length)
       cursor = levelPath(cursor).at(-2)!;
-    assert.equal(cursor, rootLevel, 'cannot walk back from ' + id);
+    assert.equal(cursor, systemRoot(id), 'cannot walk back from ' + id);
   }
 });
 

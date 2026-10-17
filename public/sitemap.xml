@@ -46,7 +46,9 @@
   <url><loc>https://pc-anatomy.com/?scale=legiongpu</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionsm</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionmemory</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legiondram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbank</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legioncell</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionstorage</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legioncooling</loc></url>
@@ -61,6 +63,7 @@
   <url><loc>https://pc-anatomy.com/?scale=macgpucore</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macmemory</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macdram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbank</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=maccell</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macstorage</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=maccooling</loc></url>
@@ -76,6 +79,17 @@
   <url><loc>https://pc-anatomy.com/?scale=legion&amp;part=legionbattery</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legion&amp;part=legion-speakers</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legion&amp;part=legion-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-io</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-passives</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-sockets</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legioncooling&amp;part=legioncooling-housing</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legioncooling&amp;part=legioncooling-pads</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legioncooling&amp;part=legioncooling-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbattery&amp;part=legionbattery-carrier</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legiondisplay&amp;part=legiondisplay-diffuser</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legiondisplay&amp;part=legiondisplay-controller</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legiondisplay&amp;part=legiondisplay-mounts</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-pcb</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-power</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionboard&amp;part=legionboard-ports</loc></url>
@@ -107,6 +121,16 @@
   <url><loc>https://pc-anatomy.com/?scale=macbook&amp;part=macbattery</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macbook&amp;part=macbook-speakers</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macbook&amp;part=macbook-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-io</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-passives</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=maccooling&amp;part=maccooling-housing</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=maccooling&amp;part=maccooling-pads</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=maccooling&amp;part=maccooling-fasteners</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbattery&amp;part=macbattery-carrier</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macdisplay&amp;part=macdisplay-diffuser</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macdisplay&amp;part=macdisplay-controller</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macdisplay&amp;part=macdisplay-mounts</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-pcb</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-power</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macboard&amp;part=macboard-ports</loc></url>
@@ -172,14 +196,14 @@
   <url><loc>https://pc-anatomy.com/?scale=macgpucore&amp;part=macgpucore-memory</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macgpucore&amp;part=macgpucore-texture</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legionmemory-board</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legiondram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legionpackage</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legionmemory-contacts</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legionmemory-spd</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macmemory&amp;part=macdram</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macmemory&amp;part=macmemory-cpu</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macmemory&amp;part=macmemory-gpu</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macmemory&amp;part=macmemory-fabric</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=legiondram&amp;part=legioncell</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legiondram&amp;part=legionbank</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legiondram&amp;part=legiondram-row</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legiondram&amp;part=legiondram-sense</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legiondram&amp;part=legiondram-column</loc></url>
@@ -188,7 +212,7 @@
   <url><loc>https://pc-anatomy.com/?scale=legioncell&amp;part=legioncell-wordline</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legioncell&amp;part=legioncell-bitline</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legioncell&amp;part=legioncell-refresh</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=macdram&amp;part=maccell</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macdram&amp;part=macbank</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macdram&amp;part=macdram-row</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macdram&amp;part=macdram-sense</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=macdram&amp;part=macdram-column</loc></url>
@@ -197,6 +221,24 @@
   <url><loc>https://pc-anatomy.com/?scale=maccell&amp;part=maccell-wordline</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=maccell&amp;part=maccell-bitline</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=maccell&amp;part=maccell-refresh</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionmemory&amp;part=legionmemory-passives</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionstorage&amp;part=legionstorage-cache</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionstorage&amp;part=legionstorage-fastener</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionsm&amp;part=legionsm-tensor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionsm&amp;part=legionsm-rt</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage&amp;part=legionpackage-substrate</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage&amp;part=legionpackage-balls</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage&amp;part=legionpackage-mold</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage&amp;part=legionpackage-wires</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionpackage&amp;part=legiondram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbank&amp;part=legioncell</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbank&amp;part=legionbank-row</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbank&amp;part=legionbank-sense</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=legionbank&amp;part=legionbank-column</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbank&amp;part=maccell</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbank&amp;part=macbank-row</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbank&amp;part=macbank-sense</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=macbank&amp;part=macbank-column</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=pc&amp;part=chassis</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=pc&amp;part=sidepanel</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=pc&amp;part=frontpanel</loc></url>

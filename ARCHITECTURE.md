@@ -9,21 +9,32 @@ existing URLs are unchanged. `systemRoot(level)` follows parent links, while
 derive the active system from the level. Reset returns to the active machine.
 Visibility lists are scoped to that machine; global search can cross systems.
 
-`lib/notebook-levels.ts` adds 27 scales. Legion has system board, Ryzen CPU/core,
-RTX Laptop GPU/SM, SO-DIMM/DRAM/cell, storage, cooling, battery and display.
-MacBook has logic board, M1 Pro, CPU/core, GPU/core, unified memory/DRAM/cell,
+`lib/notebook-levels.ts` adds 30 scales. Legion has system board, Ryzen CPU/core,
+RTX Laptop GPU/SM, SO-DIMM/package/die/bank/cell, storage, cooling, battery and display.
+MacBook has logic board, M1 Pro, CPU/core, GPU/core, unified memory/DRAM/bank/cell,
 storage, cooling, battery and display. Mac memory and GPU descend from the SoC;
 Legion memory and GPU descend from its board. Neither is a part of the desktop.
 The desktop scale table below describes its original 38 scales.
 
-`lib/concepts/notebooks.ts` supplies 133 explicitly sourced concepts.
-`lib/notebooks.ts` builds physical assemblies at a common 20 mm per scene unit
-and functional chip diagrams. `ModelTools.assembly` now accepts any LevelId and
+`lib/concepts/notebooks.ts` supplies 172 explicitly sourced concepts.
+`lib/notebooks.ts` dispatches to separate builders at a common 20 mm per scene unit.
+`notebook-kit.ts` owns physical helpers, dimensions and shared reference frames;
+`notebook-chassis.ts` owns the keyboard, shell apertures and connector inventory;
+`notebook-hardware.ts` owns boards, cooling, battery, SO-DIMM and FBGA construction;
+`notebook-display.ts` owns the layered display and generated screen artwork;
+`notebook-architecture.ts` authors the chip, bank and cell diagrams.
+Installed components retain their native sizes; no per-axis fitting is allowed.
+The representative M.2 construction reuses the existing NVMe builder with a
+uniform conversion from 8 to 20 mm per unit. `ModelTools.assembly` accepts any LevelId and
 strips nested picking identities as before. Display tilt is inside an identity
 wrapper so the inventory pose lays the screen face up. Both models opt into a
 notebook comparison group with catalogue-backed rows. The shared renderer,
 picking, resource disposal, disassembly and inventory serve all three systems.
 Cooling assemblies carry authored airflow into the complete laptops.
+Impeller meshes retain their animation metadata when static geometry is merged.
+The same preservation also keeps the desktop's authored moving meshes alive.
+Optional `LevelDef.camera` framing makes flat diagrams readable and the small
+FBGA package large enough to inspect without altering its physical dimensions.
 
 The subjects are Legion 5 15ACH6H (Ryzen 7 5800H, RTX 3060 Laptop GPU,
 DDR4-3200, 80 Wh option) and MacBook Pro 14-inch (2021, M1 Pro, 10 CPU / 16 GPU
@@ -34,11 +45,23 @@ vendor microarchitecture or physical silicon placement. Further Legion and
 M-series models are not implied by these two configurations.
 
 `tests/notebooks.test.ts` verifies menu partitioning, links/search, memory/GPU
-ownership, geometry, finite poses, logical-block separation and comparison size.
-`scripts/notebook-smoke.mjs` checks desktop/mobile navigation, reset and deep
-links with headless Edge and captures screenshots. Set `NOTEBOOK_BASE_URL` and
+ownership, geometry, finite poses, logical-block separation, native assembly size,
+ray access through every port opening, package clearances, SO-DIMM notch and
+population, chip counts, DRAM circuits and retained impeller animation.
+`scripts/notebook-smoke.mjs` checks tray-to-component dives, desktop/mobile
+navigation, comparison, reset and deep links with headless Edge and captures
+screenshots. `scripts/notebook-visual-check.mjs` renders selected scales for
+visual review. Set `NOTEBOOK_BASE_URL`, `NOTEBOOK_SCALES` (visual checks only), and
 optionally `BROWSER_EXECUTABLE` for other setups. Real touch/pinch input and a
 full device matrix remain unverified.
+
+Notebook quantities use selected public configurations. The Legion SO-DIMM is a
+representative Kingston KVR32S22S8/8 (8 GB 1Rx8, eight 8 Gbit x8 packages, 260
+contacts), not a claim about the factory-installed supplier. NVIDIA's published
+3,840 CUDA cores and 128 FP32 lanes per Ampere 8.6 SM give 30 SMs; the drawing
+shows those SMs without inventing a GA106 physical floorplan. The Mac diagrams
+show documented core counts and unified-memory relationships; deeper generic
+execution and DRAM views retain their explicit explanatory scope.
 
 Read this before changing anything. It is written for whoever picks the project
 up next, person or language model, and it assumes you have not seen the code
@@ -52,7 +75,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 554 catalogue entries are authored in source, and each one
+any kind. The 593 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -110,7 +133,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              554 entries, each with a globally unique id
+      │              593 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -136,7 +159,7 @@ state.
 
 ## The scale tree
 
-65 scales, 554 concepts. `physical` scales are lit like hardware and keep real
+68 scales, 593 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
@@ -210,7 +233,7 @@ subsystems stop touching.
 | `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
 | `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
-| `lib/sources.ts` | Every citable reference, keyed by id. 81 of them. |
+| `lib/sources.ts` | Every citable reference, keyed by id. 84 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
 | `lib/explorer-state.ts` | `ExplorerState` — what the viewer is looking at — plus `initialState` and `selectSearch`. |
 | `lib/models.ts` | The `builders` registry, the `Piece` type, the shared `material()` cache, and `buildModel(level)`. |
@@ -248,7 +271,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 99 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 108 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -453,7 +476,7 @@ timeline. Do not add a second hand-written route table.
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 554 concepts currently cite at least one
+and vendor documentation first. All 593 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -470,11 +493,11 @@ cites the same source twice. It does not check that a citation is appropriate.
 Nothing here claims a specific product's bill of materials. Every physical
 concept carries a `physicalAccuracy` string saying so, and they are not
 decorative — read one before adding a component that implies more precision than
-the model has. 339 concepts are physical, 215 are logical diagrams.
+the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-99 tests, all through Node's built-in runner.
+108 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request

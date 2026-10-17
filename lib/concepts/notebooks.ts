@@ -43,7 +43,9 @@ function part(
           : 'Apple MacBook M1 Pro laptop notebook',
         name,
       ],
-      ...(suffix === 'cover' || suffix === 'deck' ? { opensFirst: true } : {}),
+      ...(suffix === 'cover' || suffix === 'deck' || suffix === 'mold'
+        ? { opensFirst: true }
+        : {}),
     }),
   );
 }
@@ -214,6 +216,119 @@ for (const mac of [false, true]) {
     [service],
   );
 
+  part(
+    board,
+    'io',
+    'I/O daughterboards and flex links',
+    'Board',
+    'Small connector boards and flexible links occupy the enclosure edges.',
+    'Places external connections at the chassis openings while linking them to the main board.',
+    {
+      Scope: 'Service-assembly relationships; internal routing is illustrative',
+    },
+    [service],
+  );
+  part(
+    board,
+    'passives',
+    'Surface-mount support circuitry',
+    'Board',
+    'Small resistors, capacitors and support devices surround the major chips.',
+    'Filters power and supports signal integrity.',
+    { Scope: 'Representative component population' },
+    ['multiphase', service],
+  );
+  part(
+    board,
+    'fasteners',
+    'Board mounting screws',
+    'Board',
+    'Fasteners retain the board at its mounting points.',
+    'Secures the electronics to the chassis.',
+    {},
+    [service],
+  );
+  if (!mac)
+    part(
+      board,
+      'sockets',
+      'SO-DIMM sockets and retention clips',
+      'Memory',
+      'Keyed sockets hold the two notebook memory modules.',
+      'Connects memory while allowing modules to be replaced.',
+      { Sockets: '2 DDR4 SO-DIMM' },
+      ['legionpsref', 'legionservice'],
+    );
+  part(
+    cooling,
+    'housing',
+    'Blower housings and ducts',
+    'Cooling',
+    'An annular inlet and enclosed discharge path surround each radial impeller.',
+    'Directs fan output through the exhaust fins instead of letting air recirculate.',
+    {},
+    [service, 'fanconstruction'],
+  );
+  part(
+    cooling,
+    'pads',
+    'Thermal interfaces',
+    'Cooling',
+    'Thin compliant interfaces bridge package surfaces to their contact plates.',
+    'Reduces contact resistance in the thermal path.',
+    {},
+    [service, 'aircooler'],
+  );
+  part(
+    cooling,
+    'fasteners',
+    'Thermal-module fasteners',
+    'Cooling',
+    'Screws hold the fan housings and contact plates in place.',
+    'Maintains contact pressure and mechanical alignment.',
+    {},
+    [service],
+  );
+  part(
+    battery,
+    'carrier',
+    'Battery carrier and mounting tabs',
+    'Power',
+    'A support frame retains the pouch-cell group.',
+    'Locates the battery assembly inside the enclosure.',
+    {},
+    [service],
+  );
+  part(
+    display,
+    'diffuser',
+    'Optical diffuser stack',
+    'Graphics',
+    'Optical sheets spread backlight illumination across the LCD.',
+    'Makes illumination more uniform before it reaches the image-forming layer.',
+    {},
+    [spec, service],
+  );
+  part(
+    display,
+    'controller',
+    'Display timing and driver board',
+    'Board',
+    'A narrow board and panel drivers distribute display signals.',
+    'Coordinates pixel updates and the panel interface.',
+    { Scope: 'Representative panel electronics, not a vendor schematic' },
+    [service],
+  );
+  part(
+    display,
+    'mounts',
+    'Display mounting hardware',
+    'Chassis',
+    'Small fasteners locate the display stack and supporting shell.',
+    'Retains the display assembly.',
+    {},
+    [service],
+  );
   part(
     board,
     'pcb',
@@ -824,13 +939,13 @@ part(
 part(
   'legionmemory',
   'dram',
-  'DDR4 DRAM packages',
+  'DDR4 FBGA packages',
   'Memory',
   'Volatile memory packages hold working data.',
   'Stores active program data while power is supplied.',
   {},
   ['micron16gbddr4'],
-  'legiondram',
+  'legionpackage',
 );
 part(
   'legionmemory',
@@ -900,7 +1015,7 @@ for (const [dram, cell] of [
   part(
     dram,
     'cells',
-    'Memory-cell array',
+    'DRAM memory banks',
     'Memory',
     'An array stores bits as electrical charge.',
     'Holds data in rows and columns.',
@@ -909,7 +1024,7 @@ for (const [dram, cell] of [
         'Conceptual array; capacity and physical bank count are not inferred from the picture',
     },
     ['dramfundamentals'],
-    cell,
+    dram === 'legiondram' ? 'legionbank' : 'macbank',
   );
   part(
     dram,
@@ -988,6 +1103,264 @@ for (const [dram, cell] of [
     'Memory',
     'Stored charge must periodically be restored.',
     'Preserves volatile data as charge leaks away.',
+    {},
+    ['dramfundamentals'],
+  );
+}
+
+part(
+  'legionmemory',
+  'passives',
+  'SO-DIMM decoupling components',
+  'Memory',
+  'Small capacitors sit close to the memory-package supply connections.',
+  'Stabilizes the local supply during switching.',
+  {},
+  ['sodimmkingston'],
+);
+part(
+  'legionstorage',
+  'cache',
+  'SSD controller cache',
+  'Memory',
+  'A representative SSD includes local DRAM for mapping information.',
+  'Caches flash translation metadata; actual SSD implementations vary.',
+  { Scope: 'Illustrative SSD design, not a Lenovo bill of materials' },
+  ['ssdarchitecture'],
+);
+part(
+  'legionstorage',
+  'fastener',
+  'M.2 retaining screw',
+  'Storage',
+  'The module is retained at the 2280 mounting point.',
+  'Keeps the replaceable SSD seated in its socket.',
+  {},
+  ['legionservice'],
+);
+part(
+  'legionsm',
+  'tensor',
+  'Tensor Cores',
+  'Compute',
+  'Specialized Ampere units accelerate supported matrix operations.',
+  'Processes matrix math used in supported AI and graphics workloads.',
+  { Count: '4 third-generation Tensor Cores per compute-capability 8.6 SM' },
+  ['amperega102'],
+);
+part(
+  'legionsm',
+  'rt',
+  'Ray tracing core',
+  'Graphics',
+  'A dedicated unit accelerates ray traversal and intersection tests.',
+  'Reduces the cost of supported ray-tracing operations.',
+  { Count: '1 second-generation RT Core per SM' },
+  ['amperega102'],
+);
+
+// Configuration-specific facts are kept alongside the authored entries. The
+// geometry tests verify these quantities against rendered instances.
+const specificationUpdates: Record<
+  string,
+  {
+    specifications?: Record<string, string>;
+    quantity?: string;
+    sources?: SourceId[];
+    description?: string;
+  }
+> = {
+  legioncore: {
+    specifications: { Cores: '8', Threads: '16', Architecture: 'Zen 3' },
+    quantity: '8 cores / 16 hardware threads',
+  },
+  legionsm: {
+    specifications: {
+      SMs: '30',
+      'CUDA cores': '3,840',
+      'FP32 lanes per SM': '128',
+      Memory: '6 GB GDDR6',
+      Scope:
+        '30 SMs follows from the published 3,840 lanes and 128 lanes per Ampere 8.6 SM',
+    },
+    quantity: '30 streaming multiprocessors',
+    sources: ['rtx3060laptop', 'amperega102'],
+  },
+  'legiongpu-memory': {
+    specifications: { Memory: '6 GB GDDR6', Interface: '192-bit' },
+    sources: ['rtx3060laptop'],
+  },
+  legionmemory: {
+    specifications: {
+      Standard: 'DDR4-3200',
+      Capacity: '8 GB per module · 16 GB installed',
+      Format: '260-pin SO-DIMM',
+      Organization: '1Rx8 · eight 8 Gbit x8 packages',
+      Voltage: '1.2 V',
+      Dimensions: '69.6 × 30 × 1.2 mm PCB',
+      Scope:
+        'Representative Kingston KVR32S22S8/8 geometry; not a factory-installed SKU claim',
+    },
+    sources: ['sodimmkingston', 'legionpsref'],
+    quantity: '2 × 8 GB modules',
+  },
+  'legionmemory-board': {
+    specifications: {
+      Dimensions: '69.6 × 30 × 1.2 mm',
+      Format: '260-pin DDR4 SO-DIMM',
+    },
+    sources: ['sodimmkingston'],
+  },
+  'legionmemory-contacts': {
+    specifications: {
+      Contacts: '260 · 130 per face',
+      Pitch: '0.5 mm within each field',
+      Key: 'Offset DDR4 notch; not interchangeable with desktop DIMMs',
+    },
+    quantity: '260 contact fingers',
+    sources: ['sodimmkingston'],
+  },
+  legionpackage: {
+    specifications: {
+      Organization: '1G × 8 · 8 Gbit per package',
+      Banks: '16 · 4 groups × 4 banks',
+      Burst: 'BL8',
+      Scope: '8 packages make one 8 GB module',
+    },
+    quantity: '8 packages · 4 on each face',
+    sources: ['sodimmkingston', 'dramfundamentals'],
+  },
+  legionbank: {
+    specifications: {
+      Banks: '16 per 8 Gbit x8 die',
+      Scope:
+        'Bank organization is documented; the small cell view is a teaching example',
+    },
+    quantity: '16 banks in the die view',
+    sources: ['sodimmkingston', 'dramfundamentals'],
+  },
+  'legionsm-arithmetic': {
+    specifications: { 'FP32 lanes': '128 total · 4 partitions × 32' },
+    quantity: '4 processing partitions',
+    sources: ['amperega102'],
+  },
+  'legionsm-schedule': {
+    specifications: { Schedulers: '4 per SM' },
+    quantity: '4 warp schedulers',
+    sources: ['amperega102'],
+  },
+  'legionsm-registers': {
+    specifications: { Organization: '4 partition-local register files' },
+    quantity: '4 register-file groups',
+    sources: ['amperega102'],
+  },
+  'legionsm-texture': {
+    specifications: { Units: '4 per SM' },
+    quantity: '4 texture units',
+    sources: ['amperega102'],
+  },
+};
+for (const entry of notebookConcepts) {
+  const update = specificationUpdates[entry.id];
+  if (update) Object.assign(entry, update);
+}
+
+part(
+  'legionpackage',
+  'substrate',
+  'Package substrate',
+  'Memory',
+  'A thin laminate routes signals from the die to the ball grid.',
+  'Fans the die connections out to the board.',
+  {},
+  ['packaging'],
+);
+part(
+  'legionpackage',
+  'balls',
+  'FBGA solder joints',
+  'Memory',
+  'A ball grid attaches the package to the SO-DIMM.',
+  'Provides electrical connections and mechanical attachment.',
+  { Scope: 'Illustrative 78-joint field; factory package population can vary' },
+  ['packaging'],
+  undefined,
+  '78 illustrative joints',
+);
+part(
+  'legionpackage',
+  'mold',
+  'Protective mold compound',
+  'Memory',
+  'An encapsulant protects the die and internal interconnect.',
+  'Seals the fragile internal structures.',
+  {},
+  ['packaging'],
+);
+part(
+  'legionpackage',
+  'wires',
+  'Package interconnect',
+  'Memory',
+  'Fine interconnect links the die contacts to the substrate.',
+  'Carries data, commands and power across the package.',
+  { Scope: 'Illustrative wire-bond construction' },
+  ['packaging'],
+);
+part(
+  'legionpackage',
+  'die',
+  'DDR4 DRAM die',
+  'Memory',
+  'An 8 Gbit x8 die provides storage inside the selected representative package.',
+  'Contains the bank arrays and access circuits.',
+  { Capacity: '8 Gbit', Organization: '1G × 8', Banks: '16 · 4 groups of 4' },
+  ['sodimmkingston', 'dramfundamentals'],
+  'legiondram',
+);
+for (const [level, cell] of [
+  ['legionbank', 'legioncell'],
+  ['macbank', 'maccell'],
+] as const) {
+  part(
+    level,
+    'cells',
+    'Cell subarrays',
+    'Memory',
+    'A bank divides the storage array into local cell mats.',
+    'Shortens local wires and couples storage to sensing circuits.',
+    { Scope: 'Illustrative mat count; not a physical die reconstruction' },
+    ['dramfundamentals'],
+    cell,
+    '6 illustrative cell mats',
+  );
+  part(
+    level,
+    'row',
+    'Row decoding',
+    'Memory',
+    'Row-selection logic activates a wordline in a cell mat.',
+    'Selects the cells whose charge will be read.',
+    {},
+    ['dramfundamentals'],
+  );
+  part(
+    level,
+    'sense',
+    'Local sense amplifiers',
+    'Memory',
+    'Local amplifiers resolve small charge differences on bitlines.',
+    'Reads and restores the selected row.',
+    {},
+    ['dramfundamentals'],
+  );
+  part(
+    level,
+    'column',
+    'Global data path',
+    'Memory',
+    'Column selection moves data between local arrays and the bank interface.',
+    'Transfers selected bits to or from the data bus.',
     {},
     ['dramfundamentals'],
   );

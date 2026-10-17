@@ -67,6 +67,12 @@ export interface LevelDef {
    * leaves first. `logical` levels are diagrams and are lit flat.
    */
   kind: 'physical' | 'logical';
+  /** Optional camera framing for unusually small hardware or flat diagrams. */
+  camera?: {
+    padding?: number;
+    minimumDistance?: number;
+    direction?: readonly [number, number, number];
+  };
   /** The concept whose `open` leads here: the thing you drilled into. */
   concept: string;
   /** Labels along the disassembly timeline, with their slider positions. */

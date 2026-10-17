@@ -12,6 +12,18 @@
  * for that construction alone, and its name says it is an independent review.
  */
 export const sources = {
+  sodimmkingston: {
+    name: 'Kingston · KVR32S22S8/8 DDR4-3200 8 GB SO-DIMM dimensions and organization',
+    url: 'https://www.kingston.com/datasheets/kvr32s22s8_8.pdf',
+  },
+  rtx3060laptop: {
+    name: 'NVIDIA · GeForce RTX 30 Series Laptop GPU specifications',
+    url: 'https://www.nvidia.com/en-gb/geforce/laptops/30-series/',
+  },
+  amperega102: {
+    name: 'NVIDIA · GeForce Ampere architecture and SM resources',
+    url: 'https://images.nvidia.com/aem-dam/en-zz/Solutions/geforce/ampere/pdf/NVIDIA-ampere-GA102-GPU-Architecture-Whitepaper-V1.pdf',
+  },
   cpuprinciples: {
     name: 'Arm · CPU instruction-cycle principles (generic teaching model)',
     url: 'https://www.arm.com/glossary/cpu',

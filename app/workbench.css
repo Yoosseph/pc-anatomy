@@ -3396,3 +3396,16 @@ a {
   color: var(--muted-foreground);
   font-size: 10px;
 }
+
+@media (max-width: 700px) {
+  .stage-meta {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .stage-meta .breadcrumbs {
+    flex-basis: 100%;
+  }
+  .breadcrumbs button {
+    white-space: nowrap;
+  }
+}

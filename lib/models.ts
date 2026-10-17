@@ -100,9 +100,10 @@ function turnExtent(extent: T.Vector3, q: T.Quaternion) {
 const notebookBuilders = Object.fromEntries(
   Object.keys(notebookLevels).map((id) => [
     id,
-    (tools: ModelTools) => buildNotebook(id as NotebookLevel, tools),
+    (tools: ModelTools, root: T.Group) =>
+      buildNotebook(id as NotebookLevel, tools, root),
   ]),
-) as Record<NotebookLevel, (tools: ModelTools) => void>;
+) as Record<NotebookLevel, (tools: ModelTools, root: T.Group) => void>;
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ...notebookBuilders,
   pc: buildMachine,
@@ -461,6 +462,8 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
       if (
         o instanceof T.Mesh &&
         !(o instanceof T.InstancedMesh) &&
+        !o.userData.spinRate &&
+        !o.userData.seekAmplitude &&
         o.material instanceof T.MeshStandardMaterial
       ) {
         const group = groups.get(o.material) ?? [];

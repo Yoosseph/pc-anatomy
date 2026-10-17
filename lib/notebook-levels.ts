@@ -8,6 +8,8 @@ export type NotebookLevel =
   | 'legiongpu'
   | 'legionsm'
   | 'legionmemory'
+  | 'legionpackage'
+  | 'legionbank'
   | 'legiondram'
   | 'legioncell'
   | 'legionstorage'
@@ -22,6 +24,7 @@ export type NotebookLevel =
   | 'macgpu'
   | 'macgpucore'
   | 'macmemory'
+  | 'macbank'
   | 'macdram'
   | 'maccell'
   | 'macstorage'
@@ -51,6 +54,13 @@ const scale = (
     kind === 'logical' ? 'LOGICAL DIAGRAM' : 'ILLUSTRATIVE NOTEBOOK HARDWARE',
   kind,
   concept: id,
+  camera:
+    kind === 'logical'
+      ? { padding: 0.98, direction: [0.16, 1.9, 0.6] }
+      : {
+          padding: 0.98,
+          ...(id === 'legionpackage' ? { minimumDistance: 0.8 } : {}),
+        },
   phases,
   detailed: true,
   branchLabel,
@@ -110,16 +120,29 @@ export const notebookLevels: Record<NotebookLevel, LevelDef> = {
     'physical',
     'Memory',
   ),
+  legionpackage: scale(
+    'legionpackage',
+    'legionmemory',
+    'DDR4 FBGA package',
+    'Mold, die, substrate and solder-ball connections',
+  ),
   legiondram: scale(
     'legiondram',
-    'legionmemory',
-    'DDR4 memory organization',
+    'legionpackage',
+    'DDR4 DRAM die',
     'Banks, row selection and data access',
+    'logical',
+  ),
+  legionbank: scale(
+    'legionbank',
+    'legiondram',
+    'DDR4 memory bank',
+    'Cell mats, row decoders, sensing and data access',
     'logical',
   ),
   legioncell: scale(
     'legioncell',
-    'legiondram',
+    'legionbank',
     'DDR4 memory cell',
     'One transistor, one capacitor and refresh',
     'logical',
@@ -222,9 +245,16 @@ export const notebookLevels: Record<NotebookLevel, LevelDef> = {
     'Conceptual banks and row access; no asserted die topology',
     'logical',
   ),
+  macbank: scale(
+    'macbank',
+    'macdram',
+    'DRAM bank principles',
+    'Cell mats and access circuits; topology illustrative',
+    'logical',
+  ),
   maccell: scale(
     'maccell',
-    'macdram',
+    'macbank',
     'DRAM memory cell',
     'A conceptual charge-storage cell',
     'logical',

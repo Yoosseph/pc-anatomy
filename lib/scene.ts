@@ -11,7 +11,7 @@ import {
 import { airflowShown, airflowStrength } from './airflow.ts';
 import { byId, openLevel } from './manifest';
 import type { ExplorerState, Selection } from './explorer-state.ts';
-import { isPhysical } from './levels.ts';
+import { isPhysical, levels } from './levels.ts';
 import { smoothstep } from './layout';
 import {
   applyPiecePose,
@@ -153,6 +153,7 @@ export function createViewer(
         child.visible =
           visible.length > 0 && !state.isolated && state.explode < 20;
     callbacks.stats(visible.length);
+    host.dataset.cameraSettled = 'false';
     host.dataset.visible = String(visible.length);
     host.dataset.level = state.level;
     host.dataset.componentTypes = String(
@@ -191,6 +192,7 @@ export function createViewer(
       boundsPieces,
     );
     const size = bounds.getSize(v);
+    const cameraProfile = levels[state.level].camera;
     const direction =
       // Diagrams read from directly above once they are fully separated.
       // Hardware does not: it is laid out in depth, so stay on the orbit.
@@ -202,35 +204,40 @@ export function createViewer(
             ? cameraDirection.set(0, 0.05, 1)
             : state.view === 'back'
               ? cameraDirection.set(0, 0.05, -1)
-              : state.level === 'motherboard' && state.explode < 15 && !focus
-                ? cameraDirection.set(0.18, 1.9, 0.55)
-                : // Look down on something flat like a card; stand nearer eye
-                  // level for something tall like a tower, or the lid is all
-                  // you see.
-                  defaultCameraDirection(size, cameraDirection);
+              : cameraProfile?.direction && !focus
+                ? cameraDirection.set(...cameraProfile.direction)
+                : state.level === 'motherboard' && state.explode < 15 && !focus
+                  ? cameraDirection.set(0.18, 1.9, 0.55)
+                  : // Look down on something flat like a card; stand nearer eye
+                    // level for something tall like a tower, or the lid is all
+                    // you see.
+                    defaultCameraDirection(size, cameraDirection);
     // A selected part needs breathing room inside the smaller stage left by
     // the detail panel. The old 0.8 multiplier cropped focused parts at every
     // edge, even though the ordinary whole-model fit looked intentional.
-    const padding = focus
-      ? 1.16
-      : [
-            'card',
-            'rx9070',
-            'arcb580',
-            'nvme',
-            'dimm',
-            'dram',
-            'banks',
-            'bank',
-            'cell',
-            'ddr4',
-            'ddr4dram',
-            'ddr4banks',
-            'ddr4array',
-            'ddr4cell',
-          ].includes(state.level) && camera.aspect < 1
-        ? 1.05
-        : 0.8;
+    const padding =
+      cameraProfile?.padding && !focus
+        ? cameraProfile.padding
+        : focus
+          ? 1.16
+          : [
+                'card',
+                'rx9070',
+                'arcb580',
+                'nvme',
+                'dimm',
+                'dram',
+                'banks',
+                'bank',
+                'cell',
+                'ddr4',
+                'ddr4dram',
+                'ddr4banks',
+                'ddr4array',
+                'ddr4cell',
+              ].includes(state.level) && camera.aspect < 1
+            ? 1.05
+            : 0.8;
     fitCameraToBounds(
       bounds,
       camera,
@@ -239,7 +246,7 @@ export function createViewer(
       direction,
       v,
       padding,
-      focus ? 3.2 : 6,
+      cameraProfile?.minimumDistance ?? (focus ? 3.2 : 6),
     );
   }
   function boxFor(p: Piece, target: T.Box3) {
@@ -383,6 +390,10 @@ export function createViewer(
       updateHover(pointerPosition);
     renderer.render(scene, camera);
     reportLabels();
+    host.dataset.cameraSettled = String(
+      !autoCamera || camera.position.distanceToSquared(targetPosition) < 0.0001,
+    );
+    host.dataset.transitioning = String(!!dive);
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
     host.dataset.explode = String(Math.round(amount * 100));

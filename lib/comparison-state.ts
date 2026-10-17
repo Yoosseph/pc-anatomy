@@ -110,6 +110,21 @@ export const comparisonGroups = {
       { id: 'dimensions', label: 'Dimensions', keys: ['Dimensions'] },
     ],
   },
+  notebook: {
+    label: 'Laptops',
+    shortLabel: 'laptop',
+    itemLabel: 'laptop',
+    rows: [
+      { id: 'model', label: 'Model', keys: ['Model'] },
+      { id: 'processor', label: 'Processor', keys: ['Processor'] },
+      { id: 'graphics', label: 'Graphics', keys: ['Graphics'] },
+      { id: 'memory', label: 'Memory', keys: ['Memory'] },
+      { id: 'storage', label: 'Storage', keys: ['Storage'] },
+      { id: 'display', label: 'Display', keys: ['Display'] },
+      { id: 'battery', label: 'Battery', keys: ['Battery'] },
+      { id: 'dimensions', label: 'Dimensions', keys: ['Dimensions'] },
+    ],
+  },
 } as const satisfies Record<string, ComparisonGroupDefinition>;
 
 export type ComparisonGroupId = keyof typeof comparisonGroups;

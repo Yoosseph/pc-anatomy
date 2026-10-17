@@ -1,3 +1,4 @@
+import type { LevelId } from './levels.ts';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Piece } from './models.ts';
@@ -10,7 +11,7 @@ import { buildCapacitor, buildChip, buildHeader, buildScrew } from './parts.ts';
 
 export type ModelTools = {
   /** Reuse a detailed scale as a single installed, selectable assembly. */
-  assembly: (level: 'motherboard' | 'card' | 'dimm') => T.Group;
+  assembly: (level: LevelId) => T.Group;
   /**
    * Where this build moves air, drawn as chevrons marching along the path.
    * Scenery rather than a part: never selected, never named, never pointed

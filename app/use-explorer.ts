@@ -10,6 +10,7 @@ import {
 } from '@/lib/explorer-state';
 import {
   isPhysical,
+  systemRoot,
   levelPath,
   levels,
   menuRoot,
@@ -114,6 +115,7 @@ export function useExplorer() {
     setOpenSubmenu(null);
     setState((s) => ({
       ...initialState,
+      level: systemRoot(s.level),
       cameraRevision: s.cameraRevision + 1,
     }));
     setLayers(false);

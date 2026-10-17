@@ -141,72 +141,222 @@ export function buildNotebookPorts(system: NotebookSystem, tools: ModelTools) {
 
 type Key = {
   text: string;
+  sub?: string;
+  align?: 'center' | 'left' | 'right';
   width: number;
   x: number;
   z: number;
   depth?: number;
 };
-const keyRow = (labels: string[], widths: Record<string, number> = {}) =>
-  labels.map((text) => ({ text, width: widths[text] ?? 1 }));
+
+type KeySpec = {
+  text: string;
+  sub?: string;
+  width?: number;
+  depth?: number;
+  align?: 'center' | 'left' | 'right';
+  gapBefore?: number;
+};
+
 const keysFor = (mac: boolean): Key[] => {
-  const rows = [
-    keyRow([
-      'esc',
-      ...Array.from({ length: 12 }, (_, i) => `F${i + 1}`),
-      mac ? '◉' : 'del',
-    ]),
-    keyRow(
-      [
-        '`',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-        '7',
-        '8',
-        '9',
-        '0',
-        '-',
-        '=',
-        'delete',
+  const fnIcons = [
+    '☀-',
+    '☀+',
+    '▢▢',
+    '⌕',
+    '🎤',
+    '☾',
+    '⏮',
+    '⏯',
+    '⏭',
+    '🔇',
+    '🔉',
+    '🔊',
+  ];
+  const rows: { z: number; depth?: number; items: KeySpec[] }[] = [
+    {
+      z: 0,
+      depth: mac ? 0.96 : 0.74,
+      items: mac
+        ? [
+            { text: 'esc', width: 1.5, align: 'left' },
+            ...Array.from({ length: 12 }, (_, i) => ({
+              text: `F${i + 1}`,
+              sub: fnIcons[i],
+              width: 1,
+            })),
+            { text: 'touchid', width: 1 },
+          ]
+        : [
+            { text: 'Esc', width: 1.1, align: 'left' },
+            { text: 'F1', sub: '🔇', width: 0.92, gapBefore: 0.14 },
+            { text: 'F2', sub: '🔉', width: 0.92 },
+            { text: 'F3', sub: '🔊', width: 0.92 },
+            { text: 'F4', sub: '🎤', width: 0.92 },
+            { text: 'F5', sub: '☀-', width: 0.92, gapBefore: 0.14 },
+            { text: 'F6', sub: '☀+', width: 0.92 },
+            { text: 'F7', sub: '▢', width: 0.92 },
+            { text: 'F8', sub: '✈', width: 0.92 },
+            { text: 'F9', sub: '⚙', width: 0.92, gapBefore: 0.14 },
+            { text: 'F10', sub: '🔒', width: 0.92 },
+            { text: 'F11', sub: '⧉', width: 0.92 },
+            { text: 'F12', sub: '🖩', width: 0.92 },
+            { text: 'Ins', width: 0.86, gapBefore: 0.14 },
+            { text: 'PrtSc', width: 0.88 },
+            { text: 'Del', width: 0.96 },
+          ],
+    },
+    {
+      z: 1,
+      items: [
+        { text: '`', sub: '~' },
+        { text: '1', sub: '!' },
+        { text: '2', sub: '@' },
+        { text: '3', sub: '#' },
+        { text: '4', sub: '$' },
+        { text: '5', sub: '%' },
+        { text: '6', sub: '^' },
+        { text: '7', sub: '&' },
+        { text: '8', sub: '*' },
+        { text: '9', sub: '(' },
+        { text: '0', sub: ')' },
+        { text: '-', sub: '_' },
+        { text: '=', sub: '+' },
+        {
+          text: mac ? 'delete' : 'Backspace',
+          width: mac ? 1.5 : 2.0,
+          align: 'right',
+        },
       ],
-      { delete: 1.9 },
-    ),
-    keyRow(
-      ['tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
-      { tab: 1.45, '\\': 1.45 },
-    ),
-    keyRow(
-      ['caps', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'return'],
-      { caps: 1.75, return: 2.15 },
-    ),
-    keyRow(
-      ['shift', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 'shift '],
-      { shift: 2.2, 'shift ': 2.7 },
-    ),
-    keyRow(
-      mac
-        ? ['fn', 'ctrl', 'option', 'cmd', 'space', 'cmd ', 'option ']
-        : ['ctrl', 'fn', 'win', 'alt', 'space', 'alt ', 'ctrl '],
-      { space: 5.65, cmd: 1.2, 'cmd ': 1.2, option: 1.1, 'option ': 1.1 },
-    ),
+    },
+    {
+      z: 2,
+      items: [
+        { text: mac ? 'tab' : 'Tab', width: 1.5, align: 'left' },
+        { text: 'Q' },
+        { text: 'W' },
+        { text: 'E' },
+        { text: 'R' },
+        { text: 'T' },
+        { text: 'Y' },
+        { text: 'U' },
+        { text: 'I' },
+        { text: 'O' },
+        { text: 'P' },
+        { text: '[', sub: '{' },
+        { text: ']', sub: '}' },
+        { text: '\\', sub: '|', width: mac ? 1.0 : 1.5 },
+      ],
+    },
+    {
+      z: 3,
+      items: [
+        {
+          text: mac ? 'caps lock' : 'CapsLk',
+          width: mac ? 1.75 : 1.8,
+          align: 'left',
+        },
+        { text: 'A' },
+        { text: 'S' },
+        { text: 'D' },
+        { text: 'F' },
+        { text: 'G' },
+        { text: 'H' },
+        { text: 'J' },
+        { text: 'K' },
+        { text: 'L' },
+        { text: ';', sub: ':' },
+        { text: "'", sub: '"' },
+        {
+          text: mac ? 'return' : 'Enter',
+          width: mac ? 1.75 : 2.2,
+          align: 'right',
+        },
+      ],
+    },
+    {
+      z: 4,
+      items: [
+        {
+          text: mac ? 'shift' : 'Shift',
+          width: 2.25,
+          align: 'left',
+        },
+        { text: 'Z' },
+        { text: 'X' },
+        { text: 'C' },
+        { text: 'V' },
+        { text: 'B' },
+        { text: 'N' },
+        { text: 'M' },
+        { text: ',', sub: '<' },
+        { text: '.', sub: '>' },
+        { text: '/', sub: '?' },
+        {
+          text: mac ? 'shift ' : 'Shift ',
+          width: mac ? 2.25 : 2.75,
+          align: 'right',
+        },
+      ],
+    },
+    {
+      z: 5,
+      items: mac
+        ? [
+            { text: 'fn', sub: '🌐', width: 1.0, align: 'left' },
+            { text: 'control', sub: '⌃', width: 1.0 },
+            { text: 'option', sub: '⌥', width: 1.25 },
+            { text: 'command', sub: '⌘', width: 1.5 },
+            { text: 'space', width: 4.75 },
+            { text: 'command ', sub: '⌘', width: 1.25 },
+            { text: 'option ', sub: '⌥', width: 1.0 },
+          ]
+        : [
+            { text: 'Ctrl', width: 1.3, align: 'left' },
+            { text: 'Fn', width: 1.05 },
+            { text: '❖', width: 1.05 },
+            { text: 'Alt', width: 1.2 },
+            { text: 'space', sub: '☀', width: 5.4 },
+            { text: 'Alt ', width: 1.05 },
+            { text: 'Ctrl ', width: 1.05 },
+          ],
+    },
   ];
   const result: Key[] = [];
-  rows.forEach((row, r) => {
+  for (const row of rows) {
     let x = 0;
-    for (const key of row) {
-      result.push({ ...key, x: x + key.width / 2, z: r });
-      x += key.width;
+    for (const item of row.items) {
+      x += item.gapBefore ?? 0;
+      const w = item.width ?? 1;
+      result.push({
+        text: item.text,
+        sub: item.sub,
+        align: item.align,
+        width: w,
+        x: x + w / 2,
+        z: row.z,
+        depth: item.depth ?? row.depth,
+      });
+      x += w;
     }
-  });
-  result.push(
-    { text: '←', width: 1, x: 12.4, z: 5.2, depth: 0.5 },
-    { text: '↑', width: 1, x: 13.4, z: 4.9, depth: 0.5 },
-    { text: '↓', width: 1, x: 13.4, z: 5.45, depth: 0.5 },
-    { text: '→', width: 1, x: 14.4, z: 5.2, depth: 0.5 },
-  );
+  }
+  if (mac) {
+    // Inverted-T half-height arrow cluster flush with the 14.5u right edge.
+    result.push(
+      { text: '←', width: 0.9, x: 12.2, z: 5.26, depth: 0.46 },
+      { text: '↑', width: 0.9, x: 13.125, z: 4.74, depth: 0.46 },
+      { text: '↓', width: 0.9, x: 13.125, z: 5.26, depth: 0.46 },
+      { text: '→', width: 0.9, x: 14.05, z: 5.26, depth: 0.46 },
+    );
+  } else {
+    // Legion TrueStrike arrow cluster aligned with the bottom edge of the keyboard well.
+    result.push(
+      { text: '↑', width: 0.94, x: 13.55, z: 4.74, depth: 0.48 },
+      { text: '←', width: 0.94, x: 12.57, z: 5.26, depth: 0.48 },
+      { text: '↓', width: 0.94, x: 13.55, z: 5.26, depth: 0.48 },
+      { text: '→', width: 0.94, x: 14.53, z: 5.26, depth: 0.48 },
+    );
+  }
   return result;
 };
 
@@ -218,59 +368,228 @@ export function buildNotebookKeyboard(
   const mac = system === 'macbook',
     { put, slab, mm } = notebookKit(tools),
     group = new T.Group();
-  const pitch = mac ? 17.0 : 17.9,
-    width = pitch * 15.4,
-    depth = 101;
+  const pitch = mac ? 18.0 : 18.1,
+    rowPitch = mac ? 16.8 : 16.5,
+    unitsW = mac ? 14.5 : 18.95,
+    totalWidth = pitch * unitsW,
+    depth = 104;
   const keys = keysFor(mac);
   if (!mac) {
-    const numpad = [
-      ['num', '/', '*', '-'],
-      ['7', '8', '9', '+'],
-      ['4', '5', '6', '+'],
-      ['1', '2', '3', 'enter'],
-      ['0', '0', '.', 'enter'],
-    ];
-    for (let r = 0; r < 5; r++)
-      for (let c = 0; c < 4; c++)
-        keys.push({
-          text: numpad[r][c],
-          width: 0.84,
-          x: 15.9 + c * 0.88,
-          z: 1 + r,
-        });
+    const x0 = 15.35,
+      col = 0.9;
+    const navTop = ['Home', 'End', 'PgUp', 'PgDn'];
+    navTop.forEach((text, c) =>
+      keys.push({
+        text,
+        width: 0.86,
+        x: x0 + c * col + 0.45,
+        z: 0,
+        depth: 0.74,
+      }),
+    );
+    const row1 = ['Num', '/', '*', '-'];
+    row1.forEach((text, c) =>
+      keys.push({ text, width: 0.86, x: x0 + c * col + 0.45, z: 1 }),
+    );
+    ['7', '8', '9'].forEach((text, c) =>
+      keys.push({
+        text,
+        sub: text === '7' ? 'Home' : text === '9' ? 'PgUp' : '↑',
+        width: 0.86,
+        x: x0 + c * col + 0.45,
+        z: 2,
+      }),
+    );
+    ['4', '5', '6'].forEach((text, c) =>
+      keys.push({
+        text,
+        sub: text === '4' ? '←' : text === '6' ? '→' : '',
+        width: 0.86,
+        x: x0 + c * col + 0.45,
+        z: 3,
+      }),
+    );
+    // Single 2-row tall '+' key on the right of 9/6.
+    keys.push({
+      text: '+',
+      width: 0.86,
+      x: x0 + 3 * col + 0.45,
+      z: 2.5,
+      depth: 2.02,
+    });
+    ['1', '2', '3'].forEach((text, c) =>
+      keys.push({
+        text,
+        sub: text === '1' ? 'End' : text === '3' ? 'PgDn' : '↓',
+        width: 0.86,
+        x: x0 + c * col + 0.45,
+        z: 4,
+      }),
+    );
+    // Wide 2u '0' key, '.' key, and single 2-row tall 'Enter' key.
+    keys.push(
+      { text: '0', sub: 'Ins', width: 1.76, x: x0 + 0.9, z: 5 },
+      { text: '.', sub: 'Del', width: 0.86, x: x0 + 2 * col + 0.45, z: 5 },
+      {
+        text: 'Enter',
+        width: 0.86,
+        x: x0 + 3 * col + 0.45,
+        z: 4.5,
+        depth: 2.02,
+      },
+    );
   }
-  const totalWidth = mac ? width : pitch * 19.5;
+  // Matte-black anodized well on MacBook; dark backlit well plate on Legion.
   put(
     group,
-    slab([totalWidth + 3, 0.5, depth + 5], '#10151b', 0.08, 1),
-    [0, -0.55, 0],
+    slab(
+      [totalWidth + 4, 0.55, depth + 6],
+      mac ? '#0a0c0f' : '#11161d',
+      mac ? 0.25 : 0.12,
+      1.5,
+    ),
+    [0, -0.52, 0],
   );
   const canvas = document.createElement('canvas');
-  canvas.width = 2048;
-  canvas.height = 768;
+  canvas.width = 4096;
+  canvas.height = 2048;
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const drawW = totalWidth + 3,
-    drawD = depth + 5;
+  const drawW = totalWidth + 6,
+    drawD = depth + 16,
+    pxX = (mmX: number) => (mmX / drawW + 0.5) * canvas.width,
+    pxZ = (mmZ: number) => (mmZ / drawD + 0.5) * canvas.height,
+    scaleX = canvas.width / drawW,
+    scaleZ = canvas.height / drawD;
+
   for (const key of keys) {
-    const x = (key.x - (mac ? 7.7 : 9.75)) * pitch,
-      z = (key.z - 2.5) * 17.1;
-    const capW = key.width * pitch - 2,
-      capD = (key.depth ?? 1) * 15;
-    put(group, slab([capW, 1.1, capD], '#1b2027', 0.12, 1), [x, 0.2, z]);
-    ctx.fillStyle = mac ? '#e2e7ed' : '#a8dbe8';
-    ctx.font = `${key.text.length > 2 ? 18 : 27}px Arial`;
-    if (key.text !== 'space')
-      ctx.fillText(
-        key.text.trim(),
-        (x / drawW + 0.5) * 2048,
-        (z / drawD + 0.5) * 768,
-      );
+    const x = (key.x - unitsW / 2) * pitch,
+      z = (key.z - 2.5) * rowPitch;
+    const capW = key.width * pitch - (mac ? 1.7 : 1.85),
+      capD = (key.depth ?? 1) * (mac ? 15.1 : 14.7);
+    // Subtle translucent key switch skirt / backlight collar beneath each cap.
+    if (!mac)
+      put(group, slab([capW + 0.5, 0.45, capD + 0.5], '#316275', 0.1, 0.9), [
+        x,
+        -0.05,
+        z,
+      ]);
+    put(
+      group,
+      slab(
+        [capW, mac ? 0.95 : 1.15, capD],
+        mac ? '#14171c' : '#1b2129',
+        mac ? 0.08 : 0.14,
+        mac ? 0.9 : 1.1,
+      ),
+      [x, 0.22, z],
+    );
+
+    const cx = pxX(x),
+      cz = pxZ(z),
+      kw = capW * scaleX,
+      kd = capD * scaleZ;
+    // Keycap top bevel rim so every individual key silhouette stays razor-sharp.
+    ctx.strokeStyle = mac ? '#38404c' : '#63b8d1aa';
+    ctx.lineWidth = mac ? 3.2 : 3.8;
+    ctx.strokeRect(cx - kw / 2 + 4, cz - kd / 2 + 4, kw - 8, kd - 8);
+
+    if (key.text === 'touchid') {
+      // MacBook Pro Touch ID circular sapphire ring.
+      ctx.beginPath();
+      ctx.arc(cx, cz, Math.min(kw, kd) * 0.31, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0f13';
+      ctx.fill();
+      ctx.lineWidth = 5.5;
+      ctx.strokeStyle = '#9aa4b0';
+      ctx.stroke();
+      continue;
+    }
+
+    const label = key.text.trim();
+    // Caps Lock indicator LED dot in top-left corner of keycap.
+    if (label === 'caps lock' || label === 'CapsLk') {
+      ctx.beginPath();
+      ctx.arc(cx - kw * 0.34, cz - kd * 0.26, 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = mac ? '#52e06b' : '#84ecff';
+      ctx.fill();
+    }
+
+    // Tactile homing bars on F, J, and Numpad 5.
+    if (label === 'F' || label === 'J' || label === '5') {
+      ctx.fillStyle = mac ? '#b4beca' : '#a8e4f2';
+      ctx.fillRect(cx - kw * 0.17, cz + kd * 0.31, kw * 0.34, 5);
+    }
+
+    if (label === 'space') {
+      if (!mac && key.sub) {
+        ctx.fillStyle = '#b4ecfa';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = '700 36px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(key.sub, cx - kw * 0.42, cz);
+      }
+      continue;
+    }
+
+    ctx.fillStyle = mac ? '#ffffff' : '#ecfbff';
+    const isWord = label.length > 1;
+    if (key.sub && label.length === 1) {
+      // Dual-legend number/symbol key: shifted symbol on top, primary on bottom.
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = mac ? '#d5dde6' : '#b2e4f2';
+      ctx.font = '600 34px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(key.sub, cx, cz - kd * 0.21);
+      ctx.fillStyle = mac ? '#ffffff' : '#f0fcff';
+      ctx.font = '700 44px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(label, cx, cz + kd * 0.18);
+    } else if (key.sub && label.startsWith('F') && label.length <= 3) {
+      // Function key: media glyph on top, F1..F12 on bottom.
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = mac ? '#e2e8f0' : '#bae8f5';
+      ctx.font = '600 30px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(key.sub, cx, cz - kd * 0.18);
+      ctx.fillStyle = mac ? '#ffffff' : '#ecfbff';
+      ctx.font = '700 27px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(label, cx, cz + kd * 0.22);
+    } else if (mac && key.sub && isWord) {
+      // Mac modifier key: symbol at top corner, word at bottom.
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = key.align === 'left' ? 'left' : 'right';
+      const edgeX = key.align === 'left' ? cx - kw * 0.36 : cx + kw * 0.36;
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '700 32px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(key.sub, edgeX, cz - kd * 0.2);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '600 27px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(label, edgeX, cz + kd * 0.22);
+    } else {
+      ctx.textBaseline = 'middle';
+      if (key.align === 'left') {
+        ctx.textAlign = 'left';
+        ctx.font = '600 29px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(label, cx - kw * 0.37, cz + (mac ? kd * 0.16 : 0));
+      } else if (key.align === 'right') {
+        ctx.textAlign = 'right';
+        ctx.font = '600 29px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(label, cx + kw * 0.37, cz + (mac ? kd * 0.16 : 0));
+      } else {
+        ctx.textAlign = 'center';
+        ctx.font = `${isWord ? '600 30px' : '700 50px'} "Segoe UI", Arial, sans-serif`;
+        ctx.fillText(label, cx, cz - (key.sub ? kd * 0.08 : 0));
+        if (key.sub) {
+          ctx.fillStyle = '#a8dfee';
+          ctx.font = '600 22px "Segoe UI", Arial, sans-serif';
+          ctx.fillText(key.sub, cx, cz + kd * 0.24);
+        }
+      }
+    }
   }
   const texture = new T.CanvasTexture(canvas);
   texture.colorSpace = T.SRGBColorSpace;
+  texture.anisotropy = 8;
   const legends = new T.Mesh(
     new T.PlaneGeometry(mm(drawW), mm(drawD)),
     new T.MeshBasicMaterial({
@@ -280,7 +599,7 @@ export function buildNotebookKeyboard(
     }),
   );
   legends.rotation.x = -Math.PI / 2;
-  put(group, legends, [0, 0.81, 0]);
+  put(group, legends, [0, mac ? 0.72 : 0.82, 0]);
   group.userData.keyCount = keys.length;
   return group;
 }
@@ -292,16 +611,16 @@ export function buildNotebookDeck(system: NotebookSystem, tools: ModelTools) {
   const deck = new T.Group(),
     w = spec.width,
     d = spec.depth;
-  const keyboardW = mac ? 265 : 351,
-    keyboardD = 106,
-    keyboardZ = mac ? -34 : -28;
-  const padW = mac ? 130 : 104,
-    padD = mac ? 81 : 69,
+  const keyboardW = mac ? 265 : 347,
+    keyboardD = 105,
+    keyboardZ = mac ? -33 : -27;
+  const padW = mac ? 130 : 105,
+    padD = mac ? 81 : 70,
     padX = mac ? 0 : -29,
     padZ = mac ? 63 : 77;
   const holes: Opening[] = [
-    { x: 0, z: keyboardZ, w: keyboardW, d: keyboardD, r: 2 },
-    { x: padX, z: padZ, w: padW + 0.8, d: padD + 0.8, r: 3 },
+    { x: 0, z: keyboardZ, w: keyboardW, d: keyboardD, r: mac ? 3.5 : 2.5 },
+    { x: padX, z: padZ, w: padW + 0.8, d: padD + 0.8, r: mac ? 4.2 : 2.5 },
   ];
   // Fine speaker perforations are actual openings in the metal, rather than paint.
   if (mac)
@@ -317,18 +636,32 @@ export function buildNotebookDeck(system: NotebookSystem, tools: ModelTools) {
   const upperPlate = plate(w, d, 1.2, mac ? 9 : 5, spec.shell, holes);
   upperPlate.material = tools.material(
     spec.shell,
-    mac ? 0.72 : 0.15,
-    mac ? 0.34 : 0.66,
+    mac ? 0.74 : 0.22,
+    mac ? 0.31 : 0.58,
   );
   deck.add(upperPlate);
+  // Acoustic dark backing under MacBook speaker grilles so the perforations read as real micro-drilled metal.
+  if (mac)
+    for (const side of [-1, 1])
+      put(deck, slab([12, 0.3, 98], '#111418', 0.1, 1), [
+        side * 143,
+        -0.55,
+        -24,
+      ]);
   for (const x of [-1, 1])
     for (const z of [-1, 1])
       put(
         deck,
-        slab([8, spec.base - 1.5, 8], spec.shell, mac ? 0.72 : 0.15, 3),
+        slab([8, spec.base - 1.5, 8], spec.shell, mac ? 0.74 : 0.22, 3),
         [x * (w / 2 - 4), -spec.base / 2, z * (d / 2 - 4)],
       );
   put(deck, buildNotebookKeyboard(system, tools), [0, -0.15, keyboardZ]);
+  // Front-lip one-finger lid-lift thumb scoop recess.
+  put(deck, slab([mac ? 56 : 64, 1.6, 2.6], '#13171d', 0.3, 0.8), [
+    0,
+    -0.45,
+    d / 2 - 0.9,
+  ]);
   // Segmented walls are cut from the same port definitions as the I/O assembly.
   for (const edge of ['left', 'right', 'rear', 'front'] as const) {
     const span = edge === 'left' || edge === 'right' ? d - 10 : w - 10;
@@ -355,7 +688,7 @@ export function buildNotebookDeck(system: NotebookSystem, tools: ModelTools) {
       const wall = slab(
         edge === 'left' || edge === 'right' ? [1.2, rh, rw] : [rw, rh, 1.2],
         spec.shell,
-        mac ? 0.72 : 0.25,
+        mac ? 0.74 : 0.25,
       );
       put(
         deck,
@@ -371,16 +704,69 @@ export function buildNotebookDeck(system: NotebookSystem, tools: ModelTools) {
     }
   }
   if (!mac) {
-    const power = new T.Mesh(
-      new T.CylinderGeometry(mm(4), mm(4), mm(0.6), 24),
-      tools.material('#6c7882', 0.7),
+    // Legion sculpted circular power button with center LED status dot.
+    const powerRing = new T.Mesh(
+      new T.CylinderGeometry(mm(5.2), mm(5.2), mm(0.45), 28),
+      tools.material('#222831', 0.45, 0.45),
     );
-    put(deck, power, [0, 0.9, -92]);
+    put(deck, powerRing, [0, 0.75, -93]);
+    const powerBtn = new T.Mesh(
+      new T.CylinderGeometry(mm(4.1), mm(4.1), mm(0.55), 28),
+      tools.material('#37404c', 0.55, 0.38),
+    );
+    put(deck, powerBtn, [0, 0.85, -93]);
+    const powerLed = new T.Mesh(
+      new T.CylinderGeometry(mm(0.85), mm(0.85), mm(0.62), 16),
+      new T.MeshBasicMaterial({ color: '#9beeff' }),
+    );
+    put(deck, powerLed, [0, 0.9, -93]);
+    // Signature Legion rear I/O ledge behind the display hinges with top port legends.
+    put(deck, slab([w - 24, 0.5, 5.5], '#272e37', 0.3, 1.0), [
+      0,
+      0.25,
+      -d / 2 + 3.8,
+    ]);
+    for (const portX of [-91, -61, -34, -13, 20, 52, 83])
+      put(deck, slab([3.2, 0.15, 1.4], '#92c8d8', 0.2, 0.3), [
+        portX,
+        0.58,
+        -d / 2 + 3.8,
+      ]);
     tools.label(deck, 'LEGION', v(w / 2 - 30, 0.7, 103), mm(29), '#b9c2c9');
+  } else {
+    // MacBook Pro recessed black hinge exhaust clutch channel along the rear center.
+    put(deck, slab([172, 0.9, 6.5], '#14171c', 0.2, 1.2), [
+      0,
+      0.25,
+      -d / 2 + 11,
+    ]);
   }
+  const padGroup = new T.Group();
+  padGroup.add(
+    plate(
+      padW + 0.5,
+      padD + 0.5,
+      0.55,
+      mac ? 4.0 : 2.4,
+      mac ? '#565d65' : '#252c35',
+    ),
+  );
+  const padSurface = plate(
+    padW - 0.6,
+    padD - 0.6,
+    0.72,
+    mac ? 3.6 : 2.1,
+    mac ? '#838b94' : '#353e4a',
+  );
+  padSurface.material = tools.material(
+    mac ? '#838b94' : '#353e4a',
+    mac ? 0.45 : 0.2,
+    mac ? 0.28 : 0.48,
+  );
+  put(padGroup, padSurface, [0, 0.08, 0]);
   return {
     deck,
-    pad: plate(padW, padD, 0.7, 2.5, mac ? '#8d969f' : '#39424f'),
+    pad: padGroup,
     padAt: [padX, 0.1, padZ] as [number, number, number],
   };
 }

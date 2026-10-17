@@ -9,73 +9,146 @@ import {
 /** Procedural artwork; no downloaded wallpapers or runtime image assets. */
 function screenTexture(mac: boolean) {
   const canvas = document.createElement('canvas');
-  canvas.width = 1536;
-  canvas.height = 1024;
+  canvas.width = 2048;
+  canvas.height = 1280;
   const c = canvas.getContext('2d')!,
-    gradient = c.createLinearGradient(0, 0, 1536, 1024);
+    gradient = c.createLinearGradient(0, 0, 2048, 1280);
   if (gradient) {
-    gradient.addColorStop(0, mac ? '#182a49' : '#0d2230');
-    gradient.addColorStop(0.5, mac ? '#315979' : '#193e5f');
-    gradient.addColorStop(1, mac ? '#597b91' : '#162f4c');
+    gradient.addColorStop(0, mac ? '#0f203c' : '#081724');
+    gradient.addColorStop(0.48, mac ? '#234a6b' : '#123350');
+    gradient.addColorStop(1, mac ? '#4b738d' : '#194669');
   }
-  c.fillStyle = gradient ?? '#24455d';
-  c.fillRect(0, 0, 1536, 1024);
+  c.fillStyle = gradient ?? '#1d3c56';
+  c.fillRect(0, 0, 2048, 1280);
+
   for (let layer = 0; layer < 7; layer++) {
     c.beginPath();
-    c.moveTo(0, 1024);
-    for (let x = 0; x <= 1536; x += 12)
+    c.moveTo(0, 1280);
+    for (let x = 0; x <= 2048; x += 16)
       c.lineTo(
         x,
-        430 +
-          layer * 65 +
-          Math.sin(x / 370 + layer * 0.48) * 155 +
-          Math.cos(x / 1400 + layer) * 90,
+        490 +
+          layer * 82 +
+          Math.sin(x / 460 + layer * 0.52) * 185 +
+          Math.cos(x / 1650 + layer) * 110,
       );
-    c.lineTo(1536, 1024);
+    c.lineTo(2048, 1280);
     c.closePath();
     c.fillStyle = mac
       ? [
-          '#5287a1',
-          '#4a7898',
-          '#3c6487',
-          '#315577',
-          '#284765',
-          '#213f5d',
-          '#18354d',
+          '#5b93ae',
+          '#4d7e9f',
+          '#3e698d',
+          '#32587c',
+          '#274868',
+          '#1e3c59',
+          '#152f47',
         ][layer]
       : [
-          '#477b9c',
-          '#3a6688',
-          '#315778',
-          '#2a4c6c',
-          '#24425e',
-          '#1c354f',
-          '#162c43',
+          '#3f87a8',
+          '#346f91',
+          '#2b5d7d',
+          '#234d6b',
+          '#1c3f59',
+          '#163249',
+          '#102638',
         ][layer];
     c.fill();
   }
-  c.fillStyle = '#e4edf0';
-  c.font = '500 29px Arial';
+
+  if (mac) {
+    // Translucent macOS menu bar flanking the camera notch at top.
+    c.fillStyle = '#0c1624b8';
+    c.fillRect(0, 0, 2048, 44);
+    c.fillStyle = '#edf3f8';
+    c.font = '600 19px "Segoe UI", Arial, sans-serif';
+    c.textAlign = 'left';
+    c.fillText('   PC Anatomy   File   Edit   View   Window   Help', 36, 28);
+    c.textAlign = 'right';
+    c.font = '500 18px "Segoe UI", Arial, sans-serif';
+    c.fillText('100%  ▭   Wi-Fi   ⌕   14:41', 2012, 28);
+  }
+
   c.textAlign = 'left';
-  c.fillText('PC ANATOMY', 65, 75);
-  c.font = '20px Arial';
-  c.fillStyle = '#aac3d0';
+  c.fillStyle = '#eef5f8';
+  c.font = '600 38px "Segoe UI", Arial, sans-serif';
+  c.fillText('PC ANATOMY', 84, mac ? 124 : 96);
+  c.font = '400 24px "Segoe UI", Arial, sans-serif';
+  c.fillStyle = '#a8c6d6';
   c.fillText(
     mac
-      ? 'Apple Silicon · shared by design'
-      : 'Lenovo Legion · a machine in layers',
-    65,
-    115,
+      ? 'Apple M1 Pro · 14.2" Liquid Retina XDR'
+      : 'Lenovo Legion 5 · Ryzen 7 5800H · RTX 3060',
+    84,
+    mac ? 166 : 138,
   );
-  c.fillStyle = '#10213299';
-  c.fillRect(390, 948, 756, 57);
-  for (let i = 0; i < 8; i++) {
-    c.fillStyle = ['#79b6c9', '#8fa7ca', '#7d9faa', '#b4a581'][i % 4];
-    c.fillRect(435 + i * 87, 963, 28, 28);
+
+  if (mac) {
+    // Frosted macOS Dock at bottom center with squircle app icons and active dots.
+    c.fillStyle = '#0e1d2dcc';
+    c.fillRect(464, 1178, 1120, 78);
+    c.strokeStyle = '#79a8c255';
+    c.lineWidth = 2;
+    c.strokeRect(464, 1178, 1120, 78);
+    const appColors = [
+      '#4da6ff',
+      '#65d46e',
+      '#f5a623',
+      '#79bfcc',
+      '#a389d4',
+      '#e86c52',
+      '#58b9d1',
+      '#8fa7ca',
+      '#c7b283',
+      '#6897bb',
+    ];
+    for (let i = 0; i < 10; i++) {
+      const ix = 506 + i * 104;
+      c.fillStyle = appColors[i];
+      c.fillRect(ix, 1193, 46, 46);
+      c.strokeStyle = '#ffffff44';
+      c.lineWidth = 1.5;
+      c.strokeRect(ix, 1193, 46, 46);
+      if (i < 3 || i === 5) {
+        c.fillStyle = '#d8eef5';
+        c.beginPath();
+        c.arc(ix + 23, 1248, 3, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+  } else {
+    // Full-width Windows 11 translucent taskbar with centered app bar and right system tray.
+    c.fillStyle = '#09131ee0';
+    c.fillRect(0, 1212, 2048, 68);
+    c.strokeStyle = '#4e7c9644';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(0, 1212);
+    c.lineTo(2048, 1212);
+    c.stroke();
+    const winColors = [
+      '#38b2f6',
+      '#6cc4d8',
+      '#8499b8',
+      '#52c788',
+      '#e29849',
+      '#9b82cf',
+      '#63b0be',
+    ];
+    for (let i = 0; i < 7; i++) {
+      const ix = 768 + i * 76;
+      c.fillStyle = winColors[i];
+      c.fillRect(ix, 1228, 36, 36);
+    }
+    c.fillStyle = '#bfd4e0';
+    c.font = '500 18px "Segoe UI", Arial, sans-serif';
+    c.textAlign = 'right';
+    c.fillText('ENG   Wi-Fi   🔊   14:41', 2012, 1252);
   }
+
   const texture = new T.CanvasTexture(canvas);
   texture.colorSpace = T.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
   return texture;
 }
 
@@ -94,6 +167,14 @@ export function buildNotebookDisplay(
     screenZ = mac ? -2.3 : -4;
   const cover = new T.Group();
   cover.add(plate(w, d, 1.3, mac ? 8 : 5, spec.shell));
+  if (!mac) {
+    // Signature Lenovo Legion top camera reverse-notch lip on the lid exterior.
+    put(cover, slab([92, 1.3, 3.2], spec.shell, 0.35, 1.2), [
+      0,
+      -0.65,
+      -d / 2 - 1.1,
+    ]);
+  }
   for (const x of [-1, 1])
     put(cover, slab([1.2, spec.lid - 1.3, d - 8], spec.shell, 0.6), [
       x * (w / 2 - 0.6),
@@ -159,11 +240,19 @@ export function buildNotebookDisplay(
   const panel = new T.Group();
   put(
     panel,
-    plate(w - 1.7, d - 1.7, 0.7, mac ? 7 : 4, '#121923', [
+    plate(w - 1.7, d - 1.7, 0.7, mac ? 7 : 4, '#11161f', [
       { x: 0, z: screenZ, w: screenW, d: screenD, r: mac ? 4 : 1 },
     ]),
     [0, 0.2, 0],
   );
+  if (!mac) {
+    // Legion top bezel reverse-notch camera tab.
+    put(panel, slab([90, 0.7, 3.0], '#11161f', 0.15, 1.0), [
+      0,
+      0.2,
+      -d / 2 - 0.8,
+    ]);
+  }
   const screen: T.Mesh<T.BufferGeometry, T.Material> = plate(
     screenW,
     screenD,
@@ -224,22 +313,31 @@ export function buildNotebookDisplay(
   const camera = new T.Group();
   put(
     camera,
-    slab([mac ? 29.5 : 22, 0.6, mac ? 6.6 : 4.5], '#090f16', 0),
+    slab([mac ? 29.5 : 26, 0.6, mac ? 6.6 : 4.8], '#090f16', 0.1, 0.8),
     [0, 0, 0],
   );
   put(
     camera,
     new T.Mesh(
-      new T.CylinderGeometry(mm(1.2), mm(1.2), mm(0.3), 20),
-      tools.material('#2c5069', 0.6),
+      new T.CylinderGeometry(mm(1.35), mm(1.35), mm(0.35), 24),
+      tools.material('#2f5a78', 0.7, 0.2),
     ),
     [0, 0.45, 0],
   );
-  for (const x of [-8, 8])
+  // Camera indicator LED & dual array microphones.
+  put(
+    camera,
+    new T.Mesh(
+      new T.CylinderGeometry(mm(0.45), mm(0.45), mm(0.38), 14),
+      new T.MeshBasicMaterial({ color: '#45d46b' }),
+    ),
+    [4.6, 0.45, 0],
+  );
+  for (const x of [-9, 9])
     put(
       camera,
       new T.Mesh(
-        new T.CylinderGeometry(mm(0.55), mm(0.55), mm(0.2), 12),
+        new T.CylinderGeometry(mm(0.55), mm(0.55), mm(0.25), 12),
         tools.material('#182b3a', 0.3),
       ),
       [x, 0.4, 0],

@@ -4,6 +4,7 @@ import * as T from 'three';
 import { buildModel, refreshBatches, type Piece } from '../lib/models.ts';
 import { byId, isLevelRoot, manifest } from '../lib/manifest.ts';
 import { resolvePick, resolvePickNear } from '../lib/picking.ts';
+import { accelerateRaycasts } from '../lib/raycast-acceleration.ts';
 import { levelIds } from '../lib/levels.ts';
 import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
@@ -41,6 +42,11 @@ after(() => {
 });
 
 const models = new Map(levelIds.map((level) => [level, buildModel(level)]));
+// Built here, while the canvas stub above is installed, so the test may pose
+// and accelerate them without disturbing the shared models.
+const unaccelerated = (['card', 'legion', 'macbook'] as const).map(
+  (level) => [level, buildModel(level)] as const,
+);
 
 await test('pose caching preserves disassembly, layout, visibility and dive cancellation', () => {
   for (const level of ['card', 'legion', 'macbook'] as const) {
@@ -122,6 +128,65 @@ await test('local geometry boxes preserve precise raycast results through assemb
         for (const [g, box] of boxes) g.boundingBox = box;
       }
     }
+  }
+});
+
+await test('bounds trees return the same intersections as the triangle scan and leave geometry untouched', () => {
+  for (const [level, model] of unaccelerated) {
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const rays: T.Raycaster[] = [];
+    for (const piece of model.pieces.slice(0, 12)) {
+      const target = piece.base.clone().add(piece.center);
+      for (const from of [
+        new T.Vector3(0, 30, 0),
+        new T.Vector3(14, 9, 18),
+        new T.Vector3(-16, 4, -11),
+      ])
+        rays.push(
+          new T.Raycaster(
+            target.clone().add(from),
+            from.clone().negate().normalize(),
+          ),
+        );
+    }
+    const hits = () =>
+      rays.map((ray) =>
+        ray
+          .intersectObject(model.root, true)
+          .map(
+            (h) => `${h.object.uuid}:${h.instanceId}:${h.distance.toFixed(6)}`,
+          )
+          .join('|'),
+      );
+    const before = [0, 1].map((amount) => {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      return hits();
+    });
+    const indices = new Map<T.BufferGeometry, ArrayLike<number> | undefined>();
+    model.root.traverse((o) => {
+      if (o instanceof T.Mesh) indices.set(o.geometry, o.geometry.index?.array);
+    });
+    const copies = new Map(
+      [...indices].map(([g, a]) => [g, a && Array.from(a)]),
+    );
+    accelerateRaycasts(model.root);
+    let trees = 0;
+    for (const g of indices.keys()) if (g.boundsTree) trees++;
+    assert.ok(trees > 0, `${level} built no bounds trees`);
+    [0, 1].forEach((amount, i) => {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      assert.deepEqual(hits(), before[i], `${level} at ${amount}`);
+    });
+    for (const [g, copy] of copies)
+      if (copy)
+        assert.deepEqual(
+          Array.from(g.index!.array),
+          copy,
+          'bounds tree reordered a GPU index buffer',
+        );
   }
 });
 

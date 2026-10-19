@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { buildModel, type Piece } from './models';
 import { resolvePickNear } from './picking.ts';
+import { scheduleRaycastAcceleration } from './raycast-acceleration.ts';
 import { tapIntent } from './pointer-intent.ts';
 import {
   labelSignature,
@@ -101,7 +102,10 @@ export function createViewer(
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
   const stageScratch = new ModelStageScratch();
-  let poses = new ModelPoseCache(model, state.level);
+  let poses = new ModelPoseCache(model, state.level),
+    cancelAcceleration = scheduleRaycastAcceleration(model.root);
+  /** The view the pointer was last resolved against. */
+  const hoverView = new T.Matrix4();
   let fitDirty = true,
     colorsDirty = true,
     hoverPending = false;
@@ -127,6 +131,7 @@ export function createViewer(
     );
   }
   function disposeModel() {
+    cancelAcceleration();
     disposeModelResources(model);
     scene.remove(model.root);
   }
@@ -395,12 +400,17 @@ export function createViewer(
       changed ||= camera.position.distanceToSquared(targetPosition) > 0.00001;
     }
     controls.update();
+    camera.updateMatrixWorld();
     model.root.updateMatrixWorld(true);
-    // Keep names attached to the part under the cursor as the assembly moves.
+    // Keep names attached to the part under the cursor as the assembly or the
+    // view moves. Spinning fans and airflow alone do not move what is under
+    // it, and re-picking on their frames cost several rays per frame.
+    const viewChanged = !hoverView.equals(camera.matrixWorld);
+    hoverView.copy(camera.matrixWorld);
     if (
       pointerPosition &&
       activePointer === null &&
-      (hoverPending || changed || poseChanged)
+      (hoverPending || poseChanged || viewChanged)
     ) {
       updateHover(pointerPosition);
       hoverPending = false;
@@ -605,6 +615,7 @@ export function createViewer(
         disposeModel();
         model = buildModel(next.level);
         poses = new ModelPoseCache(model, next.level);
+        cancelAcceleration = scheduleRaycastAcceleration(model.root);
         collectAnimations();
         // New pieces, so the cached packing belongs to objects that no longer
         // exist. Returning to a scale would otherwise leave every part of it

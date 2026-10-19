@@ -15,6 +15,13 @@ are coalesced into the render loop, and unchanged tooltip values retain React
 state identity. Local geometry bounding boxes enable Three.js's existing early
 ray rejection; they do not replace precise triangle picking or its glass policy.
 
+Hover re-picks only when the pointer, the pose or the camera view changes, not
+on frames where only fans or airflow move. `raycast-acceleration.ts` builds a
+`three-mesh-bvh` bounds tree for each geometry of 1000+ triangles in idle time
+after a model is on screen, and returns a cancel that model disposal must call.
+Trees are built in indirect mode, so GPU index buffers are never reordered, and
+they return the same intersections as the triangle scan they replace.
+
 The shared scheduler keeps two extra frames after input. Continuing animation
 and OrbitControls change events keep it awake as needed; hidden rotors do not.
 Do not add fixed multi-second frame budgets to work around missing invalidation.
@@ -281,6 +288,7 @@ subsystems stop touching.
 | `lib/comparison-state.ts` | Category-specific comparison schemas, metadata-driven model discovery, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
+| `lib/raycast-acceleration.ts` | Idle-time bounds trees for heavy geometry, behind three.js's own sphere and box rejection. Picks are unchanged; only unreachable triangles are skipped. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
 | `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
 | `app/comparison-workbench.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx` | Comparison composition and controls, the React-to-Three bridge, and the responsive specification sheet. |
@@ -292,7 +300,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 108 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 113 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |

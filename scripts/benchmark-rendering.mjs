@@ -23,6 +23,7 @@ Reflect.set(globalThis, 'document', {
   }),
 });
 const stage = await import('../lib/model-stage.ts');
+const { accelerateRaycasts } = await import('../lib/raycast-acceleration.ts');
 const baseline = process.argv.includes('--baseline');
 const median = (values) =>
   values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
@@ -64,6 +65,10 @@ for (const level of ['pc', 'card', 'legion', 'macbook']) {
     model.root.traverse((o) => {
       if (o instanceof T.Mesh) o.geometry.boundingBox = null;
     });
+  // The viewers build these in idle time after the first frame.
+  const treeStart = performance.now();
+  if (!baseline) accelerateRaycasts(model.root);
+  const treeMs = Math.round(performance.now() - treeStart);
   const raycaster = new T.Raycaster();
   const raycastMs = measure((i) => {
     raycaster.set(
@@ -77,6 +82,7 @@ for (const level of ['pc', 'card', 'legion', 'macbook']) {
       level,
       pieces: model.pieces.length,
       buildMs: Math.round(buildMs),
+      treeMs,
       idlePoseMs,
       movingPoseMs,
       raycastMs,

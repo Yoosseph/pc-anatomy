@@ -19,6 +19,7 @@ import {
 } from './model-stage.ts';
 import { buildModel, type Piece } from './models.ts';
 import { resolvePickNear } from './picking.ts';
+import { scheduleRaycastAcceleration } from './raycast-acceleration.ts';
 import {
   animateObjects,
   collectAnimatedObjects,
@@ -44,6 +45,7 @@ type PaneModel = {
   model: BuiltModel;
   layoutSignature: string;
   poses: ModelPoseCache;
+  cancelAcceleration: () => void;
 };
 
 export function createComparisonViewer(
@@ -67,6 +69,7 @@ export function createComparisonViewer(
       model,
       layoutSignature: '',
       poses: new ModelPoseCache(model, level),
+      cancelAcceleration: scheduleRaycastAcceleration(model.root),
     };
   };
   let state = initial,
@@ -96,6 +99,8 @@ export function createComparisonViewer(
     stageScratch = new ModelStageScratch();
   let fitDirty = true,
     hoverPending = false;
+  /** The view the pointer was last resolved against. */
+  const hoverView = new T.Matrix4();
   let animated: T.Object3D[] = [];
 
   function collectAnimations() {
@@ -241,10 +246,13 @@ export function createComparisonViewer(
     host.dataset.explode = String(Math.round(amount * 100));
     host.dataset.mode = split ? 'split' : state.activeSide;
 
+    // Rotors alone do not move what is under the pointer; see scene.ts.
+    const viewChanged = !hoverView.equals(camera.matrixWorld);
+    hoverView.copy(camera.matrixWorld);
     if (
       pointerPosition &&
       activePointer === null &&
-      (hoverPending || changed)
+      (hoverPending || leftChanged || rightChanged || viewChanged)
     ) {
       updateHover(pointerPosition);
       hoverPending = false;
@@ -372,6 +380,7 @@ export function createComparisonViewer(
 
   function replacePane(side: ComparisonSide, level: ComparisonLevel) {
     const previous = panes[side];
+    previous.cancelAcceleration();
     scene.remove(previous.model.root);
     disposeModelResources(previous.model);
     panes[side] = makePane(level);
@@ -407,6 +416,7 @@ export function createComparisonViewer(
       canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('pointercancel', leave);
       for (const pane of Object.values(panes)) {
+        pane.cancelAcceleration();
         scene.remove(pane.model.root);
         disposeModelResources(pane.model);
       }

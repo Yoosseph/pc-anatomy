@@ -25,6 +25,13 @@ and disassembly behavior. It does not promise a particular frame rate.
   and OrbitControls changes continue waking it. Hidden/collapsed rotors and the
   inactive mobile comparison pane no longer request continuous frames.
 
+- Even with local boxes, a ray entering a merged chassis or board mesh still
+  scanned every triangle in it (the Legion carries about 840k), and a hover miss
+  casts nine rays. Heavy geometries now get a `three-mesh-bvh` bounds tree, built
+  one geometry per idle callback after the model is drawn. Until its tree exists
+  a mesh uses the ordinary scan. Hover also stopped re-picking on frames where
+  only fans or airflow moved; it follows pointer, pose and camera changes.
+
 ## Measurements
 
 Local Windows/Node CPU microbenchmark, median of seven batches of 81 downward
@@ -37,6 +44,21 @@ before editing the renderer; after used the same script and machine.
 | RTX 5090 | 0.5223 | 0.1708 | 67% |
 | Legion | 8.5013 | 6.1958 | 27% |
 | MacBook | 4.4790 | 4.1793 | 7% |
+
+Bounds trees, same script and machine, per ray (the table above is also per ray):
+
+| Model | Local boxes (ms) | Bounds trees (ms) | Reduction | Tree build (ms) |
+| --- | ---: | ---: | ---: | ---: |
+| Desktop PC | 2.7302 | 0.1667 | 94% | 141 |
+| RTX 5090 | 0.1708 | 0.0396 | 77% | 11 |
+| Legion | 6.1958 | 0.2185 | 96% | 165 |
+| MacBook | 4.1793 | 0.1513 | 96% | 103 |
+
+Over 400 angled rays per model, assembled and laid out, the trees returned the
+same part, hit count and nearest distance as the scan, and the test suite checks
+every intersection. Tree build is idle-time work, not part of model construction;
+the largest single geometry took about 70 ms. The library adds about 16 KB gzipped
+to the lazily loaded engine chunk and nothing to the entry chunk.
 
 Unchanged pose updates measured below 0.0001 ms for the desktop/GPU and around
 0.0001 ms for notebooks, versus 0.0015–0.0492 ms before. More importantly, their

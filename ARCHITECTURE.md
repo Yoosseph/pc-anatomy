@@ -22,6 +22,25 @@ after a model is on screen, and returns a cancel that model disposal must call.
 Trees are built in indirect mode, so GPU index buffers are never reordered, and
 they return the same intersections as the triangle scan they replace.
 
+Switching systems is mostly not rebuilding. Both viewers park the model they
+leave on a `createModelShelf` (two parked on desktop, one on touch devices) and
+take it back on return, so only a first visit builds. `exchange` takes before it
+parks; parking first evicts the model being returned to. A reused model is
+re-laid-out, re-posed and re-coloured by the usual refresh path.
+
+`geometry-cache.ts` shares measurement-only geometry (rounded boxes, perforated
+panels, notebook plates) across builds, and the surface and grain textures are
+shared the same way. These are marked shared, and `disposeModelResources` skips
+them. Nothing may mutate a geometry after construction: copy it first, as the
+notebook screen does before remapping its UVs. The merge step copies into a
+plain `BufferGeometry`, because `clone()` on a `RoundedBoxGeometry` builds a
+whole default box first.
+
+The explorer keeps a freshly built model hidden while `compileAsync` compiles
+the stage's shaders in parallel, including the render-target variants the glass
+panel's transmission pass needs. Compile the whole scene with the model visible:
+the model's point lights are part of every program key.
+
 The shared scheduler keeps two extra frames after input. Continuing animation
 and OrbitControls change events keep it awake as needed; hidden rotors do not.
 Do not add fixed multi-second frame budgets to work around missing invalidation.

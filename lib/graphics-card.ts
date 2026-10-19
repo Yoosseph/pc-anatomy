@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { roundedBox } from './geometry-cache.ts';
 import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import type { Finisher } from './materials.ts';
@@ -240,11 +240,7 @@ export function buildCardCooler(
     R = CARD.fanRadius * L;
   const slab = (size: Vec3, mat: T.Material, radius = L * 0.004) =>
     new T.Mesh(
-      new RoundedBoxGeometry(
-        ...size,
-        2,
-        Math.min(radius, Math.min(...size) * 0.45),
-      ),
+      roundedBox(...size, 2, Math.min(radius, Math.min(...size) * 0.45)),
       mat,
     );
   const put = (parent: T.Group, obj: T.Object3D, pos: Vec3) => {

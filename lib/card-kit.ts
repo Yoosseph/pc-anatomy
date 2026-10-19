@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { roundedBox } from './geometry-cache.ts';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ModelTools } from './hardware.ts';
 import type { Piece } from './models.ts';
@@ -89,7 +89,7 @@ export function cardKit(tools: ModelTools) {
     radius = 0.8,
   ) =>
     new T.Mesh(
-      new RoundedBoxGeometry(
+      roundedBox(
         m(w),
         m(h),
         m(d),

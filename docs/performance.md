@@ -99,12 +99,47 @@ reference screenshots. Real touch/pinch and a real-device GPU matrix are not
 covered. The CPU benchmark's optional `--baseline` disables pose caching and
 all local boxes as a synthetic comparison; it is not an exact historical build.
 
+## System switching and first load
+
+Browser profiles of a swap from the system picker split the time between
+building the model on the main thread and compiling its shaders on first draw.
+Four changes address it, none of them reducing detail:
+
+- Previously visited systems are parked instead of disposed and come back
+  without rebuilding or recompiling.
+- Rounded boxes, perforations, notebook plates and surface textures are shared
+  across builds. A hidden `clone()` in the merge step generated a throwaway
+  default `RoundedBoxGeometry` for every rounded part, which was the largest
+  single cost of a notebook build.
+- A new model's shaders compile in parallel through `compileAsync` before it is
+  shown. Before, three.js compiled and waited for each of the desktop's
+  programs in turn during the first frame.
+- That precompile also covers the glass transmission pass's variants. Without
+  them, 30 of the desktop's programs were still compiled one by one in the
+  first frame.
+
+`scripts/swap-timing.mjs` clicks the picker and times click to first drawn
+frame, by default on the machine's GPU. Production builds, headless Edge, RTX
+3070 Laptop GPU, three runs each:
+
+| | Before | After |
+| --- | ---: | ---: |
+| Page load to desktop drawn | 3.5–8.5 s | 4.2–4.3 s |
+| Desktop → Legion, first visit | 1.85–1.90 s | 0.90–0.95 s |
+| Legion → MacBook, first visit | 0.81–0.89 s | 0.26–0.29 s |
+| Any return to a visited system | 0.78–1.86 s | 9–23 ms |
+
+The one fast "before" load probably hit a driver shader cache. Node build times
+(warm) went from about 1.5 s to 0.3 s for the desktop, 0.96 s to 0.35 s for the
+Legion and 0.51 s to 0.14 s for the MacBook.
+
 ## Remaining costs
 
-Procedural model construction is synchronous and still substantial (roughly
-0.2–1.8 seconds for these four models in the CPU-only samples). Detailed nested
-assemblies, geometry merging, generated textures, shader compilation, shadows
-and continuous visible animations remain potential sources of load. This pass
-does not remove model detail or lower quality to hide those costs. A subsequent
-startup or GPU-focused change should profile those separately on real hardware;
-the CPU raycast improvements should not be presented as solving GPU-bound lag.
+A first visit still builds the model synchronously, roughly 0.2–0.6 s in the
+browser, and six shadow-depth programs still compile in the first frame. The
+comparison viewer parks models but does not precompile shaders, because it
+toggles pane visibility itself. Parked models keep their GPU buffers (about
+40–80 MB per full system); the shelf limit bounds that. Detailed nested
+assemblies, shadows, the transmission pass and continuous animations remain
+GPU costs; this pass does not lower quality to hide them, and the CPU
+improvements should not be presented as solving GPU-bound lag.

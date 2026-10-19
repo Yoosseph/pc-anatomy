@@ -9,6 +9,8 @@ import { byId } from './manifest.ts';
 import { isPhysical } from './levels.ts';
 import {
   ModelPoseCache,
+  createModelShelf,
+  shelfLimit,
   settledAmount,
   commonModelBounds,
   disposeModelResources,
@@ -58,8 +60,11 @@ export function createComparisonViewer(
   renderer.autoClear = false;
   renderer.info.autoReset = false;
 
-  const makePane = (level: ComparisonLevel): PaneModel => {
-    const model = buildModel(level);
+  const shelf = createModelShelf(shelfLimit());
+  const makePane = (
+    level: ComparisonLevel,
+    model = buildModel(level),
+  ): PaneModel => {
     model.root.traverse((object) => {
       if (object.userData.airflowTick) object.visible = false;
     });
@@ -382,8 +387,8 @@ export function createComparisonViewer(
     const previous = panes[side];
     previous.cancelAcceleration();
     scene.remove(previous.model.root);
-    disposeModelResources(previous.model);
-    panes[side] = makePane(level);
+    const parked = shelf.exchange(level, previous.level, previous.model);
+    panes[side] = parked ? makePane(level, parked) : makePane(level);
   }
 
   return {
@@ -420,6 +425,7 @@ export function createComparisonViewer(
         scene.remove(pane.model.root);
         disposeModelResources(pane.model);
       }
+      shelf.dispose();
       runtime.dispose();
     },
   };

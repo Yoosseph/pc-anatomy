@@ -8,9 +8,13 @@ import { accelerateRaycasts } from '../lib/raycast-acceleration.ts';
 import { levelIds } from '../lib/levels.ts';
 import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
+import { roundedBox } from '../lib/geometry-cache.ts';
+import { surfaceTexture } from '../lib/surfaces.ts';
 import {
   ModelPoseCache,
   ModelStageScratch,
+  createModelShelf,
+  disposeModelResources,
   applyPiecePose,
   prepareModelInventory,
   settledAmount,
@@ -46,6 +50,13 @@ const models = new Map(levelIds.map((level) => [level, buildModel(level)]));
 // and accelerate them without disturbing the shared models.
 const unaccelerated = (['card', 'legion', 'macbook'] as const).map(
   (level) => [level, buildModel(level)] as const,
+);
+// Second builds draw on geometry and textures cached by the first.
+const rebuilt = new Map(
+  (['pc', 'card', 'legion', 'macbook'] as const).map((level) => [
+    level,
+    buildModel(level),
+  ]),
 );
 
 await test('pose caching preserves disassembly, layout, visibility and dive cancellation', () => {
@@ -188,6 +199,85 @@ await test('bounds trees return the same intersections as the triangle scan and 
           'bounds tree reordered a GPU index buffer',
         );
   }
+});
+
+await test('a rebuild that reuses shared geometry produces the same model', () => {
+  const fingerprint = (model: { root: T.Object3D; pieces: Piece[] }) => {
+    model.root.updateMatrixWorld(true);
+    const meshes: string[] = [];
+    model.root.traverse((o) => {
+      if (!(o instanceof T.Mesh)) return;
+      const g = o.geometry;
+      if (!g.boundingBox) g.computeBoundingBox();
+      const uv = g.getAttribute('uv');
+      let uvSum = 0;
+      for (let i = 0; uv && i < uv.count; i++) uvSum += uv.getX(i) + uv.getY(i);
+      meshes.push(
+        [
+          g.getAttribute('position').count,
+          g.index?.count ?? 0,
+          g.boundingBox!.min.toArray().map((n: number) => n.toFixed(5)),
+          g.boundingBox!.max.toArray().map((n: number) => n.toFixed(5)),
+          uvSum.toFixed(3),
+          o.matrixWorld.elements.map((n) => n.toFixed(5)),
+        ].join(';'),
+      );
+    });
+    return [model.pieces.map((p) => p.key).join(','), ...meshes];
+  };
+  for (const [level, model] of rebuilt)
+    assert.deepEqual(
+      fingerprint(model),
+      fingerprint(models.get(level)!),
+      level,
+    );
+});
+
+await test('disposing a model frees its own resources but not shared ones', () => {
+  const freed = new Set<object>();
+  const watch = <R extends T.EventDispatcher<{ dispose: object }>>(r: R) => {
+    r.addEventListener('dispose', () => freed.add(r));
+    return r;
+  };
+  const shared = watch(roundedBox(1, 1, 1, 2, 0.1));
+  const surface = watch(surfaceTexture('brushed'));
+  const own = watch(new T.BoxGeometry());
+  const material = watch(new T.MeshStandardMaterial({ bumpMap: surface }));
+  const root = new T.Group();
+  root.add(new T.Mesh(shared, material), new T.Mesh(own, material));
+  disposeModelResources({ root, pieces: [] });
+  assert.ok(freed.has(own) && freed.has(material));
+  assert.ok(!freed.has(shared), 'shared geometry was disposed');
+  assert.ok(!freed.has(surface), 'shared texture was disposed');
+});
+
+await test('the model shelf returns parked models and disposes only evictions', () => {
+  const freed: string[] = [];
+  const model = (name: string) => {
+    const geometry = new T.BoxGeometry();
+    geometry.addEventListener('dispose', () => freed.push(name));
+    const root = new T.Group();
+    root.add(new T.Mesh(geometry, new T.MeshBasicMaterial()));
+    return { root, pieces: [] };
+  };
+  const shelf = createModelShelf(2);
+  const pc = model('pc'),
+    legion = model('legion'),
+    macbook = model('macbook');
+  // Desktop → Legion → MacBook → Desktop → Legion, with two parked at most.
+  assert.equal(shelf.exchange('legion', 'pc', pc), undefined);
+  assert.equal(shelf.exchange('macbook', 'legion', legion), undefined);
+  assert.equal(
+    shelf.exchange('pc', 'macbook', macbook),
+    pc,
+    'returning to the oldest parked model must not evict it first',
+  );
+  assert.equal(shelf.exchange('legion', 'pc', pc), legion);
+  assert.deepEqual(freed, [], 'three systems fit: current plus two parked');
+  assert.equal(shelf.exchange('card', 'legion', legion), undefined);
+  assert.deepEqual(freed, ['macbook'], 'the least recently left is evicted');
+  shelf.dispose();
+  assert.deepEqual(freed, ['macbook', 'pc', 'legion']);
 });
 
 await test('installed motherboard and GPU retain their full inspection geometry and parent picking identity', () => {

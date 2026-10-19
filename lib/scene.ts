@@ -16,6 +16,8 @@ import { isPhysical, levels } from './levels.ts';
 import { smoothstep } from './layout';
 import {
   ModelPoseCache,
+  createModelShelf,
+  shelfLimit,
   settledAmount,
   disposeModelResources,
   laidOutAmount,
@@ -59,6 +61,17 @@ export type SceneCallbacks = {
 /** How far laid out the parts must be before they are named. */
 const LABELS_FROM = 0.97;
 
+function hasTransmission(root: T.Object3D) {
+  let found = false;
+  root.traverse((object) => {
+    if (!(object instanceof T.Mesh)) return;
+    for (const material of [object.material].flat())
+      if (material instanceof T.MeshPhysicalMaterial && material.transmission)
+        found = true;
+  });
+  return found;
+}
+
 export function createViewer(
   host: HTMLDivElement,
   initial: ExplorerState,
@@ -93,6 +106,7 @@ export function createViewer(
   selectedBox.visible = false;
   hoverBox.visible = false;
   scene.add(selectedBox, hoverBox);
+  revealWhenCompiled(model.root);
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
     bounds = new T.Box3(),
@@ -106,6 +120,7 @@ export function createViewer(
     cancelAcceleration = scheduleRaycastAcceleration(model.root);
   /** The view the pointer was last resolved against. */
   const hoverView = new T.Matrix4();
+  const shelf = createModelShelf(shelfLimit());
   let fitDirty = true,
     colorsDirty = true,
     hoverPending = false;
@@ -295,10 +310,51 @@ export function createViewer(
     });
   };
   collectAnimations();
+  /**
+   * Keep a newly built model off the stage until its shaders are ready.
+   *
+   * Drawing a model compiles each new shader on first use and waits for it
+   * before compiling the next: about two thirds of a second the first time a
+   * notebook appeared, on top of building it. `compileAsync` hands them all
+   * to the driver at once and lets the main thread go while they compile. A
+   * parked model comes back with its programs still compiled and skips this.
+   *
+   * Transmissive glass makes three.js draw every opaque part a second time
+   * into a render target, with its own untone-mapped shader variants that
+   * `compileAsync` never sees. On the desktop those were 30 of its 47 programs
+   * and over five seconds of the first frame, so they are compiled here too,
+   * by compiling again with a render target bound.
+   */
+  function revealWhenCompiled(root: T.Object3D) {
+    // Compile the whole stage, with the model on it and visible: its own point
+    // lights are part of every shader's key. A hidden model's lights are not
+    // counted, and compiling it as a separate object counts them twice.
+    // Materials that already have programs cost a cache lookup.
+    const compiling = [renderer.compileAsync(scene, camera)];
+    if (hasTransmission(root)) {
+      const target = new T.WebGLRenderTarget(1, 1);
+      const previous = renderer.getRenderTarget();
+      renderer.setRenderTarget(target);
+      compiling.push(renderer.compileAsync(scene, camera));
+      renderer.setRenderTarget(previous);
+      target.dispose();
+    }
+    root.visible = false;
+    const reveal = () => {
+      clearTimeout(fallback);
+      root.visible = true;
+      loop.wake();
+    };
+    // Never leave a model hidden: past this, drawing it compiles what is left,
+    // as it always used to.
+    const fallback = setTimeout(reveal, 5000);
+    Promise.all(compiling).then(reveal, reveal);
+  }
   function render(seconds: number, dt: number, reducedMotion: boolean) {
     amount = settledAmount(amount, state.explode / 100, dt, reducedMotion);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
-    if (dive) {
+    // A dive into a model still compiling waits for it to appear.
+    if (dive && model.root.visible) {
       dive.t = reducedMotion
         ? 1
         : Math.min(
@@ -423,6 +479,7 @@ export function createViewer(
     host.dataset.transitioning = String(!!dive);
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
+    host.dataset.programs = String(renderer.info.programs?.length ?? 0);
     host.dataset.explode = String(Math.round(amount * 100));
     return changed || colorsDirty;
   }
@@ -493,6 +550,7 @@ export function createViewer(
   const observer = new ResizeObserver(resize);
   observer.observe(host);
   function hit(e: { clientX: number; clientY: number }, radius = 0) {
+    if (!model.root.visible) return null;
     const rect = renderer.domElement.getBoundingClientRect();
     const cast = (dx: number, dy: number) => {
       pointer.set(
@@ -612,16 +670,20 @@ export function createViewer(
       if (next.diveRevision !== state.diveRevision && next.diveInto)
         dive = { concept: next.diveInto, t: 0, phase: 'out' };
       if (next.level !== state.level) {
-        disposeModel();
-        model = buildModel(next.level);
+        cancelAcceleration();
+        scene.remove(model.root);
+        const parked = shelf.exchange(next.level, state.level, model);
+        model = parked ?? buildModel(next.level);
         poses = new ModelPoseCache(model, next.level);
         cancelAcceleration = scheduleRaycastAcceleration(model.root);
         collectAnimations();
-        // New pieces, so the cached packing belongs to objects that no longer
-        // exist. Returning to a scale would otherwise leave every part of it
-        // with an inventory position of zero, in a heap at the origin.
+        // Different pieces, so the cached packing belongs to another model. A
+        // fresh build would otherwise keep every part at an inventory position
+        // of zero, in a heap at the origin, and a parked one would keep the
+        // shelves it was packed for at whatever size the window was then.
         layoutSignature = '';
         scene.add(model.root);
+        if (!parked) revealWhenCompiled(model.root);
         amount = next.explode / 100;
         hovered = null;
         // Arrive close in, so the deeper scale opens out of the part you
@@ -652,6 +714,7 @@ export function createViewer(
       canvas.removeEventListener('pointercancel', leave);
       canvas.removeEventListener('contextmenu', inspect);
       disposeModel();
+      shelf.dispose();
       selectedBox.geometry.dispose();
       (selectedBox.material as T.Material).dispose();
       hoverBox.geometry.dispose();

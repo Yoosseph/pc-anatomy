@@ -7,6 +7,13 @@ import { resolvePick, resolvePickNear } from '../lib/picking.ts';
 import { levelIds } from '../lib/levels.ts';
 import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
+import {
+  ModelPoseCache,
+  ModelStageScratch,
+  applyPiecePose,
+  prepareModelInventory,
+  settledAmount,
+} from '../lib/model-stage.ts';
 
 // Geometry tests need the canvas texture API, but not a WebGL context. Browser
 // visual checks cover the real textures; this stub only records valid dimensions.
@@ -34,6 +41,89 @@ after(() => {
 });
 
 const models = new Map(levelIds.map((level) => [level, buildModel(level)]));
+
+await test('pose caching preserves disassembly, layout, visibility and dive cancellation', () => {
+  for (const level of ['card', 'legion', 'macbook'] as const) {
+    const model = buildModel(level);
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const scratch = new ModelStageScratch();
+    for (const amount of [0, 0.3, 0.8, 1, 0]) {
+      assert.equal(cache.update(amount), true);
+      const matrices = model.pieces.map((p) => {
+        p.object.updateMatrix();
+        return p.object.matrix.clone();
+      });
+      model.pieces.forEach((p, i) => {
+        applyPiecePose(p, level, amount, scratch);
+        p.object.updateMatrix();
+        assert.ok(p.object.matrix.equals(matrices[i]), `${level}: ${p.key}`);
+      });
+      const batch = model.pieces.find((p) => p.batch)?.batch;
+      const version = batch?.instanceMatrix.version;
+      assert.equal(cache.update(amount), false);
+      assert.equal(
+        batch?.instanceMatrix.version,
+        version,
+        'idle frame uploaded instance matrices',
+      );
+    }
+    const piece = model.pieces[0];
+    piece.visible = false;
+    cache.invalidate();
+    assert.equal(cache.update(0), true);
+    assert.equal(piece.object.scale.x, 0);
+    piece.visible = true;
+    cache.invalidate();
+    cache.update(1);
+    prepareModelInventory(model, level, 0.6);
+    cache.invalidate();
+    assert.equal(
+      cache.update(1),
+      true,
+      'resizing must apply the new inventory',
+    );
+    cache.update(0, () => 0.25);
+    assert.equal(piece.object.scale.x, 0.25);
+    assert.equal(cache.update(0), true);
+    assert.equal(
+      piece.object.scale.x,
+      1,
+      'cancelled dive left the model shrunk',
+    );
+    assert.equal(settledAmount(0.99999, 1, 0.016, false), 1);
+    assert.equal(settledAmount(0, 1, 0.016, true), 1);
+  }
+});
+
+await test('local geometry boxes preserve precise raycast results through assembled and inventory poses', () => {
+  for (const level of ['card', 'legion', 'macbook'] as const) {
+    const model = buildModel(level);
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const geometries = new Set<T.BufferGeometry>();
+    model.root.traverse((o) => {
+      if (o instanceof T.Mesh) geometries.add(o.geometry);
+    });
+    const boxes = new Map([...geometries].map((g) => [g, g.boundingBox]));
+    assert.ok([...boxes.values()].every(Boolean));
+    for (const amount of [0, 1]) {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      for (const piece of model.pieces.slice(0, 8)) {
+        const origin = piece.object.position
+          .clone()
+          .add(new T.Vector3(0, 30, 0));
+        const ray = new T.Raycaster(origin, new T.Vector3(0, -1, 0));
+        const before = resolvePick(ray.intersectObject(model.root, true));
+        for (const g of geometries) g.boundingBox = null;
+        const after = resolvePick(ray.intersectObject(model.root, true));
+        assert.equal(before?.key, after?.key, `${level} at ${amount}`);
+        for (const [g, box] of boxes) g.boundingBox = box;
+      }
+    }
+  }
+});
 
 await test('installed motherboard and GPU retain their full inspection geometry and parent picking identity', () => {
   const triangles = (root: T.Object3D) => {

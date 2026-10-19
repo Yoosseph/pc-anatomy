@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { buildModel, refreshBatches, type Piece } from './models';
+import { buildModel, type Piece } from './models';
 import { resolvePickNear } from './picking.ts';
 import { tapIntent } from './pointer-intent.ts';
 import {
@@ -14,7 +14,8 @@ import type { ExplorerState, Selection } from './explorer-state.ts';
 import { isPhysical, levels } from './levels.ts';
 import { smoothstep } from './layout';
 import {
-  applyPiecePose,
+  ModelPoseCache,
+  settledAmount,
   disposeModelResources,
   laidOutAmount,
   piecePosture,
@@ -100,6 +101,11 @@ export function createViewer(
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
   const stageScratch = new ModelStageScratch();
+  let poses = new ModelPoseCache(model, state.level);
+  let fitDirty = true,
+    colorsDirty = true,
+    hoverPending = false;
+  const colorBatches = new Set<T.InstancedMesh>();
   const activeTouches = new Set<number>(),
     selectionBounds = new T.Box3();
   const boundsPieces: Piece[] = [];
@@ -127,6 +133,8 @@ export function createViewer(
   /** Which set of pieces the shelves were last packed for. */
   let layoutSignature = '';
   function refresh() {
+    poses.invalidate();
+    fitDirty = colorsDirty = true;
     configureStageLighting(runtime, state.level);
     const visible = model.pieces.filter(shown);
     // Packing the shelves is the one expensive thing in here, and `refresh`
@@ -159,7 +167,7 @@ export function createViewer(
     host.dataset.componentTypes = String(
       new Set(visible.map((p) => p.concept)).size,
     );
-    loop.wake(90);
+    loop.wake();
     autoCamera = true;
   }
   /**
@@ -283,9 +291,7 @@ export function createViewer(
   };
   collectAnimations();
   function render(seconds: number, dt: number, reducedMotion: boolean) {
-    amount = reducedMotion
-      ? state.explode / 100
-      : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
+    amount = settledAmount(amount, state.explode / 100, dt, reducedMotion);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
     if (dive) {
       dive.t = reducedMotion
@@ -318,22 +324,22 @@ export function createViewer(
     key.shadow.intensity = shadowFade;
     renderer.shadowMap.autoUpdate = shadowFade > 0.002;
 
-    const batches = new Set<T.InstancedMesh>();
+    const poseChanged = poses.update(
+      amount,
+      dive
+        ? (p) =>
+            dive!.phase === 'out'
+              ? p.concept === dive!.concept
+                ? 1
+                : 1 - ease(dive!.t)
+              : ease(dive!.t)
+        : undefined,
+    );
+    colorBatches.clear();
     let selected = false;
     selectedBox.box.makeEmpty();
     for (const p of model.pieces) {
-      // Everything but the part being opened clears away, then the new scale
-      // grows back in. Multiplying the scale keeps explode and reveal intact.
-      let ramp = 1;
-      if (dive)
-        ramp =
-          dive.phase === 'out'
-            ? p.concept === dive.concept
-              ? 1
-              : 1 - ease(dive.t)
-            : ease(dive.t);
-      applyPiecePose(p, state.level, amount, stageScratch, ramp);
-      if (p.batch) {
+      if (p.batch && colorsDirty) {
         color.set(
           matches(p, state.selection)
             ? '#ffd790'
@@ -342,7 +348,7 @@ export function createViewer(
               : '#ffffff',
         );
         p.batch.setColorAt(p.index!, color);
-        batches.add(p.batch);
+        colorBatches.add(p.batch);
       }
       if (matches(p, state.selection) && p.visible) {
         boxFor(p, selectionBounds);
@@ -350,12 +356,14 @@ export function createViewer(
         selected = true;
       }
     }
-    refreshBatches(batches);
+    for (const batch of colorBatches)
+      if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+    colorsDirty = false;
     if (!reducedMotion && animated.length) {
-      animateObjects(animated, seconds);
+      const animating = animateObjects(animated, seconds);
       // Operating parts keep the scene alive. requestAnimationFrame pauses in
       // background tabs, and reduced-motion users receive the static model.
-      changed = true;
+      changed ||= animating;
     }
     // Airflow describes a machine that is closed, so it goes as soon as this
     // one starts to open, and it follows the fans: switch Cooling off and the
@@ -375,7 +383,10 @@ export function createViewer(
     hoverBox.visible = !!hovered && hovered.visible;
     if (hovered) boxFor(hovered, hoverBox.box);
     if (autoCamera) {
-      fit();
+      if (fitDirty) {
+        fit();
+        fitDirty = false;
+      }
       if (dive?.phase === 'in' && dive.t === 0)
         camera.position.copy(targetLook).lerp(targetPosition, 0.5);
       const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
@@ -386,8 +397,14 @@ export function createViewer(
     controls.update();
     model.root.updateMatrixWorld(true);
     // Keep names attached to the part under the cursor as the assembly moves.
-    if (pointerPosition && activePointer === null && changed)
+    if (
+      pointerPosition &&
+      activePointer === null &&
+      (hoverPending || changed || poseChanged)
+    ) {
       updateHover(pointerPosition);
+      hoverPending = false;
+    }
     renderer.render(scene, camera);
     reportLabels();
     host.dataset.cameraSettled = String(
@@ -397,7 +414,7 @@ export function createViewer(
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
     host.dataset.explode = String(Math.round(amount * 100));
-    return changed;
+    return changed || colorsDirty;
   }
   let labelsShown = '';
   const projected = new T.Vector3(),
@@ -492,6 +509,7 @@ export function createViewer(
     dragStart = [e.clientX, e.clientY];
     gestureMoved = false;
     activePointer = e.pointerId;
+    colorsDirty = true;
     hovered = null;
     callbacks.hover(null, 0, 0, false);
   }
@@ -524,7 +542,7 @@ export function createViewer(
       gestureMoved = true;
     pointerPosition = { clientX: e.clientX, clientY: e.clientY };
     if (e.buttons || e.pointerType === 'touch') return;
-    updateHover(e);
+    hoverPending = true;
     wake();
   }
   function inspect(e: MouseEvent) {
@@ -542,6 +560,7 @@ export function createViewer(
   }
   function updateHover(e: { clientX: number; clientY: number }) {
     const p = hit(e, MOUSE_AIM);
+    if (hovered !== p) colorsDirty = true;
     hovered = p;
     renderer.domElement.style.cursor = p ? 'pointer' : 'grab';
     callbacks.hover(
@@ -557,6 +576,8 @@ export function createViewer(
     );
   }
   function leave() {
+    colorsDirty = true;
+    hoverPending = false;
     hovered = null;
     pointerPosition = null;
     activePointer = null;
@@ -583,6 +604,7 @@ export function createViewer(
       if (next.level !== state.level) {
         disposeModel();
         model = buildModel(next.level);
+        poses = new ModelPoseCache(model, next.level);
         collectAnimations();
         // New pieces, so the cached packing belongs to objects that no longer
         // exist. Returning to a scale would otherwise leave every part of it

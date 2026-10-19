@@ -8,7 +8,8 @@ import {
 import { byId } from './manifest.ts';
 import { isPhysical } from './levels.ts';
 import {
-  applyPiecePose,
+  ModelPoseCache,
+  settledAmount,
   commonModelBounds,
   disposeModelResources,
   posedModelBounds,
@@ -16,7 +17,7 @@ import {
   type BuiltModel,
   ModelStageScratch,
 } from './model-stage.ts';
-import { buildModel, refreshBatches, type Piece } from './models.ts';
+import { buildModel, type Piece } from './models.ts';
 import { resolvePickNear } from './picking.ts';
 import {
   animateObjects,
@@ -42,6 +43,7 @@ type PaneModel = {
   level: ComparisonLevel;
   model: BuiltModel;
   layoutSignature: string;
+  poses: ModelPoseCache;
 };
 
 export function createComparisonViewer(
@@ -60,7 +62,12 @@ export function createComparisonViewer(
       if (object.userData.airflowTick) object.visible = false;
     });
     scene.add(model.root);
-    return { level, model, layoutSignature: '' };
+    return {
+      level,
+      model,
+      layoutSignature: '',
+      poses: new ModelPoseCache(model, level),
+    };
   };
   let state = initial,
     panes: Record<ComparisonSide, PaneModel> = {
@@ -86,8 +93,9 @@ export function createComparisonViewer(
     raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
   const activeTouches = new Set<number>(),
-    batches = new Set<T.InstancedMesh>(),
     stageScratch = new ModelStageScratch();
+  let fitDirty = true,
+    hoverPending = false;
   let animated: T.Object3D[] = [];
 
   function collectAnimations() {
@@ -104,6 +112,7 @@ export function createComparisonViewer(
   }
 
   function refreshPane(pane: PaneModel) {
+    pane.poses.invalidate();
     const visible: Piece[] = [];
     for (const piece of pane.model.pieces) {
       piece.visible = piece.reveal === 0 || state.explode / 100 > piece.reveal;
@@ -124,22 +133,19 @@ export function createComparisonViewer(
   }
 
   function refresh() {
+    fitDirty = true;
     const visible = refreshPane(panes.left) + refreshPane(panes.right);
     callbacks.stats(visible);
     host.dataset.pair = `${state.left}:${state.right}`;
     host.dataset.group = state.group;
     host.dataset.visible = String(visible);
-    loop.wake(90);
+    loop.wake();
   }
 
   function posePane(pane: PaneModel) {
-    batches.clear();
-    for (const piece of pane.model.pieces) {
-      applyPiecePose(piece, pane.level, amount, stageScratch);
-      if (piece.batch) batches.add(piece.batch);
-    }
-    refreshBatches(batches);
+    const changed = pane.poses.update(amount);
     pane.model.root.updateMatrixWorld(true);
+    return changed;
   }
 
   function fit() {
@@ -187,26 +193,33 @@ export function createComparisonViewer(
   }
 
   function render(seconds: number, dt: number, reducedMotion: boolean) {
-    amount = reducedMotion
-      ? state.explode / 100
-      : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
+    amount = settledAmount(amount, state.explode / 100, dt, reducedMotion);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
     key.shadow.intensity = isPhysical(state.left)
       ? 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9)
       : 0;
     renderer.shadowMap.autoUpdate = key.shadow.intensity > 0.002;
-    posePane(panes.left);
-    posePane(panes.right);
+    const leftChanged = posePane(panes.left);
+    const rightChanged = posePane(panes.right);
+    fitDirty ||= leftChanged || rightChanged;
 
     if (!reducedMotion && animated.length) {
-      animateObjects(animated, seconds);
-      changed = true;
+      // On phones only the selected pane is drawn, so its rotors own the clock.
+      panes.left.model.root.visible = split || state.activeSide === 'left';
+      panes.right.model.root.visible = split || state.activeSide === 'right';
+      const animating = animateObjects(animated, seconds);
+      panes.left.model.root.visible = true;
+      panes.right.model.root.visible = true;
+      changed ||= animating;
     }
 
     camera.aspect = paneAspect();
     camera.updateProjectionMatrix();
     if (autoCamera) {
-      fit();
+      if (fitDirty) {
+        fit();
+        fitDirty = false;
+      }
       const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
       camera.position.lerp(targetPosition, blend);
       controls.target.lerp(targetLook, blend);
@@ -228,8 +241,14 @@ export function createComparisonViewer(
     host.dataset.explode = String(Math.round(amount * 100));
     host.dataset.mode = split ? 'split' : state.activeSide;
 
-    if (pointerPosition && activePointer === null && changed)
+    if (
+      pointerPosition &&
+      activePointer === null &&
+      (hoverPending || changed)
+    ) {
       updateHover(pointerPosition);
+      hoverPending = false;
+    }
     return changed;
   }
   const loop = createStageLoop(
@@ -330,7 +349,7 @@ export function createComparisonViewer(
       gestureMoved = true;
     pointerPosition = { clientX: event.clientX, clientY: event.clientY };
     if (event.buttons || event.pointerType === 'touch') return;
-    updateHover(event);
+    hoverPending = true;
     wake();
   }
 

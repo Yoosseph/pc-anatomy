@@ -497,7 +497,12 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     }
   }
   root.traverse((o) => {
-    if (o instanceof T.Mesh) retired.delete(o.geometry);
+    if (o instanceof T.Mesh) {
+      retired.delete(o.geometry);
+      // Mesh.raycast only performs its cheap local-box rejection when a box
+      // exists. Merged hardware otherwise tests triangles on every sphere hit.
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    }
   });
   retired.forEach((g) => g.dispose());
   return { root, pieces };

@@ -2,9 +2,60 @@ import * as T from 'three';
 import { byId } from './manifest.ts';
 import { isPhysical, levels, type LevelId } from './levels.ts';
 import { inventoryLayout, smoothstep, spatialInventory } from './layout.ts';
-import type { Piece } from './models.ts';
+import { refreshBatches, type Piece } from './models.ts';
 
 export type BuiltModel = { root: T.Group; pieces: Piece[] };
+
+/** Stop damping once the remaining movement is imperceptible. */
+export function settledAmount(
+  current: number,
+  target: number,
+  dt: number,
+  reduced: boolean,
+) {
+  const next = reduced ? target : T.MathUtils.damp(current, target, 10, dt);
+  return Math.abs(next - target) < 0.0001 ? target : next;
+}
+
+/** Transform and upload only when the assembly pose actually changes. */
+export class ModelPoseCache {
+  private amount = NaN;
+  private dirty = true;
+  private scratch = new ModelStageScratch();
+  private batches: Set<T.InstancedMesh>;
+  private model: BuiltModel;
+  private level: LevelId;
+
+  constructor(model: BuiltModel, level: LevelId) {
+    this.model = model;
+    this.level = level;
+    this.batches = new Set(
+      model.pieces.flatMap((p) => (p.batch ? [p.batch] : [])),
+    );
+  }
+
+  /** Visibility and inventory layout changes also invalidate an unchanged amount. */
+  invalidate() {
+    this.dirty = true;
+  }
+
+  update(amount: number, ramp?: (piece: Piece) => number) {
+    if (!this.dirty && amount === this.amount && !ramp) return false;
+    for (const piece of this.model.pieces)
+      applyPiecePose(
+        piece,
+        this.level,
+        amount,
+        this.scratch,
+        ramp?.(piece) ?? 1,
+      );
+    refreshBatches(this.batches);
+    this.amount = amount;
+    // Restore the full scale on the first frame after a dive is cancelled/ends.
+    this.dirty = !!ramp;
+    return true;
+  }
+}
 
 export class ModelStageScratch {
   position = new T.Vector3();

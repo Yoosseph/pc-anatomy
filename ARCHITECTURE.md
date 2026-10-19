@@ -1,5 +1,26 @@
 # PC Anatomy — architecture
 
+## Rendering performance
+
+Both viewers use `ModelPoseCache` in `model-stage.ts`. A settled assembly keeps
+its existing transforms, instance buffers and picking bounds while the camera,
+fans or airflow move. Call `invalidate()` after changing visibility or inventory
+positions; construct a new cache when replacing a model. Dive ramps bypass the
+cache and invalidate the first frame after the ramp ends. `settledAmount` snaps
+the final sub-0.0001 movement to the target so damping can actually stop.
+
+Camera targets are recomputed after state/layout changes (and moving poses in
+comparison), rather than on every frame of camera interpolation. Hover events
+are coalesced into the render loop, and unchanged tooltip values retain React
+state identity. Local geometry bounding boxes enable Three.js's existing early
+ray rejection; they do not replace precise triangle picking or its glass policy.
+
+The shared scheduler keeps two extra frames after input. Continuing animation
+and OrbitControls change events keep it awake as needed; hidden rotors do not.
+Do not add fixed multi-second frame budgets to work around missing invalidation.
+See [the performance notes](docs/performance.md) for measurements, remaining
+costs, and repeatable CPU/browser checks.
+
 ## Notebook systems and the scale forest
 
 The explorer now has three independent roots: Desktop PC (`pc`), Lenovo Legion
@@ -497,7 +518,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-108 tests, all through Node's built-in runner.
+112 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -507,11 +528,15 @@ with Node.js 22.
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
   packing without overlap at several aspect ratios, machine depth.
-- `tests/models.test.ts` (18) — geometry presence and identity for every scale,
+- `tests/models.test.ts` (20) — geometry presence and identity for every scale,
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule
-  that no rendered object is anonymous.
+  that no rendered object is anonymous. Also checks pose-cache invalidation,
+  unchanged instance-buffer versions, dive restoration, and precise picking
+  equivalence with and without geometry bounding boxes.
+- `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
+  coalescing, disposal, and hidden/collapsed rotor behavior.
 - `tests/gpus.test.ts` (10) — the three-card menu structure, published hierarchy
   counts multiplying out to published totals, diagram blocks not overlapping,
   each card's published construction and envelope, board passives not

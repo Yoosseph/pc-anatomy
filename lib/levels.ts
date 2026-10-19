@@ -1,3 +1,4 @@
+import { notebookLevels, type NotebookLevel } from './notebook-levels.ts';
 /**
  * The exploration tree.
  *
@@ -8,6 +9,7 @@
  * read from it.
  */
 export type LevelId =
+  | NotebookLevel
   | 'pc'
   | 'motherboard'
   | 'dimm'
@@ -65,6 +67,12 @@ export interface LevelDef {
    * leaves first. `logical` levels are diagrams and are lit flat.
    */
   kind: 'physical' | 'logical';
+  /** Optional camera framing for unusually small hardware or flat diagrams. */
+  camera?: {
+    padding?: number;
+    minimumDistance?: number;
+    direction?: readonly [number, number, number];
+  };
   /** The concept whose `open` leads here: the thing you drilled into. */
   concept: string;
   /** Labels along the disassembly timeline, with their slider positions. */
@@ -637,6 +645,7 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
+  ...notebookLevels,
 };
 
 export const levelIds = Object.keys(levels) as LevelId[];
@@ -710,9 +719,17 @@ export function submenuRoot(id: LevelId): LevelId | null {
  * fan and the tower cooler are both cooling, so they share a heading instead
  * of producing two menus of one entry each.
  */
-export function branches(): Branch[] {
+export function systemRoot(id: LevelId): LevelId {
+  return levelPath(id)[0];
+}
+
+export const systemRoots: LevelId[] = ['pc', 'legion', 'macbook'];
+
+export function branches(system: LevelId = rootLevel): Branch[] {
   const grouped = new Map<string, LevelId[]>();
-  for (const root of levelIds.filter((id) => levels[id].branchLabel)) {
+  for (const root of levelIds.filter(
+    (id) => levels[id].branchLabel && systemRoot(id) === systemRoot(system),
+  )) {
     const label = levels[root].branchLabel ?? levels[root].name;
     grouped.set(label, [
       ...(grouped.get(label) ?? []),
@@ -738,5 +755,8 @@ export function branches(): Branch[] {
  * Cooling heading, keyed by whichever of them comes first.
  */
 export function menuRoot(id: LevelId): LevelId | null {
-  return branches().find((branch) => branch.levels.includes(id))?.root ?? null;
+  return (
+    branches(systemRoot(id)).find((branch) => branch.levels.includes(id))
+      ?.root ?? null
+  );
 }

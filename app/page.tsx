@@ -129,6 +129,7 @@ export default function Home() {
           onClose={() => explorer.setLayers(false)}
         />
         <SystemsList
+          level={state.level}
           visible={state.visible}
           hidden={state.hidden}
           onToggleCategory={explorer.toggleCategory}

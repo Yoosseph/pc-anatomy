@@ -12,6 +12,51 @@
  * for that construction alone, and its name says it is an independent review.
  */
 export const sources = {
+  sodimmkingston: {
+    name: 'Kingston · KVR32S22S8/8 DDR4-3200 8 GB SO-DIMM dimensions and organization',
+    url: 'https://www.kingston.com/datasheets/kvr32s22s8_8.pdf',
+  },
+  rtx3060laptop: {
+    name: 'NVIDIA · GeForce RTX 30 Series Laptop GPU specifications',
+    url: 'https://www.nvidia.com/en-gb/geforce/laptops/30-series/',
+  },
+  amperega102: {
+    name: 'NVIDIA · GeForce Ampere architecture and SM resources',
+    url: 'https://images.nvidia.com/aem-dam/en-zz/Solutions/geforce/ampere/pdf/NVIDIA-ampere-GA102-GPU-Architecture-Whitepaper-V1.pdf',
+  },
+  cpuprinciples: {
+    name: 'Arm · CPU instruction-cycle principles (generic teaching model)',
+    url: 'https://www.arm.com/glossary/cpu',
+  },
+  metalprinciples: {
+    name: 'Apple · Metal programming guide (conceptual GPU execution)',
+    url: 'https://developer.apple.com/library/archive/documentation/Miscellaneous/Conceptual/MetalProgrammingGuide/Introduction/Introduction.html',
+  },
+  legionpsref: {
+    name: 'Lenovo · Legion 5 15ACH6H platform specifications',
+    url: 'https://psref.lenovo.com/syspool/Sys/PDF/Legion/Lenovo_Legion_5_15ACH6H/Lenovo_Legion_5_15ACH6H_Spec.pdf',
+  },
+  legionservice: {
+    name: 'Lenovo · Legion 5 (15 / 17 inch, generation 6) maintenance manual',
+    url: 'https://download.lenovo.com/consumer/mobiles_pub/legion_5_15_17_6_hmm.pdf',
+  },
+  macbookspec: {
+    name: 'Apple · MacBook Pro 14-inch (2021) specifications',
+    url: 'https://support.apple.com/en-us/111902',
+  },
+  macbookservice: {
+    name: 'Apple · MacBook Pro 14-inch (2021) repair manual',
+    url: 'https://support.apple.com/en-us/100549',
+  },
+  m1proarchitecture: {
+    name: 'Apple · M1 Pro and M1 Max architecture overview',
+    url: 'https://www.apple.com/newsroom/2021/10/introducing-m1-pro-and-m1-max-the-most-powerful-chips-apple-has-ever-built/',
+  },
+  ampereguide: {
+    name: 'NVIDIA · Ampere tuning guide',
+    url: 'https://docs.nvidia.com/cuda/ampere-tuning-guide/index.html',
+  },
+
   tuf5090: {
     name: 'ASUS · TUF RTX 5090 construction and cooling',
     url: 'https://www.asus.com/uk/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx5090-32g-gaming/',

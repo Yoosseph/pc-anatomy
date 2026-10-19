@@ -1,3 +1,4 @@
+import { notebookConcepts } from './concepts/notebooks.ts';
 import { coolerConcepts } from './concepts/cooler.ts';
 import { liquidConcepts } from './concepts/liquid.ts';
 import { processorConcepts } from './concepts/processors.ts';
@@ -41,6 +42,7 @@ export type Level = LevelId;
  * inside it, then the graphics card branch.
  */
 export const manifest: Concept[] = [
+  ...notebookConcepts,
   ...pcConcepts,
   ...motherboardConcepts,
   ...ramConcepts,

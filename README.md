@@ -8,13 +8,32 @@ Ideas worth building are collected on the [**roadmap and Kanban board →**](htt
 
 Before changing any code, read [**ARCHITECTURE.md →**](ARCHITECTURE.md). It is the full technical picture of the project — the scale tree, where every module lives, the conventions behind the geometry, and the traps that are not obvious from reading the source. It is written to be read start to finish by whoever is doing the work, person or language model.
 
-Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The roughly 400 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
+Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The more than 590 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
 
 ![An assembled ATX tower in PC Anatomy: a dual-glass aluminium case with the motherboard, graphics card, cooler and power supply visible through the window](docs/screenshots/pc-assembled.png)
 
 Press **Auto** at the left end of the bottom bar to watch the machine take itself apart, or drag the timeline to move through the sequence by hand.
 
-## Scale tree
+## Laptops and Mac
+
+Choose **Desktop PC**, **Laptops**, or **Mac** in the system navigation. Laptops
+opens a Lenovo Legion 5 15ACH6H; Mac opens a 2021 14-inch MacBook Pro with M1 Pro.
+Both use the same component inspection, disassembly, inventory, search and
+comparison workbench as the desktop. Open their boards to explore mobile
+processors, graphics and memory, or inspect the battery, cooling and display.
+The Legion memory path opens a physical FBGA package, its die, a bank, and a
+transistor-and-capacitor cell array.
+
+The Legion uses replaceable SO-DIMMs and M.2 storage with a separate laptop GPU.
+The MacBook uses an integrated GPU and unified memory, with onboard flash.
+The first Mac configuration is M1 Pro with 10 CPU and 16 GPU cores; other Apple
+Silicon generations are future additions. Internal layouts and logical diagrams
+are illustrative, with their scope and references in each component card.
+
+![Lenovo Legion 5 in the explorer](docs/screenshots/legion-assembled.png)
+![MacBook Pro with M1 Pro in the explorer](docs/screenshots/macbook-assembled.png)
+
+## Desktop scale tree
 
 ```text
 Desktop PC

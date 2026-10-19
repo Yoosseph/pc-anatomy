@@ -1,10 +1,12 @@
 'use client';
+import { systemRoot, type LevelId } from '@/lib/levels';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { categories, colors, manifest, type Category } from '@/lib/manifest';
 
 type Props = {
+  level: LevelId;
   visible: Category[];
   hidden: string[];
   onToggleCategory: (category: Category) => void;
@@ -18,6 +20,7 @@ type Props = {
 };
 
 export default function SystemsList({
+  level,
   visible,
   hidden,
   onToggleCategory,
@@ -70,7 +73,12 @@ export default function SystemsList({
             {expanded === category && (
               <div className="sublayers">
                 {manifest
-                  .filter((c) => c.category === category && c.id !== 'card')
+                  .filter(
+                    (c) =>
+                      c.category === category &&
+                      c.open !== c.level &&
+                      systemRoot(c.level) === systemRoot(level),
+                  )
                   .map((c) => (
                     <div key={c.id}>
                       <button onClick={() => onSelectConcept(c.id)}>

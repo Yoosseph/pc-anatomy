@@ -1,3 +1,5 @@
+import { buildNotebook } from './notebooks.ts';
+import { notebookLevels, type NotebookLevel } from './notebook-levels.ts';
 import { resourceTexture, siliconColor } from './silicon-texture.ts';
 import { buildAirflow } from './airflow.ts';
 import { buildHardware, type ModelTools } from './hardware.ts';
@@ -95,7 +97,15 @@ function turnExtent(extent: T.Vector3, q: T.Quaternion) {
  * One builder per scale. Adding a branch to the machine means adding a line
  * here and an entry in `levels`; nothing else dispatches on the scale id.
  */
+const notebookBuilders = Object.fromEntries(
+  Object.keys(notebookLevels).map((id) => [
+    id,
+    (tools: ModelTools, root: T.Group) =>
+      buildNotebook(id as NotebookLevel, tools, root),
+  ]),
+) as Record<NotebookLevel, (tools: ModelTools, root: T.Group) => void>;
 const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
+  ...notebookBuilders,
   pc: buildMachine,
   motherboard: buildMotherboard,
   dimm: buildDimm,
@@ -452,6 +462,8 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
       if (
         o instanceof T.Mesh &&
         !(o instanceof T.InstancedMesh) &&
+        !o.userData.spinRate &&
+        !o.userData.seekAmplitude &&
         o.material instanceof T.MeshStandardMaterial
       ) {
         const group = groups.get(o.material) ?? [];

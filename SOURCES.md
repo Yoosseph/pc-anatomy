@@ -326,3 +326,19 @@ generic ring of cores around a shared cache with a memory interface, labelled as
 such in the interface and in every one of its concepts. It is not a floorplan
 and not a specific processor, and it is deliberately far below the level of
 detail the graphics branch reaches.
+
+## Notebook systems
+
+- [Kingston KVR32S22S8/8 datasheet](https://www.kingston.com/datasheets/kvr32s22s8_8.pdf): representative 8 GB 1Rx8 SO-DIMM organization, 260 contacts, nominal dimensions and eight 8 Gbit x8 packages. This is a reference module, not a claim about Lenovo's factory supplier.
+- [NVIDIA RTX 30 Series laptop specifications](https://www.nvidia.com/en-gb/geforce/laptops/30-series/): RTX 3060 Laptop GPU's 3,840 CUDA cores, 6 GB GDDR6 and 192-bit interface.
+- [NVIDIA GeForce Ampere architecture](https://images.nvidia.com/aem-dam/en-zz/Solutions/geforce/ampere/pdf/NVIDIA-ampere-GA102-GPU-Architecture-Whitepaper-V1.pdf): four SM partitions, 128 FP32 lanes, four Tensor Cores and one RT Core in the GA10x SM. Combining 128 lanes/SM with 3,840 published lanes gives the 30-SM diagram. No GA102 die layout is represented as a GA106 floorplan.
+
+The service drawings guide distinct enclosure, board, fan and battery layouts.
+Connector inventories and shell openings share the same model data. Internal
+passive population, exact trace routing, the representative FBGA interconnect,
+and miniature backlight zones remain illustrative. The MacBook display is an
+LCD with a mini-LED backlight; the diagram does not imply an OLED panel.
+
+The new sources are indexed in docs/component-references.md. Lenovo PSREF and the generation-6 Legion maintenance manual identify the 15ACH6H configuration and service assemblies. The selected 80 Wh battery and 165 Hz FHD display are options, not universal specifications for every SKU. Apple specifications and the 2021 MacBook Pro 14-inch repair manual identify the M1 Pro notebook and its assemblies. Apple’s M1 Pro architecture overview supports its CPU/GPU and unified-memory organization. NVIDIA’s Ampere tuning guide supports functional SM concepts. Arm CPU principles and Apple’s Metal programming guide support generic execution diagrams, not undocumented vendor microarchitecture. Existing DRAM, flash, NVMe, power and cooling sources support general operating principles.
+
+The two outer footprints share one physical scale for comparison. Interior positions, package and fastener populations, battery pouches and keyboard artwork are illustrative. Onboard Mac flash is not a removable M.2 SSD, unified memory is not a SO-DIMM, and notebook CPU/GPU packages are soldered. The generic DRAM views do not assert a Mac memory die topology. Issue #33 tracks these first models; #31 remains open for further M-series models.

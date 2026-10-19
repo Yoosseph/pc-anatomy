@@ -14,6 +14,10 @@ import { rootLevel, type LevelId } from './levels.ts';
 /** The scales with a fan in them, and so with air to draw. */
 export const airflowLevels: readonly LevelId[] = [
   'pc',
+  'legion',
+  'macbook',
+  'legioncooling',
+  'maccooling',
   'fan',
   'cooler',
   'liquid',

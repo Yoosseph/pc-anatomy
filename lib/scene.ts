@@ -77,6 +77,8 @@ export function createViewer(
     gestureMoved = false,
     pointerPosition: { clientX: number; clientY: number } | null = null,
     hovered: Piece | null = null;
+  // Route eligibility changes with explorer state, not with the frame clock.
+  let powerRoutes = visiblePowerRoutes(state);
   /**
    * Descending is one continuous move, not a cut. `out` shrinks everything
    * except the part being opened while the camera closes in on it, leaving it
@@ -382,12 +384,12 @@ export function createViewer(
       if (strength > 0.002 && !reducedMotion) changed = true;
     }
     if (powerFlows.length) {
-      const routes = visiblePowerRoutes(state);
       const strength = dive ? 0 : powerStrength(amount);
       for (const tick of powerFlows)
-        tick(reducedMotion ? 0 : seconds, strength, routes);
-      host.dataset.powerRoutes = strength > 0.002 ? routes.join(',') : '';
-      if (routes.length && strength > 0.002 && !reducedMotion) changed = true;
+        tick(reducedMotion ? 0 : seconds, strength, powerRoutes);
+      host.dataset.powerRoutes = strength > 0.002 ? powerRoutes.join(',') : '';
+      if (powerRoutes.length && strength > 0.002 && !reducedMotion)
+        changed = true;
     } else host.dataset.powerRoutes = '';
     selectedBox.visible = selected;
     hoverBox.visible = !!hovered && hovered.visible;
@@ -622,6 +624,7 @@ export function createViewer(
         next.focusRevision !== state.focusRevision ||
         next.isolated !== state.isolated;
       state = next;
+      powerRoutes = visiblePowerRoutes(state);
       const priorAuto = autoCamera;
       refresh();
       autoCamera = cameraChange || priorAuto;

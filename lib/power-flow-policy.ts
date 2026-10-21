@@ -12,12 +12,12 @@ export interface PowerRoute {
   destination: string;
   voltage: string;
   color: string;
-  targets: PowerTarget[];
-  requires: string[];
-  categories: Category[];
+  targets: readonly Exclude<PowerTarget, 'all'>[];
+  requires: readonly string[];
+  categories: readonly Category[];
   inspect: string;
   description: string;
-  sources: SourceId[];
+  sources: readonly SourceId[];
 }
 
 export const powerRoutes: readonly PowerRoute[] = [
@@ -132,4 +132,35 @@ export function visiblePowerRoutes(state: PowerView): PowerRouteId[] {
         route.requires.every((id) => !state.hidden.includes(id)),
     )
     .map((route) => route.id);
+}
+
+const explanationRoutes: Record<Exclude<PowerTarget, 'all'>, PowerRouteId> = {
+  cpu: 'eps',
+  gpu: 'gpu',
+  storage: 'sata',
+};
+
+/** Derive the legend independently of React and the animation clock. */
+export function powerPanelState(state: PowerView & { explode: number }) {
+  const routes = powerRoutes.filter((route) =>
+    matchesPowerTarget(route, state.powerTarget),
+  );
+  const visible = visiblePowerRoutes(state);
+  const explanationId =
+    state.powerTarget === 'all' ? null : explanationRoutes[state.powerTarget];
+  const explanation = routes.find(
+    (route) => route.id === explanationId,
+  )?.description;
+
+  let status: string | null = null;
+  if (state.explode >= 9) status = 'Reassemble the PC to see the power paths.';
+  else if (!visible.length) {
+    if (state.isolated) status = 'Leave isolation to see the power paths.';
+    else if (state.diveInto)
+      status = 'Power paths pause while opening a component.';
+    else
+      status =
+        'Show the power supply, cables and destination components to see their paths.';
+  }
+  return { routes, visible, explanation, status };
 }

@@ -308,7 +308,8 @@ isolated, camera view, the airflow mode, and three revision counters. `cameraRev
 ## Conventions that matter
 
 **Power flow is an opt-in annotation on the desktop tower.** `power-flow-policy.ts`
-holds the route descriptions, citations, destination filters and visibility rules
+holds the route descriptions, citations, destination filters, visibility rules
+and the pure `powerPanelState` derivation for legend rows and status messages
 without importing three.js. `machine.ts` shares the four authored cable paths
 between the physical looms and `buildPowerFlow` in `power-flow.ts`. The dashed
 motherboard-to-PCIe-slot path is conceptual, not a PCB trace. ATX, EPS, GPU and
@@ -324,6 +325,10 @@ whose required parts/categories are hidden, during isolation, or during a dive.
 `state.power` and `powerTarget` survive navigation and are cleared by Reset;
 they are view preferences and do not enter the URL. `app/power-controls.tsx`
 owns the legend and invokes the existing component inspection cards.
+Route construction in `power-flow.ts` samples each cable once and shares arrow
+and endpoint geometry across tracks; its frame loop only interpolates samples.
+The scene recomputes eligible routes on state updates, while the animation clock
+and disassembly fade remain frame-driven.
 
 `tests/power-flow.test.ts` covers the feeds, endpoints, visibility, citations,
 animation, picking exclusion and fade. `scripts/power-flow-smoke.mjs` exercises
@@ -524,7 +529,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-114 tests, all through Node's built-in runner.
+116 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request

@@ -3,9 +3,7 @@ import { useState } from 'react';
 import { Zap } from 'lucide-react';
 import {
   hasPowerFlow,
-  matchesPowerTarget,
-  powerRoutes,
-  visiblePowerRoutes,
+  powerPanelState,
   type PowerTarget,
 } from '@/lib/power-flow-policy';
 import type { ExplorerState } from '@/lib/explorer-state';
@@ -30,11 +28,7 @@ export default function PowerControls({
 }) {
   const [expanded, setExpanded] = useState(false);
   if (!hasPowerFlow(state.level)) return null;
-  const visible = visiblePowerRoutes(state);
-  const open = state.explode >= 9;
-  const explanationId = { all: 'atx', cpu: 'eps', gpu: 'gpu', storage: 'sata' }[
-    state.powerTarget
-  ];
+  const { routes, visible, explanation, status } = powerPanelState(state);
   return (
     <>
       <button
@@ -80,50 +74,31 @@ export default function PowerControls({
               </button>
             ))}
           </fieldset>
-          {open || !visible.length ? (
-            <output className="power-status">
-              {open
-                ? 'Reassemble the PC to see the power paths.'
-                : state.isolated
-                  ? 'Leave isolation to see the power paths.'
-                  : state.diveInto
-                    ? 'Power paths pause while opening a component.'
-                    : 'Show the power supply, cables and destination components to see their paths.'}
-            </output>
-          ) : null}
+          {status && <output className="power-status">{status}</output>}
           <ul className="power-legend" id="power-legend">
-            {powerRoutes
-              .filter((route) => matchesPowerTarget(route, state.powerTarget))
-              .map((route) => (
-                <li
-                  key={route.id}
-                  className={!visible.includes(route.id) ? 'power-muted' : ''}
+            {routes.map((route) => (
+              <li
+                key={route.id}
+                className={!visible.includes(route.id) ? 'power-muted' : ''}
+              >
+                <i style={{ background: route.color }} aria-hidden="true" />
+                <button
+                  onClick={() => onInspect(route.inspect)}
+                  title={route.description}
+                  aria-label={`Inspect ${route.destination}: ${route.label}`}
                 >
-                  <i style={{ background: route.color }} aria-hidden="true" />
-                  <button
-                    onClick={() => onInspect(route.inspect)}
-                    title={route.description}
-                    aria-label={`Inspect ${route.destination}: ${route.label}`}
-                  >
-                    <span>
-                      <strong>{route.label}</strong>
-                      <small>{route.voltage}</small>
-                    </span>
-                    <span className="power-destination">
-                      {route.destination} →
-                    </span>
-                  </button>
-                </li>
-              ))}
+                  <span>
+                    <strong>{route.label}</strong>
+                    <small>{route.voltage}</small>
+                  </span>
+                  <span className="power-destination">
+                    {route.destination} →
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
-          {state.powerTarget !== 'all' && (
-            <p className="power-explanation">
-              {
-                powerRoutes.find((route) => route.id === explanationId)
-                  ?.description
-              }
-            </p>
-          )}
+          {explanation && <p className="power-explanation">{explanation}</p>}
           <p className="power-note">
             Colors identify routes. Arrows show direction, not speed or watts.
             Dashed line: power through the board.

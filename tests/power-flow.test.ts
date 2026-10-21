@@ -7,6 +7,7 @@ import {
   hasPowerFlow,
   visiblePowerRoutes,
   powerStrength,
+  powerPanelState,
 } from '../lib/power-flow-policy.ts';
 import { buildModel } from '../lib/models.ts';
 import { disposeModelResources } from '../lib/model-stage.ts';
@@ -110,6 +111,80 @@ await test('route descriptions cite real sources and inspection destinations exi
     }
     for (const id of route.requires) assert.equal(byId[id].level, 'pc');
   }
+});
+
+await test('the panel keeps filtered legend rows while muting unavailable routes', () => {
+  const state = { ...initialState, power: true };
+  const all = powerPanelState(state);
+  assert.deepEqual(
+    all.routes.map((route) => route.id),
+    all.visible,
+  );
+  assert.equal(all.explanation, undefined);
+  assert.equal(all.status, null);
+
+  for (const [powerTarget, expected] of [
+    ['cpu', ['eps']],
+    ['gpu', ['atx', 'gpu', 'slot']],
+    ['storage', ['sata']],
+  ] as const) {
+    const panel = powerPanelState({ ...state, powerTarget });
+    assert.deepEqual(
+      panel.routes.map((route) => route.id),
+      expected,
+    );
+    assert.deepEqual(panel.visible, expected);
+    assert.ok(panel.explanation);
+    assert.equal(panel.status, null);
+  }
+
+  const gpu = powerPanelState({ ...state, powerTarget: 'gpu' });
+  assert.equal(
+    gpu.explanation,
+    powerRoutes.find((route) => route.id === 'gpu')!.description,
+  );
+  const hiddenBoard = powerPanelState({
+    ...state,
+    powerTarget: 'gpu',
+    hidden: ['motherboard'],
+  });
+  assert.deepEqual(hiddenBoard.routes, gpu.routes);
+  assert.deepEqual(hiddenBoard.visible, ['gpu']);
+  assert.equal(hiddenBoard.status, null);
+});
+
+await test('panel guidance prioritizes reassembly, isolation, dives, then hidden hardware', () => {
+  const state = {
+    ...initialState,
+    power: true,
+    explode: 9,
+    isolated: true,
+    diveInto: 'motherboard',
+    hidden: ['psu'],
+  };
+  assert.equal(
+    powerPanelState(state).status,
+    'Reassemble the PC to see the power paths.',
+  );
+  assert.equal(
+    powerPanelState({ ...state, explode: 0 }).status,
+    'Leave isolation to see the power paths.',
+  );
+  assert.equal(
+    powerPanelState({ ...state, explode: 0, isolated: false }).status,
+    'Power paths pause while opening a component.',
+  );
+  assert.equal(
+    powerPanelState({ ...state, explode: 0, isolated: false, diveInto: null })
+      .status,
+    'Show the power supply, cables and destination components to see their paths.',
+  );
+  const assembled = { ...initialState, power: true };
+  assert.equal(powerPanelState({ ...assembled, explode: 8 }).status, null);
+  assert.equal(
+    powerPanelState({ ...assembled, explode: 9 }).status,
+    'Reassemble the PC to see the power paths.',
+  );
 });
 
 await test('all four cable feeds begin at the PSU and terminate at their hardware', () => {

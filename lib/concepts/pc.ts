@@ -246,7 +246,7 @@ export const pcConcepts: Concept[] = [
     description:
       'The board every other part plugs into: processor, memory, expansion cards and storage.',
     purpose:
-      'Carries power and high-speed signals between the processor and everything else in the machine.',
+      'Carries power and high-speed signals. The 24-pin ATX cable supplies the board and its expansion slots; a separate 8-pin EPS cable supplies 12 V to the CPU voltage regulators, which produce the lower voltages the processor needs.',
     quantity: '1 ATX board',
     specifications: {
       'Form factor': 'ATX · 305 × 244 mm',
@@ -255,7 +255,7 @@ export const pcConcepts: Concept[] = [
     },
     representationType: 'physical',
     physicalAccuracy: standard,
-    sources: ['mainboardmanual'],
+    sources: ['mainboardmanual', 'psu', 'mpscontroller'],
     searchTerms: ['mainboard', 'mobo', 'board', 'logic board'],
   }),
   concept({
@@ -267,7 +267,7 @@ export const pcConcepts: Concept[] = [
     level: 'pc',
     open: 'card',
     description:
-      'The expansion card in the primary PCI Express slot, and a parallel computer of its own.',
+      'The expansion card in the primary PCI Express slot, and a parallel computer of its own. It receives power through both the slot and a direct 12V-2x6 cable from the PSU. Onboard regulators produce lower voltages for the GPU and memory.',
     purpose:
       'Renders images and runs the massively parallel work the processor is poorly suited to.',
     quantity: '1 installed card',
@@ -276,7 +276,7 @@ export const pcConcepts: Concept[] = [
       Specimen: 'GeForce RTX 5090',
     },
     representationType: 'physical',
-    sources: ['tuf5090', 'whitepaper'],
+    sources: ['tuf5090', 'whitepaper', 'psu', 'powerdesign', 'pcie'],
     searchTerms: ['gpu', 'video card', 'rtx', 'graphics', 'nvidia'],
   }),
   concept({
@@ -310,14 +310,15 @@ export const pcConcepts: Concept[] = [
     parent: 'psu',
     level: 'pc',
     description:
-      'The looms running from the supply to the board, the processor and the graphics card.',
+      'Four looms connect the PSU to the motherboard, the CPU power input, the graphics card and the SATA SSD. The CPU feed ends at motherboard regulators; the GPU and SATA feeds run directly from the supply.',
     purpose:
       'Carries current to each load on conductors sized for it, using keyed connectors that only fit one way.',
-    quantity: '3 modeled looms',
+    quantity: '4 modeled looms',
     specifications: {
       Board: '24-pin',
       Processor: '8-pin EPS',
       Graphics: '12V-2x6',
+      Storage: '15-pin SATA power, separate from the data connector',
     },
     representationType: 'physical',
     sources: ['psu'],
@@ -407,7 +408,7 @@ export const pcConcepts: Concept[] = [
     level: 'pc',
     open: 'ssd',
     description:
-      'Flash storage in a drive-shaped enclosure on the older SATA interface.',
+      'Flash storage in a drive-shaped enclosure on the older SATA interface. This representative 2.5-inch SSD uses 5 V from the PSU through a 15-pin power connector, separate from its 7-pin data connector.',
     purpose:
       'Holds data that must survive power loss, without the seek delay of a spinning disk.',
     quantity: '1 modeled drive',
@@ -420,7 +421,7 @@ export const pcConcepts: Concept[] = [
     },
     representationType: 'physical',
     physicalAccuracy: standard,
-    sources: ['samsungsata', 'ssdarchitecture'],
+    sources: ['samsungsata', 'ssdarchitecture', 'psu'],
     searchTerms: ['ssd', 'sata', 'flash', 'drive', 'storage'],
   }),
 ];

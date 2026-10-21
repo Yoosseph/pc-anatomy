@@ -11,6 +11,7 @@ import ScaleNav from './scale-nav';
 import SystemsList from './systems-list';
 import StageHeading from './stage-heading';
 import StageTools from './stage-tools';
+import PowerControls from './power-controls';
 import Disassembly from './disassembly';
 import SearchDialog from './search-dialog';
 import DetailPanel from './detail-panel';
@@ -175,7 +176,14 @@ export default function Home() {
         onToggleAirflow={explorer.toggleAirflow}
         onUnhide={explorer.unhide}
         onClearHidden={explorer.clearHidden}
-      />
+      >
+        <PowerControls
+          state={state}
+          onToggle={explorer.togglePower}
+          onTarget={explorer.setPowerTarget}
+          onInspect={(id) => choose({ concept: id })}
+        />
+      </StageTools>
       <Disassembly
         level={state.level}
         explode={state.explode}

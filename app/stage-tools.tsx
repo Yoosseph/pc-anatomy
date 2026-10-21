@@ -16,11 +16,13 @@ import {
 } from '@/lib/airflow-policy';
 import type { ExplorerState } from '@/lib/explorer-state';
 import type { LevelId } from '@/lib/levels';
+import type { ReactNode } from 'react';
 
 const views = ['perspective', 'top', 'front', 'back'] as const;
 const viewLabels = ['3D', 'TOP', 'FRONT', 'BACK'];
 
 type Props = {
+  children?: ReactNode;
   view: ExplorerState['view'];
   level: LevelId;
   explode: number;
@@ -36,6 +38,7 @@ type Props = {
 };
 
 export default function StageTools({
+  children,
   view,
   level,
   explode,
@@ -137,6 +140,7 @@ export default function StageTools({
           <small>{showingAirflow ? 'On' : 'Off'}</small>
         </button>
       )}
+      {children}
       {hiddenComponents.length > 0 && (
         <div className="hidden-tracker">
           <button

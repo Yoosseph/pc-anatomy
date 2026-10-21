@@ -9,6 +9,8 @@ import {
   type PartLabel,
 } from './inventory-labels.ts';
 import { airflowShown, airflowStrength } from './airflow.ts';
+import { powerStrength, visiblePowerRoutes } from './power-flow-policy.ts';
+import type { PowerTick } from './power-flow.ts';
 import { byId, openLevel } from './manifest';
 import type { ExplorerState, Selection } from './explorer-state.ts';
 import { isPhysical, levels } from './levels.ts';
@@ -149,7 +151,11 @@ export function createViewer(
     for (const child of model.root.children)
       // Airflow is scenery too, but it fades on its own curve in `render`,
       // which is finer grained than this and would fight with it.
-      if (child.userData.contextFrame && !child.userData.airflowTick)
+      if (
+        child.userData.contextFrame &&
+        !child.userData.airflowTick &&
+        !child.userData.powerTick
+      )
         child.visible =
           visible.length > 0 && !state.isolated && state.explode < 20;
     callbacks.stats(visible.length);
@@ -268,10 +274,14 @@ export function createViewer(
    * that the scene only has to supply a clock to.
    */
   let flows: ((seconds: number, strength: number) => void)[] = [];
+  let powerFlows: PowerTick[] = [];
   const collectAnimations = () => {
     animated = collectAnimatedObjects(model.root);
     flows = [];
+    powerFlows = [];
     model.root.traverse((object) => {
+      if (object.userData.powerTick)
+        powerFlows.push(object.userData.powerTick as PowerTick);
       if (object.userData.airflowTick)
         flows.push(
           object.userData.airflowTick as (
@@ -371,6 +381,14 @@ export function createViewer(
       for (const tick of flows) tick(reducedMotion ? 0 : seconds, strength);
       if (strength > 0.002 && !reducedMotion) changed = true;
     }
+    if (powerFlows.length) {
+      const routes = visiblePowerRoutes(state);
+      const strength = dive ? 0 : powerStrength(amount);
+      for (const tick of powerFlows)
+        tick(reducedMotion ? 0 : seconds, strength, routes);
+      host.dataset.powerRoutes = strength > 0.002 ? routes.join(',') : '';
+      if (routes.length && strength > 0.002 && !reducedMotion) changed = true;
+    } else host.dataset.powerRoutes = '';
     selectedBox.visible = selected;
     hoverBox.visible = !!hovered && hovered.visible;
     if (hovered) boxFor(hovered, hoverBox.box);

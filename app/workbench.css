@@ -2885,22 +2885,11 @@ a {
 .compare-button > span {
   min-width: 0;
 }
-.compare-button :is(strong, small) {
-  display: block;
-}
 .compare-button strong {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
-}
-.compare-button small {
-  margin-top: 2px;
-  overflow: hidden;
-  color: #8cb0b8;
-  font-size: 9.5px;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .comparison-workbench {
   background: radial-gradient(

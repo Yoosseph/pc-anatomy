@@ -161,7 +161,6 @@ export default function ScaleNav({
         <GitCompareArrows size={16} />
         <span>
           <strong>Compare components</strong>
-          <small>Side-by-side 3D &amp; specs</small>
         </span>
         <ChevronRight size={14} />
       </button>

@@ -321,22 +321,6 @@ a {
   align-items: center;
   margin: 0 0 8px;
 }
-.rail-top-heading {
-  margin: 0 0 6px;
-}
-.scale-heading {
-  margin: 12px 0 6px;
-}
-.section-badge {
-  font: 500 9px monospace;
-  letter-spacing: 0.5px;
-  color: #8cb4bc;
-  background: #142024;
-  border: 1px solid #2b464e;
-  border-radius: 4px;
-  padding: 1px 6px;
-  text-transform: uppercase;
-}
 .section-heading button {
   font:
     500 11px 'Segoe UI',
@@ -360,6 +344,9 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.compare-button + .scale-navigation {
+  margin-top: 10px;
 }
 .scale-navigation > button {
   display: flex;
@@ -3681,19 +3668,6 @@ a {
 }
 .system-picker button[aria-pressed='true'] .system-picker-head > svg {
   color: var(--accent-bright);
-}
-.system-picker-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #333840;
-  transition:
-    background 0.14s ease,
-    box-shadow 0.14s ease;
-}
-.system-picker button[aria-pressed='true'] .system-picker-dot {
-  background: var(--accent-bright);
-  box-shadow: 0 0 6px #79bfccaa;
 }
 .system-picker button > strong {
   display: block;

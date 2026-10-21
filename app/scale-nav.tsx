@@ -134,9 +134,6 @@ export default function ScaleNav({
       >
         <X size={17} />
       </button>
-      <div className="section-heading rail-top-heading">
-        <span>SYSTEM</span>
-      </div>
       <nav className="system-picker" aria-label="Choose a system">
         {systemRoots.map((root) => {
           const Icon = levelIcon[root];
@@ -148,7 +145,6 @@ export default function ScaleNav({
             >
               <span className="system-picker-head">
                 <Icon size={14} />
-                <i className="system-picker-dot" />
               </span>
               <strong>
                 {root === 'pc'
@@ -176,12 +172,6 @@ export default function ScaleNav({
         </span>
         <ChevronRight size={14} />
       </button>
-      <div className="section-heading scale-heading">
-        <span>EXPLORE BY SCALE</span>
-        <span className="section-badge">
-          {systemBranches.reduce((sum, b) => sum + b.levels.length, 1)} scales
-        </span>
-      </div>
       <nav className="scale-navigation" aria-label="Exploration scale">
         <button
           className={level === rootLevel ? 'active' : ''}

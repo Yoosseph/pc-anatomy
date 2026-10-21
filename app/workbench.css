@@ -306,12 +306,6 @@ a {
   display: flex;
   flex-direction: column;
 }
-.eyebrow {
-  font: 10px monospace;
-  letter-spacing: 1.65px;
-  color: #abaeb3;
-  margin: 0 0 12px;
-}
 .section-heading {
   font: 600 9.5px monospace;
   letter-spacing: 1.4px;
@@ -528,14 +522,6 @@ a {
 .stage-heading > div:first-child {
   min-width: 0;
 }
-.stage-heading .eyebrow {
-  color: var(--accent-muted);
-  font-size: 10px;
-  margin: 0;
-  padding-right: 12px;
-  border-right: 1px solid #4b5055;
-  white-space: nowrap;
-}
 .stage-heading h1 {
   font-size: 28px;
   font-weight: 400;
@@ -609,27 +595,6 @@ a {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.stage-counter {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  flex: none;
-  padding: 7px 10px;
-  color: #979ba2;
-  background: #17191b99;
-  border: 1px solid #393c41;
-  border-radius: 4px;
-}
-.stage-counter strong {
-  font: 13px monospace;
-  color: #d9dde0;
-}
-.stage-counter span {
-  font: 9px monospace;
-  letter-spacing: 0.7px;
-  color: #858991;
-  text-transform: uppercase;
 }
 .viewport {
   position: absolute;
@@ -1604,15 +1569,11 @@ a {
 .has-selection .stage-heading {
   right: calc(var(--inspect) + 30px);
 }
-.has-selection .stage-heading h1,
-.has-selection .stage-heading .eyebrow {
+.has-selection .stage-heading h1 {
   display: none;
 }
 .has-selection .stage-meta {
   margin-top: 0;
-}
-.has-selection .stage-counter {
-  display: none;
 }
 .has-selection .stage-tools {
   right: calc(var(--inspect) + 30px);
@@ -1971,9 +1932,6 @@ a {
   .has-selection .reset {
     padding-left: 14px;
   }
-  .stage-counter {
-    min-width: 0;
-  }
   .header-actions {
     gap: 15px;
   }
@@ -2013,17 +1971,10 @@ a {
     left: 22px;
     right: 22px;
   }
-  .stage-heading .eyebrow {
-    font-size: 9px;
-  }
   .stage-heading h1 {
     font-size: 23px;
     max-width: 250px;
     line-height: 1.2;
-  }
-  .stage-counter span {
-    font-size: 7px;
-    letter-spacing: 0.5px;
   }
   .breadcrumbs {
     font-size: 10px;
@@ -2221,9 +2172,6 @@ a {
   .breadcrumbs {
     margin-top: 0;
   }
-  .stage-heading .eyebrow {
-    margin-bottom: 0;
-  }
   .viewport {
     top: 176px;
     bottom: 168px;
@@ -2311,12 +2259,6 @@ a {
   }
   .stage-heading h1 {
     font-size: 21px;
-  }
-  .stage-heading .eyebrow {
-    font-size: 8px;
-  }
-  .stage-counter {
-    display: none;
   }
   .breadcrumbs {
     font-size: 9px;
@@ -3679,21 +3621,6 @@ a {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.system-picker small {
-  display: block;
-  width: 100%;
-  margin-top: 0;
-  color: #6f757e;
-  font: 8.5px monospace;
-  letter-spacing: 0.05px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.system-picker button[aria-pressed='true'] small {
-  color: #9ac0c8;
 }
 
 @media (max-width: 700px) {

@@ -153,13 +153,6 @@ export default function ScaleNav({
                     ? 'Laptops'
                     : 'Mac'}
               </strong>
-              <small>
-                {root === 'pc'
-                  ? 'ATX desktop'
-                  : root === 'legion'
-                    ? 'Legion 5'
-                    : 'MacBook Pro'}
-              </small>
             </button>
           );
         })}

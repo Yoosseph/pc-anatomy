@@ -144,7 +144,6 @@ export default function Home() {
         explode={state.explode}
         logical={logical}
         selected={selected}
-        count={count}
         hint={hint}
         onDismissHint={dismissHint}
         onNavigate={navigate}

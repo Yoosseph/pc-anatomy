@@ -8,6 +8,7 @@ import {
 } from './levels.ts';
 import type { Category } from './concept.ts';
 
+/** Picker headings, in display order. Empty categories are not shown. */
 const categoryDefinitions = [
   { id: 'systems', label: 'Complete systems' },
   { id: 'boards', label: 'Boards' },
@@ -36,6 +37,7 @@ export type ComparisonItem = {
   millimetersPerUnit: number | null;
 };
 
+/** Fallback for branches whose levels name no `comparisonCategory`. */
 const conceptCategories: Record<Category, ComparisonCategoryId> = {
   Chassis: 'chassis',
   Board: 'boards',
@@ -49,8 +51,8 @@ const conceptCategories: Record<Category, ComparisonCategoryId> = {
 
 function itemCategory(level: LevelId): ComparisonCategoryId {
   if (levels[level].parent === null) return 'systems';
-  // An explicit subsystem category propagates through its deeper scales.
-  // New unclassified branches still appear using their concept's category.
+  // The nearest explicit category on the path wins, so a GPU's die and SM
+  // stay in Graphics and a module's DRAM cell stays in Memory.
   const owner = levelPath(level)
     .reverse()
     .find((id) => levels[id].comparisonCategory);
@@ -60,11 +62,14 @@ function itemCategory(level: LevelId): ComparisonCategoryId {
 }
 
 function specId(label: string) {
-  return label
-    .toLowerCase()
-    .replace('organisation', 'organization')
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-|-$/g, '');
+  return (
+    label
+      .toLowerCase()
+      // The DDR5 catalogue spells it the British way; both rows must align.
+      .replace('organisation', 'organization')
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-|-$/g, '')
+  );
 }
 
 function catalogueItem(level: LevelId): ComparisonItem {
@@ -106,37 +111,53 @@ export function comparisonItem(level: LevelId): ComparisonItem {
   return item;
 }
 
+export function comparisonCategoryLabel(id: ComparisonCategoryId) {
+  return categoryDefinitions.find((category) => category.id === id)!.label;
+}
+
+/** Where an item lives, e.g. "Desktop PC / Motherboard / Ryzen 9 9950X". */
+export function comparisonItemPath(item: ComparisonItem) {
+  const ancestors = levelPath(item.level).slice(0, -1);
+  return (
+    ancestors.map((level) => levels[level].name).join(' / ') ||
+    levels[item.system].name
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Search and filtering
+
+function searchableText(item: ComparisonItem) {
+  return [
+    item.name,
+    item.shortName,
+    item.note,
+    item.kind,
+    comparisonCategoryLabel(item.category),
+    ...levelPath(item.level).map((level) => levels[level].name),
+    ...byId[levels[item.level].concept].searchTerms,
+    ...item.specs.flatMap((spec) => [spec.label, spec.value]),
+  ]
+    .join(' ')
+    .toLowerCase();
+}
+
 const searchText = new Map(
-  comparisonItems.map((item) => {
-    const root = byId[levels[item.level].concept];
-    return [
-      item.level,
-      [
-        item.name,
-        item.shortName,
-        item.note,
-        item.kind,
-        categoryDefinitions.find((category) => category.id === item.category)!
-          .label,
-        ...levelPath(item.level).map((level) => levels[level].name),
-        ...root.searchTerms,
-        ...item.specs.flatMap((spec) => [spec.label, spec.value]),
-      ]
-        .join(' ')
-        .toLowerCase(),
-    ];
-  }),
+  comparisonItems.map((item) => [item.level, searchableText(item)]),
 );
 
+export type ComparisonFilter = {
+  category?: ComparisonCategoryId;
+  system?: LevelId;
+  query?: string;
+};
+
+/** Every filter narrows the result, and every search word must match. */
 export function filterComparisonItems({
   category,
   system,
   query = '',
-}: {
-  category?: ComparisonCategoryId;
-  system?: LevelId;
-  query?: string;
-} = {}) {
+}: ComparisonFilter = {}) {
   const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
   return comparisonItems.filter(
     (item) =>
@@ -144,6 +165,16 @@ export function filterComparisonItems({
       (!system || item.system === systemRoot(system)) &&
       terms.every((term) => searchText.get(item.level)!.includes(term)),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Pair questions
+
+/** Like parts share one specification table; unlike parts get one card each. */
+export function sharesSpecTable(left: LevelId, right: LevelId) {
+  const a = comparisonItem(left),
+    b = comparisonItem(right);
+  return a.category === b.category && a.kind === b.kind;
 }
 
 export type ComparisonRow = {
@@ -155,13 +186,8 @@ export type ComparisonRow = {
 
 /** Align matching field names, never row positions or unrelated CPU/GPU fields. */
 export function comparisonRows(left: LevelId, right: LevelId): ComparisonRow[] {
-  const a = comparisonItem(left),
-    b = comparisonItem(right);
   const rows = new Map<string, ComparisonRow>();
-  for (const [side, item] of [
-    ['left', a],
-    ['right', b],
-  ] as const)
+  const addSide = (side: 'left' | 'right', item: ComparisonItem) => {
     for (const spec of item.specs) {
       const id = `${item.category}:${spec.id}`;
       const row = rows.get(id) ?? {
@@ -173,14 +199,19 @@ export function comparisonRows(left: LevelId, right: LevelId): ComparisonRow[] {
       row[side] = spec.value;
       rows.set(id, row);
     }
+  };
+  addSide('left', comparisonItem(left));
+  addSide('right', comparisonItem(right));
   return [...rows.values()];
 }
 
+/** True size needs an authored millimetre scale on both sides. */
 export function canComparePhysicalScale(left: LevelId, right: LevelId) {
-  return [left, right].every((level) => {
-    const units = comparisonItem(level).millimetersPerUnit;
-    return units !== null && Number.isFinite(units) && units > 0;
-  });
+  // Validation below guarantees any declared scale is finite and positive.
+  return (
+    comparisonItem(left).millimetersPerUnit !== null &&
+    comparisonItem(right).millimetersPerUnit !== null
+  );
 }
 
 export function validateComparisonCatalogue() {

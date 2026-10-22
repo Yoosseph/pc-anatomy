@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   canComparePhysicalScale,
   comparisonCategories,
+  comparisonCategoryLabel,
   comparisonItem,
+  comparisonItemPath,
   comparisonItems,
   comparisonPanePoint,
   comparisonRows,
@@ -14,6 +16,9 @@ import {
   setComparisonActiveSide,
   setComparisonExplode,
   setComparisonFraming,
+  sharesSpecTable,
+  otherSide,
+  sideLetter,
   swapComparisonSides,
   validateComparisonCatalogue,
 } from '../lib/comparison-state.ts';
@@ -216,6 +221,29 @@ await test('specification rows match meaning by label and preserve missing value
   assert.equal(unrelated.length, 2);
   assert.ok(unrelated.every((row) => row.left === null || row.right === null));
   assert.deepEqual(comparisonRows('legionboard', 'macboard'), []);
+});
+
+await test('labels, paths and table eligibility describe items the way the picker shows them', () => {
+  assert.equal(comparisonCategoryLabel('power'), 'Power & batteries');
+  assert.equal(comparisonItemPath(comparisonItem('pc')), 'Desktop PC');
+  assert.equal(
+    comparisonItemPath(comparisonItem('ryzenio')),
+    'Desktop PC / Motherboard / Ryzen 9 9950X',
+  );
+  assert.ok(sharesSpecTable('ssd', 'legionstorage'));
+  assert.equal(sharesSpecTable('maccpu', 'nvme'), false);
+  // Same category, but a hardware model and a diagram never share rows.
+  assert.equal(sharesSpecTable('dimm', 'cell'), false);
+  assert.deepEqual(
+    (['left', 'right'] as const).map((side) => [
+      sideLetter(side),
+      otherSide(side),
+    ]),
+    [
+      ['A', 'right'],
+      ['B', 'left'],
+    ],
+  );
 });
 
 await test('pane coordinates map split and mobile viewports independently', () => {

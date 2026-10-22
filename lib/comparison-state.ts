@@ -19,30 +19,38 @@ export type ComparisonState = {
 };
 export type ComparisonViewState = Omit<ComparisonState, 'specsOpen'>;
 
-export function createComparisonState(level?: LevelId): ComparisonState {
-  const left = level ?? 'card';
-  const item = comparisonItem(left);
-  const candidates = comparisonItems.filter(
-    (candidate) => candidate.level !== left,
+export const otherSide = (side: ComparisonSide): ComparisonSide =>
+  side === 'left' ? 'right' : 'left';
+/** Sides are labelled A and B in the interface. */
+export const sideLetter = (side: ComparisonSide) =>
+  side === 'left' ? 'A' : 'B';
+
+/**
+ * The model shown beside `level` on entry: the most like-for-like part
+ * available, preferring one from another system so the pair is interesting.
+ */
+function companionFor(level: LevelId): LevelId {
+  const item = comparisonItem(level);
+  const others = comparisonItems.filter((other) => other.level !== level);
+  const sameCategory = others.filter(
+    (other) => other.category === item.category,
   );
-  const sameKind = candidates.filter(
-    (candidate) =>
-      candidate.category === item.category && candidate.kind === item.kind,
-  );
-  const right =
-    level === undefined
-      ? 'rx9070'
-      : (
-          sameKind.find((candidate) => candidate.system !== item.system) ??
-          sameKind[0] ??
-          candidates.find(
-            (candidate) => candidate.category === item.category,
-          ) ??
-          candidates[0]
-        ).level;
+  const sameKind = sameCategory.filter((other) => other.kind === item.kind);
+  const pick =
+    sameKind.find((other) => other.system !== item.system) ??
+    sameKind[0] ??
+    sameCategory[0] ??
+    others[0];
+  return pick.level;
+}
+
+/** Comparison opens on the scale the explorer was showing. */
+export function createComparisonState(
+  level: LevelId = 'card',
+): ComparisonState {
   return {
-    left,
-    right,
+    left: level,
+    right: companionFor(level),
     activeSide: 'left',
     explode: 0,
     specsOpen: false,
@@ -57,7 +65,7 @@ export function selectComparisonItem(
   side: ComparisonSide,
   level: ComparisonLevel,
 ): ComparisonState {
-  const other = side === 'left' ? state.right : state.left;
+  const other = state[otherSide(side)];
   if (!(level in levels) || level === other || state[side] === level)
     return state;
   return {

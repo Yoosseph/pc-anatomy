@@ -99,6 +99,14 @@ The rail on the left carries the scale tree and per-system visibility. The GPU m
 
 ![Every part of the machine laid out flat as a component inventory, seen on the desktop workbench](docs/screenshots/workbench-inventory.png)
 
+On the assembled desktop, turn on **Power** beside **Airflow** to trace the
+24-pin ATX, 8-pin EPS, 12V-2x6 GPU and SATA power feeds. Choose **All**, **CPU**,
+**GPU** or **Storage** to follow a destination; GPU includes its separate PCIe
+slot feed. The legend explains the voltages and opens component details. The
+paths remain visible through the case, fade during disassembly, and use static
+arrows when reduced motion is enabled. Colors identify routes; the animation
+shows direction rather than measured speed or watts.
+
 ## Quick start
 
 PC Anatomy requires Node.js 22.13 or newer.

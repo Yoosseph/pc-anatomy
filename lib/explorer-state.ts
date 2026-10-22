@@ -2,6 +2,7 @@ import { byId, isLevelRoot } from './manifest.ts';
 import { categories, type Category } from './concept.ts';
 import { isPhysical, rootLevel, type LevelId } from './levels.ts';
 import type { AirflowMode } from './airflow-policy.ts';
+import type { PowerTarget } from './power-flow-policy.ts';
 
 /**
  * What the explorer is currently showing, and the moves that change it.
@@ -29,6 +30,9 @@ export type ExplorerState = {
    * scale of it. `airflowShown` resolves it against the current scale.
    */
   airflow: AirflowMode;
+  /** Desktop power annotations persist across navigation until Reset. */
+  power: boolean;
+  powerTarget: PowerTarget;
   cameraRevision: number;
   focusRevision: number;
   /** The component being opened, while the isolate-and-close-in ramp runs. */
@@ -46,6 +50,8 @@ export const initialState: ExplorerState = {
   isolated: false,
   view: 'perspective',
   airflow: 'auto',
+  power: false,
+  powerTarget: 'all',
   cameraRevision: 0,
   focusRevision: 0,
   diveInto: null,

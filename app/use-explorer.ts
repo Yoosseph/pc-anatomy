@@ -296,6 +296,10 @@ export function useExplorer() {
       cameraRevision: s.cameraRevision + 1,
     }));
 
+  const togglePower = () => setState((s) => ({ ...s, power: !s.power }));
+  const setPowerTarget = (powerTarget: ExplorerState['powerTarget']) =>
+    setState((s) => ({ ...s, powerTarget }));
+
   const toggleIsolate = () =>
     setState((s) => ({
       ...s,
@@ -352,6 +356,8 @@ export function useExplorer() {
     clearHidden,
     setView,
     toggleAirflow,
+    togglePower,
+    setPowerTarget,
     toggleIsolate,
     refocus,
     hide,

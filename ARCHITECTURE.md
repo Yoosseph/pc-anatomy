@@ -271,7 +271,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 108 tests: catalogue integrity, layout, picking, geometry presence, airflow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 114 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -306,6 +306,38 @@ isolated, camera view, the airflow mode, and three revision counters. `cameraRev
 `diveRevision` starts a dive. The scene watches the revisions, not the values.
 
 ## Conventions that matter
+
+**Power flow is an opt-in annotation on the desktop tower.** `power-flow-policy.ts`
+holds the route descriptions, citations, destination filters, visibility rules
+and the pure `powerPanelState` derivation for legend rows and status messages
+without importing three.js. `machine.ts` shares the four authored cable paths
+between the physical looms and `buildPowerFlow` in `power-flow.ts`. The dashed
+motherboard-to-PCIe-slot path is conceptual, not a PCB trace. ATX, EPS, GPU and
+SATA cables start at the PSU; the GPU has both auxiliary and slot power.
+
+The overlay is scenery, refuses raycasts and uses depth-independent lines and
+arrows so the EPS cable behind the tray and the SATA cable under the shroud stay
+readable. It never changes hardware materials. Colors identify routes, not
+voltages; the legend names the voltages separately. The arrows show direction,
+not electron speed or power consumption. `scene.ts` supplies the clock and the
+disassembly fade, freezes the arrows for reduced motion, and suppresses paths
+whose required parts/categories are hidden, during isolation, or during a dive.
+`state.power` and `powerTarget` survive navigation and are cleared by Reset;
+they are view preferences and do not enter the URL. `app/power-controls.tsx`
+owns the legend and invokes the existing component inspection cards.
+Route construction in `power-flow.ts` samples each cable once and shares arrow
+and endpoint geometry across tracks; its frame loop only interpolates samples.
+The scene recomputes eligible routes on state updates, while the animation clock
+and disassembly fade remain frame-driven.
+
+`tests/power-flow.test.ts` covers the feeds, endpoints, visibility, citations,
+animation, picking exclusion and fade. `scripts/power-flow-smoke.mjs` exercises
+the controls, inspection, navigation, reset, disassembly, keyboard input and
+responsive layouts in headless Edge. Screenshots default to `outputs/power-flow`;
+override `POWER_BASE_URL`, `POWER_SCREENSHOTS` or `BROWSER_EXECUTABLE` as needed.
+Set `POWER_SOFTWARE=1` to exercise SwiftShader instead of the available GPU.
+On narrow screens the panel starts with just the destination filters; Details
+expands the connector legend so the model remains visible while tracing power.
 
 **Geometry is millimetres.** Every builder opens with a local `mm()` converting
 to scene units and states its scale in the file header: the tower is 1 unit ≈
@@ -497,7 +529,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-108 tests, all through Node's built-in runner.
+116 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request

@@ -28,7 +28,14 @@ export default function ComparisonViewer({ state, onCount }: Props) {
       ),
     (current, reportError) => ({
       stats: (count) => current().onCount(count),
-      hover: (name, x, y) => setHover(name ? { name, x, y } : null),
+      hover: (name, x, y) =>
+        setHover((previous) =>
+          name
+            ? previous?.name === name && previous.x === x && previous.y === y
+              ? previous
+              : { name, x, y }
+            : null,
+        ),
       error: reportError,
     }),
     'The comparison viewer could not load. Reload to try again.',

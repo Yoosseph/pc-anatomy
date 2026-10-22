@@ -4,9 +4,21 @@ import * as T from 'three';
 import { buildModel, refreshBatches, type Piece } from '../lib/models.ts';
 import { byId, isLevelRoot, manifest } from '../lib/manifest.ts';
 import { resolvePick, resolvePickNear } from '../lib/picking.ts';
+import { accelerateRaycasts } from '../lib/raycast-acceleration.ts';
 import { levelIds } from '../lib/levels.ts';
 import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
+import { roundedBox } from '../lib/geometry-cache.ts';
+import { surfaceTexture } from '../lib/surfaces.ts';
+import {
+  ModelPoseCache,
+  ModelStageScratch,
+  createModelShelf,
+  disposeModelResources,
+  applyPiecePose,
+  prepareModelInventory,
+  settledAmount,
+} from '../lib/model-stage.ts';
 
 // Geometry tests need the canvas texture API, but not a WebGL context. Browser
 // visual checks cover the real textures; this stub only records valid dimensions.
@@ -34,6 +46,239 @@ after(() => {
 });
 
 const models = new Map(levelIds.map((level) => [level, buildModel(level)]));
+// Built here, while the canvas stub above is installed, so the test may pose
+// and accelerate them without disturbing the shared models.
+const unaccelerated = (['card', 'legion', 'macbook'] as const).map(
+  (level) => [level, buildModel(level)] as const,
+);
+// Second builds draw on geometry and textures cached by the first.
+const rebuilt = new Map(
+  (['pc', 'card', 'legion', 'macbook'] as const).map((level) => [
+    level,
+    buildModel(level),
+  ]),
+);
+
+await test('pose caching preserves disassembly, layout, visibility and dive cancellation', () => {
+  for (const level of ['card', 'legion', 'macbook'] as const) {
+    const model = buildModel(level);
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const scratch = new ModelStageScratch();
+    for (const amount of [0, 0.3, 0.8, 1, 0]) {
+      assert.equal(cache.update(amount), true);
+      const matrices = model.pieces.map((p) => {
+        p.object.updateMatrix();
+        return p.object.matrix.clone();
+      });
+      model.pieces.forEach((p, i) => {
+        applyPiecePose(p, level, amount, scratch);
+        p.object.updateMatrix();
+        assert.ok(p.object.matrix.equals(matrices[i]), `${level}: ${p.key}`);
+      });
+      const batch = model.pieces.find((p) => p.batch)?.batch;
+      const version = batch?.instanceMatrix.version;
+      assert.equal(cache.update(amount), false);
+      assert.equal(
+        batch?.instanceMatrix.version,
+        version,
+        'idle frame uploaded instance matrices',
+      );
+    }
+    const piece = model.pieces[0];
+    piece.visible = false;
+    cache.invalidate();
+    assert.equal(cache.update(0), true);
+    assert.equal(piece.object.scale.x, 0);
+    piece.visible = true;
+    cache.invalidate();
+    cache.update(1);
+    prepareModelInventory(model, level, 0.6);
+    cache.invalidate();
+    assert.equal(
+      cache.update(1),
+      true,
+      'resizing must apply the new inventory',
+    );
+    cache.update(0, () => 0.25);
+    assert.equal(piece.object.scale.x, 0.25);
+    assert.equal(cache.update(0), true);
+    assert.equal(
+      piece.object.scale.x,
+      1,
+      'cancelled dive left the model shrunk',
+    );
+    assert.equal(settledAmount(0.99999, 1, 0.016, false), 1);
+    assert.equal(settledAmount(0, 1, 0.016, true), 1);
+  }
+});
+
+await test('local geometry boxes preserve precise raycast results through assembled and inventory poses', () => {
+  for (const level of ['card', 'legion', 'macbook'] as const) {
+    const model = buildModel(level);
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const geometries = new Set<T.BufferGeometry>();
+    model.root.traverse((o) => {
+      if (o instanceof T.Mesh) geometries.add(o.geometry);
+    });
+    const boxes = new Map([...geometries].map((g) => [g, g.boundingBox]));
+    assert.ok([...boxes.values()].every(Boolean));
+    for (const amount of [0, 1]) {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      for (const piece of model.pieces.slice(0, 8)) {
+        const origin = piece.object.position
+          .clone()
+          .add(new T.Vector3(0, 30, 0));
+        const ray = new T.Raycaster(origin, new T.Vector3(0, -1, 0));
+        const before = resolvePick(ray.intersectObject(model.root, true));
+        for (const g of geometries) g.boundingBox = null;
+        const after = resolvePick(ray.intersectObject(model.root, true));
+        assert.equal(before?.key, after?.key, `${level} at ${amount}`);
+        for (const [g, box] of boxes) g.boundingBox = box;
+      }
+    }
+  }
+});
+
+await test('bounds trees return the same intersections as the triangle scan and leave geometry untouched', () => {
+  for (const [level, model] of unaccelerated) {
+    prepareModelInventory(model, level, 1.6);
+    const cache = new ModelPoseCache(model, level);
+    const rays: T.Raycaster[] = [];
+    for (const piece of model.pieces.slice(0, 12)) {
+      const target = piece.base.clone().add(piece.center);
+      for (const from of [
+        new T.Vector3(0, 30, 0),
+        new T.Vector3(14, 9, 18),
+        new T.Vector3(-16, 4, -11),
+      ])
+        rays.push(
+          new T.Raycaster(
+            target.clone().add(from),
+            from.clone().negate().normalize(),
+          ),
+        );
+    }
+    const hits = () =>
+      rays.map((ray) =>
+        ray
+          .intersectObject(model.root, true)
+          .map(
+            (h) => `${h.object.uuid}:${h.instanceId}:${h.distance.toFixed(6)}`,
+          )
+          .join('|'),
+      );
+    const before = [0, 1].map((amount) => {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      return hits();
+    });
+    const indices = new Map<T.BufferGeometry, ArrayLike<number> | undefined>();
+    model.root.traverse((o) => {
+      if (o instanceof T.Mesh) indices.set(o.geometry, o.geometry.index?.array);
+    });
+    const copies = new Map(
+      [...indices].map(([g, a]) => [g, a && Array.from(a)]),
+    );
+    accelerateRaycasts(model.root);
+    let trees = 0;
+    for (const g of indices.keys()) if (g.boundsTree) trees++;
+    assert.ok(trees > 0, `${level} built no bounds trees`);
+    [0, 1].forEach((amount, i) => {
+      cache.update(amount);
+      model.root.updateMatrixWorld(true);
+      assert.deepEqual(hits(), before[i], `${level} at ${amount}`);
+    });
+    for (const [g, copy] of copies)
+      if (copy)
+        assert.deepEqual(
+          Array.from(g.index!.array),
+          copy,
+          'bounds tree reordered a GPU index buffer',
+        );
+  }
+});
+
+await test('a rebuild that reuses shared geometry produces the same model', () => {
+  const fingerprint = (model: { root: T.Object3D; pieces: Piece[] }) => {
+    model.root.updateMatrixWorld(true);
+    const meshes: string[] = [];
+    model.root.traverse((o) => {
+      if (!(o instanceof T.Mesh)) return;
+      const g = o.geometry;
+      if (!g.boundingBox) g.computeBoundingBox();
+      const uv = g.getAttribute('uv');
+      let uvSum = 0;
+      for (let i = 0; uv && i < uv.count; i++) uvSum += uv.getX(i) + uv.getY(i);
+      meshes.push(
+        [
+          g.getAttribute('position').count,
+          g.index?.count ?? 0,
+          g.boundingBox!.min.toArray().map((n: number) => n.toFixed(5)),
+          g.boundingBox!.max.toArray().map((n: number) => n.toFixed(5)),
+          uvSum.toFixed(3),
+          o.matrixWorld.elements.map((n) => n.toFixed(5)),
+        ].join(';'),
+      );
+    });
+    return [model.pieces.map((p) => p.key).join(','), ...meshes];
+  };
+  for (const [level, model] of rebuilt)
+    assert.deepEqual(
+      fingerprint(model),
+      fingerprint(models.get(level)!),
+      level,
+    );
+});
+
+await test('disposing a model frees its own resources but not shared ones', () => {
+  const freed = new Set<object>();
+  const watch = <R extends T.EventDispatcher<{ dispose: object }>>(r: R) => {
+    r.addEventListener('dispose', () => freed.add(r));
+    return r;
+  };
+  const shared = watch(roundedBox(1, 1, 1, 2, 0.1));
+  const surface = watch(surfaceTexture('brushed'));
+  const own = watch(new T.BoxGeometry());
+  const material = watch(new T.MeshStandardMaterial({ bumpMap: surface }));
+  const root = new T.Group();
+  root.add(new T.Mesh(shared, material), new T.Mesh(own, material));
+  disposeModelResources({ root, pieces: [] });
+  assert.ok(freed.has(own) && freed.has(material));
+  assert.ok(!freed.has(shared), 'shared geometry was disposed');
+  assert.ok(!freed.has(surface), 'shared texture was disposed');
+});
+
+await test('the model shelf returns parked models and disposes only evictions', () => {
+  const freed: string[] = [];
+  const model = (name: string) => {
+    const geometry = new T.BoxGeometry();
+    geometry.addEventListener('dispose', () => freed.push(name));
+    const root = new T.Group();
+    root.add(new T.Mesh(geometry, new T.MeshBasicMaterial()));
+    return { root, pieces: [] };
+  };
+  const shelf = createModelShelf(2);
+  const pc = model('pc'),
+    legion = model('legion'),
+    macbook = model('macbook');
+  // Desktop → Legion → MacBook → Desktop → Legion, with two parked at most.
+  assert.equal(shelf.exchange('legion', 'pc', pc), undefined);
+  assert.equal(shelf.exchange('macbook', 'legion', legion), undefined);
+  assert.equal(
+    shelf.exchange('pc', 'macbook', macbook),
+    pc,
+    'returning to the oldest parked model must not evict it first',
+  );
+  assert.equal(shelf.exchange('legion', 'pc', pc), legion);
+  assert.deepEqual(freed, [], 'three systems fit: current plus two parked');
+  assert.equal(shelf.exchange('card', 'legion', legion), undefined);
+  assert.deepEqual(freed, ['macbook'], 'the least recently left is evicted');
+  shelf.dispose();
+  assert.deepEqual(freed, ['macbook', 'pc', 'legion']);
+});
 
 await test('installed motherboard and GPU retain their full inspection geometry and parent picking identity', () => {
   const triangles = (root: T.Object3D) => {

@@ -1,5 +1,52 @@
 # PC Anatomy — architecture
 
+## Rendering performance
+
+Both viewers use `ModelPoseCache` in `model-stage.ts`. A settled assembly keeps
+its existing transforms, instance buffers and picking bounds while the camera,
+fans or airflow move. Call `invalidate()` after changing visibility or inventory
+positions; construct a new cache when replacing a model. Dive ramps bypass the
+cache and invalidate the first frame after the ramp ends. `settledAmount` snaps
+the final sub-0.0001 movement to the target so damping can actually stop.
+
+Camera targets are recomputed after state/layout changes (and moving poses in
+comparison), rather than on every frame of camera interpolation. Hover events
+are coalesced into the render loop, and unchanged tooltip values retain React
+state identity. Local geometry bounding boxes enable Three.js's existing early
+ray rejection; they do not replace precise triangle picking or its glass policy.
+
+Hover re-picks only when the pointer, the pose or the camera view changes, not
+on frames where only fans or airflow move. `raycast-acceleration.ts` builds a
+`three-mesh-bvh` bounds tree for each geometry of 1000+ triangles in idle time
+after a model is on screen, and returns a cancel that model disposal must call.
+Trees are built in indirect mode, so GPU index buffers are never reordered, and
+they return the same intersections as the triangle scan they replace.
+
+Switching systems is mostly not rebuilding. Both viewers park the model they
+leave on a `createModelShelf` (two parked on desktop, one on touch devices) and
+take it back on return, so only a first visit builds. `exchange` takes before it
+parks; parking first evicts the model being returned to. A reused model is
+re-laid-out, re-posed and re-coloured by the usual refresh path.
+
+`geometry-cache.ts` shares measurement-only geometry (rounded boxes, perforated
+panels, notebook plates) across builds, and the surface and grain textures are
+shared the same way. These are marked shared, and `disposeModelResources` skips
+them. Nothing may mutate a geometry after construction: copy it first, as the
+notebook screen does before remapping its UVs. The merge step copies into a
+plain `BufferGeometry`, because `clone()` on a `RoundedBoxGeometry` builds a
+whole default box first.
+
+The explorer keeps a freshly built model hidden while `compileAsync` compiles
+the stage's shaders in parallel, including the render-target variants the glass
+panel's transmission pass needs. Compile the whole scene with the model visible:
+the model's point lights are part of every program key.
+
+The shared scheduler keeps two extra frames after input. Continuing animation
+and OrbitControls change events keep it awake as needed; hidden rotors do not.
+Do not add fixed multi-second frame budgets to work around missing invalidation.
+See [the performance notes](docs/performance.md) for measurements, remaining
+costs, and repeatable CPU/browser checks.
+
 ## Notebook systems and the scale forest
 
 The explorer now has three independent roots: Desktop PC (`pc`), Lenovo Legion
@@ -260,6 +307,7 @@ subsystems stop touching.
 | `lib/comparison-state.ts` | Category-specific comparison schemas, metadata-driven model discovery, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
+| `lib/raycast-acceleration.ts` | Idle-time bounds trees for heavy geometry, behind three.js's own sphere and box rejection. Picks are unchanged; only unreachable triangles are skipped. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
 | `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
 | `app/comparison-workbench.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx` | Comparison composition and controls, the React-to-Three bridge, and the responsive specification sheet. |
@@ -539,11 +587,15 @@ with Node.js 22.
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
   packing without overlap at several aspect ratios, machine depth.
-- `tests/models.test.ts` (18) — geometry presence and identity for every scale,
+- `tests/models.test.ts` (20) — geometry presence and identity for every scale,
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule
-  that no rendered object is anonymous.
+  that no rendered object is anonymous. Also checks pose-cache invalidation,
+  unchanged instance-buffer versions, dive restoration, and precise picking
+  equivalence with and without geometry bounding boxes.
+- `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
+  coalescing, disposal, and hidden/collapsed rotor behavior.
 - `tests/gpus.test.ts` (10) — the three-card menu structure, published hierarchy
   counts multiplying out to published totals, diagram blocks not overlapping,
   each card's published construction and envelope, board passives not

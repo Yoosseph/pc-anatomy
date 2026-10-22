@@ -2,9 +2,61 @@ import * as T from 'three';
 import { byId } from './manifest.ts';
 import { isPhysical, levels, type LevelId } from './levels.ts';
 import { inventoryLayout, smoothstep, spatialInventory } from './layout.ts';
-import type { Piece } from './models.ts';
+import { refreshBatches, type Piece } from './models.ts';
+import { isShared } from './geometry-cache.ts';
 
 export type BuiltModel = { root: T.Group; pieces: Piece[] };
+
+/** Stop damping once the remaining movement is imperceptible. */
+export function settledAmount(
+  current: number,
+  target: number,
+  dt: number,
+  reduced: boolean,
+) {
+  const next = reduced ? target : T.MathUtils.damp(current, target, 10, dt);
+  return Math.abs(next - target) < 0.0001 ? target : next;
+}
+
+/** Transform and upload only when the assembly pose actually changes. */
+export class ModelPoseCache {
+  private amount = NaN;
+  private dirty = true;
+  private scratch = new ModelStageScratch();
+  private batches: Set<T.InstancedMesh>;
+  private model: BuiltModel;
+  private level: LevelId;
+
+  constructor(model: BuiltModel, level: LevelId) {
+    this.model = model;
+    this.level = level;
+    this.batches = new Set(
+      model.pieces.flatMap((p) => (p.batch ? [p.batch] : [])),
+    );
+  }
+
+  /** Visibility and inventory layout changes also invalidate an unchanged amount. */
+  invalidate() {
+    this.dirty = true;
+  }
+
+  update(amount: number, ramp?: (piece: Piece) => number) {
+    if (!this.dirty && amount === this.amount && !ramp) return false;
+    for (const piece of this.model.pieces)
+      applyPiecePose(
+        piece,
+        this.level,
+        amount,
+        this.scratch,
+        ramp?.(piece) ?? 1,
+      );
+    refreshBatches(this.batches);
+    this.amount = amount;
+    // Restore the full scale on the first frame after a dive is cancelled/ends.
+    this.dirty = !!ramp;
+    return true;
+  }
+}
 
 export class ModelStageScratch {
   position = new T.Vector3();
@@ -194,14 +246,58 @@ export function disposeModelResources(model: BuiltModel) {
       : [object.material]
     ).forEach((material) => materials.add(material));
   });
-  geometries.forEach((geometry) => geometry.dispose());
+  geometries.forEach((geometry) => {
+    if (!isShared(geometry)) geometry.dispose();
+  });
   materials.forEach((material) => {
     if (
       material instanceof T.MeshBasicMaterial ||
       material instanceof T.MeshStandardMaterial
     )
       for (const value of Object.values(material))
-        if (value instanceof T.Texture) value.dispose();
+        if (value instanceof T.Texture && !isShared(value)) value.dispose();
     material.dispose();
   });
 }
+
+/**
+ * Recently left models, kept whole so going back to one is immediate.
+ *
+ * Building a model takes from a tenth of a second to over one, on the main
+ * thread, and swapping between the desktop and the notebooks used to pay it
+ * every time, in both directions. A parked model keeps its GPU buffers, which
+ * is what the limit bounds: about 40 to 80 MB each for the full systems.
+ * Whoever takes a model back owns re-applying visibility, layout and pose.
+ */
+export function createModelShelf(limit: number) {
+  const parked = new Map<LevelId, BuiltModel>();
+  return {
+    /**
+     * Park the model being left and hand back the one being returned to, if
+     * it is here. Taking comes first: with every system parked, parking first
+     * would evict the very model about to be reused.
+     */
+    exchange(arriving: LevelId, leaving: LevelId, model: BuiltModel) {
+      const back = parked.get(arriving);
+      parked.delete(arriving);
+      parked.delete(leaving);
+      parked.set(leaving, model);
+      for (const [oldest, old] of parked) {
+        if (parked.size <= limit) break;
+        parked.delete(oldest);
+        disposeModelResources(old);
+      }
+      return back;
+    },
+    dispose() {
+      parked.forEach(disposeModelResources);
+      parked.clear();
+    },
+  };
+}
+
+/** Phones get one parked model; their GPU memory is the scarcer resource. */
+export const shelfLimit = () =>
+  typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+    ? 1
+    : 2;

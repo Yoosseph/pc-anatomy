@@ -15,7 +15,7 @@ import {
 import { buildChassis, plateWithHoles, type CaseShell } from './chassis.ts';
 import { cardStack } from './graphics-card.ts';
 import { finishes, type Finish } from './materials.ts';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { roundedBox } from './geometry-cache.ts';
 
 /**
  * The assembled desktop machine.
@@ -132,11 +132,7 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
    */
   const slab = (size: Vec3, kind: Finish, color?: string, radius = 0.014) =>
     new T.Mesh(
-      new RoundedBoxGeometry(
-        ...size,
-        2,
-        Math.min(radius, Math.min(...size) * 0.45),
-      ),
+      roundedBox(...size, 2, Math.min(radius, Math.min(...size) * 0.45)),
       finish(kind, color),
     );
 

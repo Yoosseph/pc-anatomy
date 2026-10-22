@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { Vec3 } from './layout.ts';
+import { sharedGeometry } from './geometry-cache.ts';
 
 /**
  * Small mechanical pieces that appear all over a machine: fans, heatsinks,
@@ -404,6 +405,20 @@ export function buildPerforation(
   /** Hole radius as a fraction of the pitch. */
   open = 0.31,
 ) {
+  const geometry = sharedGeometry(
+    `perforation:${width},${height},${thickness},${pitch},${open}`,
+    () => perforationGeometry(width, height, thickness, pitch, open),
+  );
+  return new T.Mesh(geometry, material(color, 0.76, 0.42));
+}
+
+function perforationGeometry(
+  width: number,
+  height: number,
+  thickness: number,
+  pitch: number,
+  open: number,
+) {
   const shape = new T.Shape();
   shape.moveTo(-width / 2, -height / 2);
   shape.lineTo(width / 2, -height / 2);
@@ -427,7 +442,7 @@ export function buildPerforation(
     curveSegments: 7,
   });
   geometry.translate(0, 0, -thickness / 2);
-  return new T.Mesh(geometry, material(color, 0.76, 0.42));
+  return geometry;
 }
 
 // ── Heatsinks ─────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import * as T from 'three';
-import { buildModel, refreshBatches, type Piece } from './models';
+import { buildModel, type Piece } from './models';
 import { resolvePickNear } from './picking.ts';
+import { scheduleRaycastAcceleration } from './raycast-acceleration.ts';
 import { tapIntent } from './pointer-intent.ts';
 import {
   labelSignature,
@@ -16,7 +17,10 @@ import type { ExplorerState, Selection } from './explorer-state.ts';
 import { isPhysical, levels } from './levels.ts';
 import { smoothstep } from './layout';
 import {
-  applyPiecePose,
+  ModelPoseCache,
+  createModelShelf,
+  shelfLimit,
+  settledAmount,
   disposeModelResources,
   laidOutAmount,
   piecePosture,
@@ -59,6 +63,17 @@ export type SceneCallbacks = {
 /** How far laid out the parts must be before they are named. */
 const LABELS_FROM = 0.97;
 
+function hasTransmission(root: T.Object3D) {
+  let found = false;
+  root.traverse((object) => {
+    if (!(object instanceof T.Mesh)) return;
+    for (const material of [object.material].flat())
+      if (material instanceof T.MeshPhysicalMaterial && material.transmission)
+        found = true;
+  });
+  return found;
+}
+
 export function createViewer(
   host: HTMLDivElement,
   initial: ExplorerState,
@@ -95,6 +110,7 @@ export function createViewer(
   selectedBox.visible = false;
   hoverBox.visible = false;
   scene.add(selectedBox, hoverBox);
+  revealWhenCompiled(model.root);
   const targetPosition = new T.Vector3(),
     targetLook = new T.Vector3(),
     bounds = new T.Box3(),
@@ -104,6 +120,15 @@ export function createViewer(
   const raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
   const stageScratch = new ModelStageScratch();
+  let poses = new ModelPoseCache(model, state.level),
+    cancelAcceleration = scheduleRaycastAcceleration(model.root);
+  /** The view the pointer was last resolved against. */
+  const hoverView = new T.Matrix4();
+  const shelf = createModelShelf(shelfLimit());
+  let fitDirty = true,
+    colorsDirty = true,
+    hoverPending = false;
+  const colorBatches = new Set<T.InstancedMesh>();
   const activeTouches = new Set<number>(),
     selectionBounds = new T.Box3();
   const boundsPieces: Piece[] = [];
@@ -125,12 +150,15 @@ export function createViewer(
     );
   }
   function disposeModel() {
+    cancelAcceleration();
     disposeModelResources(model);
     scene.remove(model.root);
   }
   /** Which set of pieces the shelves were last packed for. */
   let layoutSignature = '';
   function refresh() {
+    poses.invalidate();
+    fitDirty = colorsDirty = true;
     configureStageLighting(runtime, state.level);
     const visible = model.pieces.filter(shown);
     // Packing the shelves is the one expensive thing in here, and `refresh`
@@ -167,7 +195,7 @@ export function createViewer(
     host.dataset.componentTypes = String(
       new Set(visible.map((p) => p.concept)).size,
     );
-    loop.wake(90);
+    loop.wake();
     autoCamera = true;
   }
   /**
@@ -294,12 +322,51 @@ export function createViewer(
     });
   };
   collectAnimations();
+  /**
+   * Keep a newly built model off the stage until its shaders are ready.
+   *
+   * Drawing a model compiles each new shader on first use and waits for it
+   * before compiling the next: about two thirds of a second the first time a
+   * notebook appeared, on top of building it. `compileAsync` hands them all
+   * to the driver at once and lets the main thread go while they compile. A
+   * parked model comes back with its programs still compiled and skips this.
+   *
+   * Transmissive glass makes three.js draw every opaque part a second time
+   * into a render target, with its own untone-mapped shader variants that
+   * `compileAsync` never sees. On the desktop those were 30 of its 47 programs
+   * and over five seconds of the first frame, so they are compiled here too,
+   * by compiling again with a render target bound.
+   */
+  function revealWhenCompiled(root: T.Object3D) {
+    // Compile the whole stage, with the model on it and visible: its own point
+    // lights are part of every shader's key. A hidden model's lights are not
+    // counted, and compiling it as a separate object counts them twice.
+    // Materials that already have programs cost a cache lookup.
+    const compiling = [renderer.compileAsync(scene, camera)];
+    if (hasTransmission(root)) {
+      const target = new T.WebGLRenderTarget(1, 1);
+      const previous = renderer.getRenderTarget();
+      renderer.setRenderTarget(target);
+      compiling.push(renderer.compileAsync(scene, camera));
+      renderer.setRenderTarget(previous);
+      target.dispose();
+    }
+    root.visible = false;
+    const reveal = () => {
+      clearTimeout(fallback);
+      root.visible = true;
+      loop.wake();
+    };
+    // Never leave a model hidden: past this, drawing it compiles what is left,
+    // as it always used to.
+    const fallback = setTimeout(reveal, 5000);
+    Promise.all(compiling).then(reveal, reveal);
+  }
   function render(seconds: number, dt: number, reducedMotion: boolean) {
-    amount = reducedMotion
-      ? state.explode / 100
-      : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
+    amount = settledAmount(amount, state.explode / 100, dt, reducedMotion);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
-    if (dive) {
+    // A dive into a model still compiling waits for it to appear.
+    if (dive && model.root.visible) {
       dive.t = reducedMotion
         ? 1
         : Math.min(
@@ -330,22 +397,22 @@ export function createViewer(
     key.shadow.intensity = shadowFade;
     renderer.shadowMap.autoUpdate = shadowFade > 0.002;
 
-    const batches = new Set<T.InstancedMesh>();
+    const poseChanged = poses.update(
+      amount,
+      dive
+        ? (p) =>
+            dive!.phase === 'out'
+              ? p.concept === dive!.concept
+                ? 1
+                : 1 - ease(dive!.t)
+              : ease(dive!.t)
+        : undefined,
+    );
+    colorBatches.clear();
     let selected = false;
     selectedBox.box.makeEmpty();
     for (const p of model.pieces) {
-      // Everything but the part being opened clears away, then the new scale
-      // grows back in. Multiplying the scale keeps explode and reveal intact.
-      let ramp = 1;
-      if (dive)
-        ramp =
-          dive.phase === 'out'
-            ? p.concept === dive.concept
-              ? 1
-              : 1 - ease(dive.t)
-            : ease(dive.t);
-      applyPiecePose(p, state.level, amount, stageScratch, ramp);
-      if (p.batch) {
+      if (p.batch && colorsDirty) {
         color.set(
           matches(p, state.selection)
             ? '#ffd790'
@@ -354,7 +421,7 @@ export function createViewer(
               : '#ffffff',
         );
         p.batch.setColorAt(p.index!, color);
-        batches.add(p.batch);
+        colorBatches.add(p.batch);
       }
       if (matches(p, state.selection) && p.visible) {
         boxFor(p, selectionBounds);
@@ -362,12 +429,14 @@ export function createViewer(
         selected = true;
       }
     }
-    refreshBatches(batches);
+    for (const batch of colorBatches)
+      if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+    colorsDirty = false;
     if (!reducedMotion && animated.length) {
-      animateObjects(animated, seconds);
+      const animating = animateObjects(animated, seconds);
       // Operating parts keep the scene alive. requestAnimationFrame pauses in
       // background tabs, and reduced-motion users receive the static model.
-      changed = true;
+      changed ||= animating;
     }
     // Airflow describes a machine that is closed, so it goes as soon as this
     // one starts to open, and it follows the fans: switch Cooling off and the
@@ -395,7 +464,10 @@ export function createViewer(
     hoverBox.visible = !!hovered && hovered.visible;
     if (hovered) boxFor(hovered, hoverBox.box);
     if (autoCamera) {
-      fit();
+      if (fitDirty) {
+        fit();
+        fitDirty = false;
+      }
       if (dive?.phase === 'in' && dive.t === 0)
         camera.position.copy(targetLook).lerp(targetPosition, 0.5);
       const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
@@ -404,10 +476,21 @@ export function createViewer(
       changed ||= camera.position.distanceToSquared(targetPosition) > 0.00001;
     }
     controls.update();
+    camera.updateMatrixWorld();
     model.root.updateMatrixWorld(true);
-    // Keep names attached to the part under the cursor as the assembly moves.
-    if (pointerPosition && activePointer === null && changed)
+    // Keep names attached to the part under the cursor as the assembly or the
+    // view moves. Spinning fans and airflow alone do not move what is under
+    // it, and re-picking on their frames cost several rays per frame.
+    const viewChanged = !hoverView.equals(camera.matrixWorld);
+    hoverView.copy(camera.matrixWorld);
+    if (
+      pointerPosition &&
+      activePointer === null &&
+      (hoverPending || poseChanged || viewChanged)
+    ) {
       updateHover(pointerPosition);
+      hoverPending = false;
+    }
     renderer.render(scene, camera);
     reportLabels();
     host.dataset.cameraSettled = String(
@@ -416,8 +499,9 @@ export function createViewer(
     host.dataset.transitioning = String(!!dive);
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
+    host.dataset.programs = String(renderer.info.programs?.length ?? 0);
     host.dataset.explode = String(Math.round(amount * 100));
-    return changed;
+    return changed || colorsDirty;
   }
   let labelsShown = '';
   const projected = new T.Vector3(),
@@ -486,6 +570,7 @@ export function createViewer(
   const observer = new ResizeObserver(resize);
   observer.observe(host);
   function hit(e: { clientX: number; clientY: number }, radius = 0) {
+    if (!model.root.visible) return null;
     const rect = renderer.domElement.getBoundingClientRect();
     const cast = (dx: number, dy: number) => {
       pointer.set(
@@ -512,6 +597,7 @@ export function createViewer(
     dragStart = [e.clientX, e.clientY];
     gestureMoved = false;
     activePointer = e.pointerId;
+    colorsDirty = true;
     hovered = null;
     callbacks.hover(null, 0, 0, false);
   }
@@ -544,7 +630,7 @@ export function createViewer(
       gestureMoved = true;
     pointerPosition = { clientX: e.clientX, clientY: e.clientY };
     if (e.buttons || e.pointerType === 'touch') return;
-    updateHover(e);
+    hoverPending = true;
     wake();
   }
   function inspect(e: MouseEvent) {
@@ -562,6 +648,7 @@ export function createViewer(
   }
   function updateHover(e: { clientX: number; clientY: number }) {
     const p = hit(e, MOUSE_AIM);
+    if (hovered !== p) colorsDirty = true;
     hovered = p;
     renderer.domElement.style.cursor = p ? 'pointer' : 'grab';
     callbacks.hover(
@@ -577,6 +664,8 @@ export function createViewer(
     );
   }
   function leave() {
+    colorsDirty = true;
+    hoverPending = false;
     hovered = null;
     pointerPosition = null;
     activePointer = null;
@@ -601,14 +690,20 @@ export function createViewer(
       if (next.diveRevision !== state.diveRevision && next.diveInto)
         dive = { concept: next.diveInto, t: 0, phase: 'out' };
       if (next.level !== state.level) {
-        disposeModel();
-        model = buildModel(next.level);
+        cancelAcceleration();
+        scene.remove(model.root);
+        const parked = shelf.exchange(next.level, state.level, model);
+        model = parked ?? buildModel(next.level);
+        poses = new ModelPoseCache(model, next.level);
+        cancelAcceleration = scheduleRaycastAcceleration(model.root);
         collectAnimations();
-        // New pieces, so the cached packing belongs to objects that no longer
-        // exist. Returning to a scale would otherwise leave every part of it
-        // with an inventory position of zero, in a heap at the origin.
+        // Different pieces, so the cached packing belongs to another model. A
+        // fresh build would otherwise keep every part at an inventory position
+        // of zero, in a heap at the origin, and a parked one would keep the
+        // shelves it was packed for at whatever size the window was then.
         layoutSignature = '';
         scene.add(model.root);
+        if (!parked) revealWhenCompiled(model.root);
         amount = next.explode / 100;
         hovered = null;
         // Arrive close in, so the deeper scale opens out of the part you
@@ -640,6 +735,7 @@ export function createViewer(
       canvas.removeEventListener('pointercancel', leave);
       canvas.removeEventListener('contextmenu', inspect);
       disposeModel();
+      shelf.dispose();
       selectedBox.geometry.dispose();
       (selectedBox.material as T.Material).dispose();
       hoverBox.geometry.dispose();

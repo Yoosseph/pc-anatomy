@@ -2,6 +2,7 @@ import * as T from 'three';
 import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import { buildScrew } from './parts.ts';
+import { sharedGeometry } from './geometry-cache.ts';
 
 /** A common physical coordinate system, never fitted independently per axis. */
 export const notebookMM = (value: number) => value / 20;
@@ -99,6 +100,17 @@ export function notebookKit(tools: ModelTools) {
     thickness: number,
     radius: number,
     holes: Opening[] = [],
+  ) =>
+    sharedGeometry(
+      `plate:${w},${d},${thickness},${radius},${JSON.stringify(holes)}`,
+      () => buildPlateGeometry(w, d, thickness, radius, holes),
+    );
+  const buildPlateGeometry = (
+    w: number,
+    d: number,
+    thickness: number,
+    radius: number,
+    holes: Opening[],
   ) => {
     const shape = new T.Shape();
     roundedPath(shape, 0, 0, mm(w), mm(d), mm(radius));

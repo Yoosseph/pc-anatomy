@@ -10,12 +10,16 @@ import {
 import {
   comparisonCategories,
   comparisonItem,
+  comparisonItemPath,
   filterComparisonItems,
+  otherSide,
+  sideLetter,
   type ComparisonCategoryId,
+  type ComparisonItem,
   type ComparisonLevel,
   type ComparisonSide,
 } from '@/lib/comparison-state';
-import { levelPath, levels, systemRoots } from '@/lib/levels';
+import { levels, systemRoots } from '@/lib/levels';
 
 type Props = {
   side: ComparisonSide;
@@ -26,6 +30,46 @@ type Props = {
   onClose: () => void;
 };
 
+type ResultProps = {
+  item: ComparisonItem;
+  selected: boolean;
+  /** Set when the other side already shows this model. */
+  takenBy: string | null;
+  onChoose: () => void;
+};
+
+function PickerResult({ item, selected, takenBy, onChoose }: ResultProps) {
+  return (
+    <li>
+      <button
+        data-level={item.level}
+        disabled={takenBy !== null}
+        aria-pressed={selected}
+        onClick={onChoose}
+      >
+        <span className="comparison-result-copy">
+          <strong>{item.name}</strong>
+          <small>{comparisonItemPath(item)}</small>
+          <span>{item.note}</span>
+        </span>
+        <span className="comparison-result-kind">
+          {takenBy
+            ? `On ${takenBy}`
+            : item.kind === 'logical'
+              ? 'Diagram'
+              : 'Hardware'}
+        </span>
+        {selected && <Check size={16} aria-label="Selected" />}
+      </button>
+    </li>
+  );
+}
+
+/**
+ * Category, system and search filters combine. The counts beside each
+ * category follow the system and search filters, so a reader can see where
+ * the matches are before switching category.
+ */
 export default function ComparisonPicker({
   side,
   selected,
@@ -35,6 +79,7 @@ export default function ComparisonPicker({
   onClose,
 }: Props) {
   const search = useRef<HTMLInputElement>(null);
+  // Open on the current part's category; "All parts" is one click away.
   const [category, setCategory] = useState<ComparisonCategoryId | undefined>(
     comparisonItem(selected).category,
   );
@@ -44,6 +89,8 @@ export default function ComparisonPicker({
     () => filterComparisonItems({ system, query }),
     [system, query],
   );
+  const countIn = (id: ComparisonCategoryId) =>
+    matches.filter((item) => item.category === id).length;
   const results = category
     ? matches.filter((item) => item.category === category)
     : matches;
@@ -59,7 +106,7 @@ export default function ComparisonPicker({
     setQuery('');
     search.current?.focus();
   };
-  const letter = side === 'left' ? 'A' : 'B';
+  const otherLetter = sideLetter(otherSide(side));
   return (
     <Dialog
       open
@@ -75,7 +122,7 @@ export default function ComparisonPicker({
       >
         <header className="comparison-picker-heading">
           <div>
-            <DialogTitle>Choose part {letter}</DialogTitle>
+            <DialogTitle>Choose part {sideLetter(side)}</DialogTitle>
             <DialogDescription>
               Browse any system. Your other choice stays in place.
             </DialogDescription>
@@ -132,9 +179,7 @@ export default function ComparisonPicker({
                 onClick={() => setCategory(entry.id)}
               >
                 {entry.label}
-                <span aria-hidden="true">
-                  {matches.filter((item) => item.category === entry.id).length}
-                </span>
+                <span aria-hidden="true">{countIn(entry.id)}</span>
               </button>
             ))}
           </nav>
@@ -154,35 +199,13 @@ export default function ComparisonPicker({
                 <h3>{group.label}</h3>
                 <ul>
                   {group.items.map((item) => (
-                    <li key={item.level}>
-                      <button
-                        data-level={item.level}
-                        disabled={item.level === other}
-                        aria-pressed={item.level === selected}
-                        onClick={() => onChoose(item.level)}
-                      >
-                        <span className="comparison-result-copy">
-                          <strong>{item.name}</strong>
-                          <small>
-                            {levelPath(item.level)
-                              .slice(0, -1)
-                              .map((level) => levels[level].name)
-                              .join(' / ') || levels[item.system].name}
-                          </small>
-                          <span>{item.note}</span>
-                        </span>
-                        <span className="comparison-result-kind">
-                          {item.level === other
-                            ? `On ${letter === 'A' ? 'B' : 'A'}`
-                            : item.kind === 'logical'
-                              ? 'Diagram'
-                              : 'Hardware'}
-                        </span>
-                        {item.level === selected && (
-                          <Check size={16} aria-label="Selected" />
-                        )}
-                      </button>
-                    </li>
+                    <PickerResult
+                      key={item.level}
+                      item={item}
+                      selected={item.level === selected}
+                      takenBy={item.level === other ? otherLetter : null}
+                      onChoose={() => onChoose(item.level)}
+                    />
                   ))}
                 </ul>
               </section>

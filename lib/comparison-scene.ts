@@ -159,6 +159,7 @@ export function createComparisonViewer(
     pane.model.root.updateMatrixWorld(true);
   }
 
+  /** Ease each pane camera toward its model's posed bounds; true while moving. */
   function framePanes(blend: number) {
     const pair = [panes.left, panes.right] as const;
     for (const pane of pair) {
@@ -181,12 +182,13 @@ export function createComparisonViewer(
     let changed = false;
     pair.forEach((pane, index) => {
       pane.bounds.getCenter(targetCenter);
-      const amount = pane.framed ? blend : 1;
-      pane.frame.center.lerp(targetCenter, amount);
+      // A newly built pane snaps to its frame; after that it eases.
+      const step = pane.framed ? blend : 1;
+      pane.frame.center.lerp(targetCenter, step);
       pane.frame.distance = T.MathUtils.lerp(
         pane.frame.distance,
         distances[index],
-        amount,
+        step,
       );
       pane.framed = true;
       changed ||=

@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   ArrowLeftRight,
   BarChart3,
@@ -8,7 +8,8 @@ import {
   Columns2,
 } from 'lucide-react';
 import {
-  comparisonCategories,
+  canComparePhysicalScale,
+  comparisonCategoryLabel,
   comparisonItem,
   createComparisonState,
   selectComparisonItem,
@@ -16,7 +17,11 @@ import {
   setComparisonExplode,
   setComparisonFraming,
   setComparisonSpecsOpen,
+  otherSide,
+  sideLetter,
   swapComparisonSides,
+  type ComparisonFraming,
+  type ComparisonItem,
   type ComparisonLevel,
   type ComparisonSide,
   type ComparisonViewState,
@@ -31,10 +36,56 @@ import './comparison.css';
 
 type Props = { initialLevel: ComparisonLevel; onExit: () => void };
 
+function framingNote(framing: ComparisonFraming, trueSizeAvailable: boolean) {
+  if (framing === 'scale') return 'Same physical scale in both panes.';
+  return trueSizeAvailable
+    ? 'Each model fits its pane. Sizes are not relative.'
+    : 'Each model fits its pane. Diagrams and illustrative parts have no physical scale.';
+}
+
+function disassemblyTitle(left: ComparisonItem, right: ComparisonItem) {
+  if (left.kind !== right.kind) return 'Explore both';
+  return left.kind === 'logical' ? 'Expand both' : 'Disassemble both';
+}
+
+type PartSelectorProps = {
+  side: ComparisonSide;
+  item: ComparisonItem;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+  onOpen: () => void;
+};
+
+/** The card above each pane; it opens that side's picker. */
+function PartSelector({ side, item, buttonRef, onOpen }: PartSelectorProps) {
+  return (
+    <button
+      className={`comparison-selector ${side}`}
+      ref={buttonRef}
+      aria-label={`Choose part ${sideLetter(side)}`}
+      aria-haspopup="dialog"
+      onClick={onOpen}
+    >
+      <span className="comparison-letter">{sideLetter(side)}</span>
+      <span className="comparison-selected-part">
+        <small>
+          {comparisonCategoryLabel(item.category)} · {levels[item.system].name}
+        </small>
+        <strong>{item.shortName}</strong>
+        <span>
+          {item.kind === 'physical' ? 'Hardware model' : 'Architecture diagram'}
+        </span>
+      </span>
+      <ChevronDown size={17} aria-hidden="true" />
+    </button>
+  );
+}
+
 export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
   const specsButton = useRef<HTMLButtonElement>(null);
-  const leftButton = useRef<HTMLButtonElement>(null);
-  const rightButton = useRef<HTMLButtonElement>(null);
+  const selectorButtons = {
+    left: useRef<HTMLButtonElement>(null),
+    right: useRef<HTMLButtonElement>(null),
+  };
   const [state, setState] = useState(() => createComparisonState(initialLevel));
   const [picker, setPicker] = useState<ComparisonSide | null>(null);
   const [viewerRevision, setViewerRevision] = useState(0);
@@ -61,11 +112,8 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
   );
   const leftItem = comparisonItem(state.left);
   const rightItem = comparisonItem(state.right);
-  const trueSizeAvailable =
-    leftItem.millimetersPerUnit !== null &&
-    rightItem.millimetersPerUnit !== null;
+  const trueSizeAvailable = canComparePhysicalScale(state.left, state.right);
   const logical = leftItem.kind === 'logical' && rightItem.kind === 'logical';
-  const mixed = leftItem.kind !== rightItem.kind;
   const reset = () => {
     stopDisassembly();
     setState((current) => ({ ...current, explode: 0 }));
@@ -77,40 +125,18 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
     setState((current) => selectComparisonItem(current, picker, level));
     setPicker(null);
   };
-  const selector = (side: ComparisonSide) => {
-    const item = side === 'left' ? leftItem : rightItem;
-    return (
-      <button
-        className={`comparison-selector ${side}`}
-        ref={side === 'left' ? leftButton : rightButton}
-        aria-label={`Choose part ${side === 'left' ? 'A' : 'B'}`}
-        aria-haspopup="dialog"
-        onClick={() => {
-          stopDisassembly();
-          setPicker(side);
-        }}
-      >
-        <span className="comparison-letter">{side === 'left' ? 'A' : 'B'}</span>
-        <span className="comparison-selected-part">
-          <small>
-            {
-              comparisonCategories.find(
-                (category) => category.id === item.category,
-              )?.label
-            }{' '}
-            · {levels[item.system].name}
-          </small>
-          <strong>{item.shortName}</strong>
-          <span>
-            {item.kind === 'physical'
-              ? 'Hardware model'
-              : 'Architecture diagram'}
-          </span>
-        </span>
-        <ChevronDown size={17} aria-hidden="true" />
-      </button>
-    );
+  const openPicker = (side: ComparisonSide) => {
+    stopDisassembly();
+    setPicker(side);
   };
+  const selector = (side: ComparisonSide) => (
+    <PartSelector
+      side={side}
+      item={side === 'left' ? leftItem : rightItem}
+      buttonRef={selectorButtons[side]}
+      onOpen={() => openPicker(side)}
+    />
+  );
   return (
     <main
       className="workbench comparison-workbench"
@@ -177,11 +203,7 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
             </button>
           </fieldset>
           <p id="comparison-scale-note">
-            {state.framing === 'scale'
-              ? 'Same physical scale in both panes.'
-              : trueSizeAvailable
-                ? 'Each model fits its pane. Sizes are not relative.'
-                : 'Each model fits its pane. Diagrams and illustrative parts have no physical scale.'}
+            {framingNote(state.framing, trueSizeAvailable)}
           </p>
         </div>
       </section>
@@ -215,9 +237,7 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
         onSetExplode={setExplode}
         onReset={reset}
         sectionLabel="Shared disassembly control"
-        title={
-          mixed ? 'Explore both' : logical ? 'Expand both' : 'Disassemble both'
-        }
+        title={disassemblyTitle(leftItem, rightItem)}
         sliderLabel="Disassemble or expand both models"
         valueText={`${Math.round(state.explode)} percent for both models`}
       />
@@ -235,8 +255,8 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
           key={`${picker}:${state[picker]}`}
           side={picker}
           selected={state[picker]}
-          other={state[picker === 'left' ? 'right' : 'left']}
-          returnFocusRef={picker === 'left' ? leftButton : rightButton}
+          other={state[otherSide(picker)]}
+          returnFocusRef={selectorButtons[picker]}
           onChoose={choose}
           onClose={() => setPicker(null)}
         />

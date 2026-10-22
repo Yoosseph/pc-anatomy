@@ -8,8 +8,6 @@ type Props = {
   explode: number;
   logical: boolean;
   selected: Concept | null;
-  /** `null` until the viewer has reported for the first time. */
-  count: number | null;
   /** Show the first-visit line about what clicking does. */
   hint?: boolean;
   onDismissHint?: () => void;
@@ -29,7 +27,6 @@ export default function StageHeading({
   explode,
   logical,
   selected,
-  count,
   hint = false,
   onDismissHint,
   onNavigate,
@@ -49,7 +46,6 @@ export default function StageHeading({
               : scale.title}
         </h1>
         <div className="stage-meta">
-          <p className="eyebrow">{scale.caption}</p>
           <nav className="breadcrumbs" aria-label="Component hierarchy">
             {path.length > 1 && (
               <button
@@ -88,16 +84,6 @@ export default function StageHeading({
           </p>
         )}
       </div>
-      {count !== null && (
-        <output
-          className="stage-counter"
-          aria-live="polite"
-          aria-label={`${count} visible parts`}
-        >
-          <strong>{count}</strong>
-          <span>visible parts</span>
-        </output>
-      )}
     </section>
   );
 }

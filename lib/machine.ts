@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
+import { buildPowerFlow } from './power-flow.ts';
 import {
   buildLightStrip,
   buildFan,
@@ -425,7 +426,7 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
 
   // Cable looms from the supply up to the board and the card.
   //
-  // Three runs, one per connector the supply actually feeds, each ending on
+  // Four runs, one per connector the supply actually feeds, each ending on
   // the connector it plugs into rather than somewhere inside the part. There
   // used to be five: two pairs went to the same two connectors, and both of
   // the spares terminated inside the graphics card.
@@ -471,18 +472,17 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   // 24-pin: up through the shroud and along the front edge of the board, in
   // plain sight through the window, passing in front of the card rather than
   // through it.
-  loom(
-    [
-      [2.6, FLOOR + 3.1, 1.4],
-      [1.7, FLOOR + 3.65, 1.9],
-      [1.0, 0.2, 1.95],
-      [0.72, BOARD_Y + mm(22), 1.6],
-      [BOARD_X + mm(127), BOARD_Y + mm(45), -1.5],
-      [BOARD_X + mm(115), BOARD_Y + mm(45), BOARD_Z + mm(10)],
-    ],
-    0.16,
-    '#16191b',
-  );
+  const atxPath: Vec3[] = [
+    [REAR + mm(175) + 0.04, FLOOR + mm(46), 0.3],
+    [0.5, FLOOR + 1.8, 1.4],
+    [2.6, FLOOR + 3.1, 1.4],
+    [1.7, FLOOR + 3.65, 1.9],
+    [1.0, 0.2, 1.95],
+    [0.72, BOARD_Y + mm(22), 1.6],
+    [BOARD_X + mm(127), BOARD_Y + mm(45), -1.5],
+    [BOARD_X + mm(115), BOARD_Y + mm(45), BOARD_Z + mm(10)],
+  ];
+  loom(atxPath, 0.16, '#16191b');
   // 8-pin EPS: the run a build hides. Back along the supply under the
   // shroud, through the tray into the cable chamber, up the back of the tray,
   // and forward through the grommet above the board's top edge onto the
@@ -490,40 +490,59 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   // in front of the tray, and pass straight through the I/O shield.
   const EPS_TOP = BOARD_Y + BOARD_H / 2 + 0.26;
   const CHAMBER_Z = (TRAY + BACK) / 2;
-  loom(
-    [
-      [REAR + 5.19, FLOOR + 1.75, -0.55],
-      [REAR + 5.34, FLOOR + 2.1, -1.4],
-      [REAR + 5.0, FLOOR + 2.22, -2.62],
-      [REAR + 3.0, FLOOR + 2.2, -2.72],
-      [REAR + 1.45, FLOOR + 2.2, -2.72],
-      [REAR + 1.0, FLOOR + 2.2, TRAY],
-      [REAR + 0.95, FLOOR + 2.6, CHAMBER_Z],
-      [REAR + 1.0, 0, CHAMBER_Z],
-      [EPS_X + 0.35, EPS_TOP - 0.9, CHAMBER_Z],
-      [EPS_X + 0.2, EPS_TOP, CHAMBER_Z + 0.1],
-      [EPS_X + 0.1, EPS_TOP, TRAY],
-      [EPS_X + 0.05, EPS_TOP, BOARD_Z + 0.2],
-      [EPS_X, BOARD_Y + BOARD_H / 2 - mm(8), BOARD_Z + mm(12)],
-      [EPS_X, BOARD_Y + mm(145), BOARD_Z + mm(10)],
-    ],
-    0.1,
-    '#1f2325',
-  );
+  const epsPath: Vec3[] = [
+    [REAR + 5.19, FLOOR + 1.75, -0.55],
+    [REAR + 5.34, FLOOR + 2.1, -1.4],
+    [REAR + 5.0, FLOOR + 2.22, -2.62],
+    [REAR + 3.0, FLOOR + 2.2, -2.72],
+    [REAR + 1.45, FLOOR + 2.2, -2.72],
+    [REAR + 1.0, FLOOR + 2.2, TRAY],
+    [REAR + 0.95, FLOOR + 2.6, CHAMBER_Z],
+    [REAR + 1.0, 0, CHAMBER_Z],
+    [EPS_X + 0.35, EPS_TOP - 0.9, CHAMBER_Z],
+    [EPS_X + 0.2, EPS_TOP, CHAMBER_Z + 0.1],
+    [EPS_X + 0.1, EPS_TOP, TRAY],
+    [EPS_X + 0.05, EPS_TOP, BOARD_Z + 0.2],
+    [EPS_X, BOARD_Y + BOARD_H / 2 - mm(8), BOARD_Z + mm(12)],
+    [EPS_X, BOARD_Y + mm(145), BOARD_Z + mm(10)],
+  ];
+  loom(epsPath, 0.1, '#1f2325');
   // 12V-2x6 to the card: out of the shroud, forward of everything, and down
   // onto the socket on the card's top face.
-  loom(
-    [
-      [3.4, FLOOR + 3.1, 0.4],
-      [2.3, FLOOR + 3.65, 1.5],
-      [0.6, SLOT1_Y + 0.6, 1.9],
-      [-0.554, SLOT1_Y + 0.6, 1.75],
-      [-0.554, SLOT1_Y - mm(10), BOARD_Z + mm(139)],
-    ],
-    0.13,
-    '#1d2124',
-  );
+  const gpuPath: Vec3[] = [
+    [REAR + mm(175) + 0.04, FLOOR + mm(46), -0.1],
+    [0.5, FLOOR + 1.8, 1.4],
+    [3.4, FLOOR + 3.1, 0.4],
+    [2.3, FLOOR + 3.65, 1.5],
+    [0.6, SLOT1_Y + 0.6, 1.9],
+    [-0.554, SLOT1_Y + 0.6, 1.75],
+    [-0.554, SLOT1_Y - mm(10), BOARD_Z + mm(139)],
+  ];
+  loom(gpuPath, 0.13, '#1d2124');
+  const sataPath: Vec3[] = [
+    [REAR + mm(175) + 0.04, FLOOR + mm(46), 0.65],
+    [0.4, FLOOR + 1.3, 1.5],
+    [2.8, FLOOR + 1.0, 1.5],
+    [CAGE_X + mm(6), FLOOR + 1.0, -0.3 + mm(45)],
+    [CAGE_X + mm(6), FLOOR + 1.0, -0.3 + mm(39)],
+  ];
+  loom(sataPath, 0.09, '#1f2325');
   add('psucable', cables, [0, 0, 0], [0, -1.4, 1.2], 0);
+  root.add(
+    buildPowerFlow({
+      atx: atxPath,
+      eps: epsPath,
+      gpu: gpuPath,
+      sata: sataPath,
+      // Conceptual distribution inside the board, not a copper trace layout.
+      slot: [
+        atxPath[atxPath.length - 1],
+        [BOARD_X + mm(92), BOARD_Y + mm(20), BOARD_Z + mm(4)],
+        [BOARD_X + mm(92), SLOT1_Y, BOARD_Z + mm(4)],
+        [BOARD_X - mm(14), SLOT1_Y, BOARD_Z + mm(10)],
+      ],
+    }),
+  );
 
   // ── Motherboard ─────────────────────────────────────────────────────────
   const motherboard = buildMotherboardAssembly(tools);

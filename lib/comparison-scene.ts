@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {
   comparisonPanePoint,
+  comparisonItem,
   type ComparisonLevel,
   type ComparisonSide,
   type ComparisonViewState,
@@ -8,8 +9,13 @@ import {
 import { byId } from './manifest.ts';
 import { isPhysical } from './levels.ts';
 import {
+  COMPARISON_ORBIT_DISTANCE,
+  comparisonFitDistances,
+  updateComparisonCamera,
+  type ComparisonFrame,
+} from './comparison-framing.ts';
+import {
   applyPiecePose,
-  commonModelBounds,
   disposeModelResources,
   posedModelBounds,
   prepareModelInventory,
@@ -24,8 +30,6 @@ import {
   configureStageLighting,
   createStageLoop,
   createStageRuntime,
-  defaultCameraDirection,
-  fitCameraToBounds,
   pointerMoved,
 } from './stage-runtime.ts';
 
@@ -42,6 +46,11 @@ type PaneModel = {
   level: ComparisonLevel;
   model: BuiltModel;
   layoutSignature: string;
+  millimetersPerUnit: number | null;
+  bounds: T.Box3;
+  frame: ComparisonFrame;
+  camera: T.PerspectiveCamera;
+  framed: boolean;
 };
 
 export function createComparisonViewer(
@@ -57,10 +66,20 @@ export function createComparisonViewer(
   const makePane = (level: ComparisonLevel): PaneModel => {
     const model = buildModel(level);
     model.root.traverse((object) => {
-      if (object.userData.airflowTick) object.visible = false;
+      if (object.userData.airflowTick || object.userData.powerTick)
+        object.visible = false;
     });
     scene.add(model.root);
-    return { level, model, layoutSignature: '' };
+    return {
+      level,
+      model,
+      layoutSignature: '',
+      millimetersPerUnit: comparisonItem(level).millimetersPerUnit,
+      bounds: new T.Box3(),
+      frame: { center: new T.Vector3(), radius: 1, distance: 1 },
+      camera: new T.PerspectiveCamera(),
+      framed: false,
+    };
   };
   let state = initial,
     panes: Record<ComparisonSide, PaneModel> = {
@@ -69,20 +88,18 @@ export function createComparisonViewer(
     },
     amount = initial.explode / 100,
     split = host.clientWidth >= BREAKPOINT,
-    autoCamera = true,
     pointerPosition: { clientX: number; clientY: number } | null = null,
     activePointer: number | null = null,
     dragStart: [number, number] = [0, 0],
     gestureMoved = false;
-  configureStageLighting(runtime, initial.left);
+  // This camera belongs only to OrbitControls. Each pane maps its normalized
+  // coordinates into the independently authored units of its model.
+  camera.position.set(0.7, 0.85, 1.2).setLength(COMPARISON_ORBIT_DISTANCE);
+  controls.target.set(0, 0, 0);
+  controls.update();
 
-  const targetPosition = new T.Vector3(),
-    targetLook = new T.Vector3(),
+  const targetCenter = new T.Vector3(),
     size = new T.Vector3(),
-    leftBounds = new T.Box3(),
-    rightBounds = new T.Box3(),
-    commonBounds = new T.Box3(),
-    cameraDirection = new T.Vector3(),
     raycaster = new T.Raycaster(),
     pointer = new T.Vector2();
   const activeTouches = new Set<number>(),
@@ -127,7 +144,7 @@ export function createComparisonViewer(
     const visible = refreshPane(panes.left) + refreshPane(panes.right);
     callbacks.stats(visible);
     host.dataset.pair = `${state.left}:${state.right}`;
-    host.dataset.group = state.group;
+    host.dataset.framing = state.framing;
     host.dataset.visible = String(visible);
     loop.wake(90);
   }
@@ -142,48 +159,59 @@ export function createComparisonViewer(
     pane.model.root.updateMatrixWorld(true);
   }
 
-  function fit() {
-    posedModelBounds(
-      panes.left.model,
-      panes.left.level,
-      amount,
-      leftBounds,
-      stageScratch,
+  function framePanes(blend: number) {
+    const pair = [panes.left, panes.right] as const;
+    for (const pane of pair) {
+      posedModelBounds(
+        pane.model,
+        pane.level,
+        amount,
+        pane.bounds,
+        stageScratch,
+      );
+      pane.frame.radius = pane.bounds.getSize(size).length() / 2;
+    }
+    const distances = comparisonFitDistances(
+      [panes.left.frame.radius, panes.right.frame.radius],
+      [panes.left.millimetersPerUnit, panes.right.millimetersPerUnit],
+      state.framing,
+      camera.aspect,
+      camera.fov,
     );
-    posedModelBounds(
-      panes.right.model,
-      panes.right.level,
-      amount,
-      rightBounds,
-      stageScratch,
-    );
-    commonModelBounds(leftBounds, rightBounds, commonBounds);
-    commonBounds.getSize(size);
-    const direction =
-      !isPhysical(state.left) && amount > 0.85
-        ? cameraDirection.set(0, 1, 0.001)
-        : defaultCameraDirection(size, cameraDirection);
-    fitCameraToBounds(
-      commonBounds,
-      camera,
-      targetPosition,
-      targetLook,
-      direction,
-      size,
-      camera.aspect < 1 ? 1.08 : 1,
-    );
+    let changed = false;
+    pair.forEach((pane, index) => {
+      pane.bounds.getCenter(targetCenter);
+      const amount = pane.framed ? blend : 1;
+      pane.frame.center.lerp(targetCenter, amount);
+      pane.frame.distance = T.MathUtils.lerp(
+        pane.frame.distance,
+        distances[index],
+        amount,
+      );
+      pane.framed = true;
+      changed ||=
+        pane.frame.center.distanceToSquared(targetCenter) > 0.000001 ||
+        Math.abs(pane.frame.distance - distances[index]) > 0.0001;
+      updateComparisonCamera(camera, pane.frame, pane.camera);
+    });
+    host.dataset.cameraSettled = String(!changed);
+    return changed;
   }
 
   function renderPane(side: ComparisonSide, x: number, width: number) {
     const height = host.clientHeight;
     panes.left.model.root.visible = side === 'left';
     panes.right.model.root.visible = side === 'right';
-    camera.aspect = width / Math.max(1, height);
-    camera.updateProjectionMatrix();
+    const pane = panes[side];
+    configureStageLighting(runtime, pane.level);
+    key.shadow.intensity = isPhysical(pane.level)
+      ? 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9)
+      : 0;
+    renderer.shadowMap.autoUpdate = key.shadow.intensity > 0.002;
     renderer.setViewport(x, 0, width, height);
     renderer.setScissor(x, 0, width, height);
     renderer.clear(true, true, true);
-    renderer.render(scene, camera);
+    renderer.render(scene, pane.camera);
   }
 
   function render(seconds: number, dt: number, reducedMotion: boolean) {
@@ -191,10 +219,6 @@ export function createComparisonViewer(
       ? state.explode / 100
       : T.MathUtils.damp(amount, state.explode / 100, 10, dt);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
-    key.shadow.intensity = isPhysical(state.left)
-      ? 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9)
-      : 0;
-    renderer.shadowMap.autoUpdate = key.shadow.intensity > 0.002;
     posePane(panes.left);
     posePane(panes.right);
 
@@ -205,14 +229,13 @@ export function createComparisonViewer(
 
     camera.aspect = paneAspect();
     camera.updateProjectionMatrix();
-    if (autoCamera) {
-      fit();
-      const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
-      camera.position.lerp(targetPosition, blend);
-      controls.target.lerp(targetLook, blend);
-      changed ||= camera.position.distanceToSquared(targetPosition) > 0.00001;
-    }
     controls.update();
+    // Always update both camera transforms, including while disassembly is
+    // still moving. Short-circuiting here leaves the other pane stale.
+    const framingChanged = framePanes(
+      reducedMotion ? 1 : 1 - Math.exp(-9 * dt),
+    );
+    changed ||= framingChanged;
 
     renderer.info.reset();
     renderer.setScissorTest(true);
@@ -232,13 +255,7 @@ export function createComparisonViewer(
       updateHover(pointerPosition);
     return changed;
   }
-  const loop = createStageLoop(
-    controls,
-    () => {
-      autoCamera = false;
-    },
-    render,
-  );
+  const loop = createStageLoop(controls, () => {}, render);
   const wake = loop.wake;
 
   function resize() {
@@ -257,7 +274,6 @@ export function createComparisonViewer(
       callbacks.hover(null, 0, 0);
     }
     refresh();
-    autoCamera = true;
     wake();
   }
   const observer = new ResizeObserver(resize);
@@ -282,9 +298,7 @@ export function createComparisonViewer(
       );
       if (point.side !== origin.side) return [];
       pointer.set(point.x, point.y);
-      camera.aspect = paneAspect();
-      camera.updateProjectionMatrix();
-      raycaster.setFromCamera(pointer, camera);
+      raycaster.setFromCamera(pointer, panes[origin.side].camera);
       return raycaster.intersectObject(panes[origin.side].model.root, true);
     };
     return resolvePickNear(cast, radius);
@@ -368,15 +382,9 @@ export function createComparisonViewer(
         if (next.left !== state.left) replacePane('left', next.left);
         if (next.right !== state.right) replacePane('right', next.right);
       }
-      const cameraChange =
-        next.explode !== state.explode ||
-        next.left !== state.left ||
-        next.right !== state.right;
       state = next;
-      configureStageLighting(runtime, next.left);
       collectAnimations();
       refresh();
-      autoCamera = cameraChange || autoCamera;
       wake();
     },
     dispose() {

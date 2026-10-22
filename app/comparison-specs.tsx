@@ -8,14 +8,15 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  comparisonGroups,
   comparisonItem,
-  type ComparisonGroupId,
+  comparisonRows,
   type ComparisonLevel,
 } from '@/lib/comparison-state';
+import { byId } from '@/lib/manifest';
+import { levels } from '@/lib/levels';
+import { sources } from '@/lib/sources';
 
 type Props = {
-  group: ComparisonGroupId;
   left: ComparisonLevel;
   right: ComparisonLevel;
   open: boolean;
@@ -24,7 +25,6 @@ type Props = {
 };
 
 export default function ComparisonSpecs({
-  group,
   left,
   right,
   open,
@@ -32,9 +32,12 @@ export default function ComparisonSpecs({
   onOpenChange,
 }: Props) {
   const closeButton = useRef<HTMLButtonElement>(null);
-  const leftItem = comparisonItem(group, left),
-    rightItem = comparisonItem(group, right),
-    definition = comparisonGroups[group];
+  const leftItem = comparisonItem(left),
+    rightItem = comparisonItem(right);
+  const aligned =
+    leftItem.category === rightItem.category &&
+    leftItem.kind === rightItem.kind;
+  const rows = comparisonRows(left, right);
   return (
     <Sheet open={open} modal={false} onOpenChange={onOpenChange}>
       <SheetContent
@@ -48,8 +51,9 @@ export default function ComparisonSpecs({
           <div>
             <SheetTitle>Specification comparison</SheetTitle>
             <SheetDescription>
-              Published {definition.shortLabel} catalogue values, shown without
-              ranking either model.
+              {aligned
+                ? 'Matching fields are aligned. Not listed means the catalogue has no value for that model.'
+                : 'Different kinds of parts, with each model’s own specifications.'}
             </SheetDescription>
           </div>
           <button
@@ -60,36 +64,99 @@ export default function ComparisonSpecs({
             <X size={18} />
           </button>
         </div>
-        <table className="comparison-specs-grid">
-          <thead>
-            <tr className="spec-row spec-head">
-              <th scope="col">Specification</th>
-              <th scope="col">{leftItem.shortName}</th>
-              <th scope="col">{rightItem.shortName}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leftItem.specs.map((leftSpec, index) => {
-              const rightSpec = rightItem.specs[index],
-                different = leftSpec.value !== rightSpec.value;
-              return (
+        {aligned ? (
+          <table className="comparison-specs-grid">
+            <thead>
+              <tr className="spec-row spec-head">
+                <th scope="col">Specification</th>
+                <th scope="col">A · {leftItem.shortName}</th>
+                <th scope="col">B · {rightItem.shortName}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
                 <tr
                   className="spec-row"
-                  data-different={different || undefined}
-                  key={leftSpec.id}
+                  key={row.id}
+                  data-different={
+                    Boolean(row.left && row.right && row.left !== row.right) ||
+                    undefined
+                  }
                 >
-                  <th scope="row">{leftSpec.label}</th>
-                  <td>{leftSpec.value}</td>
-                  <td>{rightSpec.value}</td>
+                  <th scope="row">{row.label}</th>
+                  <td>
+                    {row.left ?? (
+                      <span className="spec-unlisted">Not listed</span>
+                    )}
+                  </td>
+                  <td>
+                    {row.right ?? (
+                      <span className="spec-unlisted">Not listed</span>
+                    )}
+                  </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <p className="comparison-specs-note">
-          Sources and modeling accuracy remain available with each model in the
-          explorer.
-        </p>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="comparison-independent-specs">
+            {[leftItem, rightItem].map((item, i) => (
+              <section className="comparison-spec-card" key={item.level}>
+                <h3>
+                  {i === 0 ? 'A' : 'B'} · {item.name}
+                </h3>
+                <p>
+                  {levels[item.system].name} ·{' '}
+                  {item.kind === 'physical'
+                    ? 'Hardware'
+                    : 'Architecture diagram'}
+                </p>
+                <dl>
+                  {item.specs.map((spec) => (
+                    <div key={spec.id}>
+                      <dt>{spec.label}</dt>
+                      <dd>{spec.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {!item.specs.length && (
+                  <p>No specifications listed for this model.</p>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
+        {aligned && !rows.length && (
+          <p className="comparison-specs-note">
+            No specifications listed for these models.
+          </p>
+        )}
+        <div className="comparison-source-notes">
+          {[leftItem, rightItem].map((item, i) => {
+            const concept = byId[levels[item.level].concept];
+            return (
+              <section key={item.level}>
+                <h3>
+                  {i === 0 ? 'A' : 'B'} · {item.shortName}
+                </h3>
+                <p>{concept.physicalAccuracy}</p>
+                <ul>
+                  {concept.sources.map((id) => (
+                    <li key={id}>
+                      <a
+                        href={sources[id].url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {sources[id].name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
       </SheetContent>
     </Sheet>
   );

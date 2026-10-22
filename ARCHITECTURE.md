@@ -27,8 +27,8 @@ Installed components retain their native sizes; no per-axis fitting is allowed.
 The representative M.2 construction reuses the existing NVMe builder with a
 uniform conversion from 8 to 20 mm per unit. `ModelTools.assembly` accepts any LevelId and
 strips nested picking identities as before. Display tilt is inside an identity
-wrapper so the inventory pose lays the screen face up. Both models opt into a
-notebook comparison group with catalogue-backed rows. The shared renderer,
+wrapper so the inventory pose lays the screen face up. Every notebook scale is
+a comparison item, and its branch label picks its picker category. The shared renderer,
 picking, resource disposal, disassembly and inventory serve all three systems.
 Cooling assemblies carry authored airflow into the complete laptops.
 Impeller meshes retain their animation metadata when static geometry is merged.
@@ -141,7 +141,7 @@ lib/models.ts        one geometry builder per scale, handed `ModelTools`.
 lib/stage-runtime.ts shared WebGL, lighting, camera and controls
 lib/model-stage.ts   shared posing, inventory, bounds and model disposal
 lib/scene.ts         ordinary explorer visibility, picking and dive ramp
-lib/comparison-*.ts  same-category comparison state/data and renderer
+lib/comparison-*.ts  part comparison catalogue, state, framing and renderer
       │
 app/                 React: what the viewer is currently looking at
 ```
@@ -257,12 +257,14 @@ subsystems stop touching.
 | `lib/stage-runtime.ts` | Shared Three.js stage foundation: renderer, environment, lighting, camera, controls, demand-driven frame scheduling, animation ticking, camera fitting, context-loss reporting, and base disposal. |
 | `lib/scene.ts` | Ordinary explorer visibility, picking, camera targets, and dive ramp composed over the shared stage runtime. Returns `{ update, dispose }`. |
 | `lib/model-stage.ts` | Reusable model-stage primitives shared by both renderers: scratch-backed piece posing and bounds, inventory preparation, common bounds, and resource disposal. |
-| `lib/comparison-state.ts` | Category-specific comparison schemas, metadata-driven model discovery, pure comparison transitions, catalogue-backed spec projection, validation, and pane coordinate math. |
-| `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels. |
+| `lib/comparison-catalogue.ts` | Every level as a comparison item: browser categories, system, kind, own specifications, physical scale, filters, label-aligned rows and validation. |
+| `lib/comparison-state.ts` | Pure comparison transitions (entry pair, pick, swap, framing) and pane coordinate math. |
+| `lib/comparison-framing.ts` | Per-pane camera distances for fit-each and true-size framing, and the mapping from the shared orbit camera to each pane camera. |
+| `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels, each with its own camera and lighting. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
 | `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
-| `app/comparison-workbench.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx` | Comparison composition and controls, the React-to-Three bridge, and the responsive specification sheet. |
+| `app/comparison-workbench.tsx`, `comparison-picker.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx`, `comparison.css` | Comparison composition and controls, the categorised part picker, the React-to-Three bridge, the responsive specification sheet, and their styles. |
 | `app/use-explorer.ts` | All explorer state and every named move: navigate, goTo, dive, arrive, choose, isolate, hide, and the rest. The first state is read from the address. |
 | `app/use-address.ts` | Keeps the address bar, title and canonical link on the place shown: a scale change pushes history, a selection or slider move replaces it, and the back button moves the explorer. |
 | `app/use-first-visit-hint.ts` | The one-time line under the heading that says what clicking or tapping does. |
@@ -271,7 +273,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 114 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison state/data/pane/bounds behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 125 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -449,19 +451,25 @@ These interaction decisions are settled, and re-opening them has been tried:
   it off again. The switch is absent where there are no fans, and airflow
   follows the Cooling category — hide the fans and the arrows go with them.
 
-## Same-category comparison mode
+## Part comparison mode
 
 Comparison is a separate workbench; see
 [`docs/comparison-mode-spec.md`](docs/comparison-mode-spec.md) for its contract.
-Levels opt in through `comparisonGroup`, and configured groups appear once two
-models opt in. The registry supplies labels and catalogue-backed row schemas;
-pure transitions and startup validation reject invalid groups, pairs, or rows.
+Every level is a comparison item, so any part can be paired with any other,
+across systems and scales. The catalogue sorts items into browser categories:
+a level inherits the nearest `comparisonCategory` on its path, so deeper scales
+stay with their subsystem. A physical level that declares `millimetersPerUnit`
+can be shown at true size beside another calibrated one; everything else fits
+its own pane. Specifications are each concept's own, aligned by label only for
+like pairs.
 
 Its scene coordinator shares `stage-runtime.ts` and `model-stage.ts` with the
-explorer. One camera and disassembly amount frame both models at true relative
-scale. Wide screens use two scissored panes; below 700 CSS pixels only the
-selected A/B pane renders. Swaps reuse both roots, replacements dispose only
-one root, and exit disposes the renderer and both models.
+explorer. One orbit camera works in a normalized space, and
+`comparison-framing.ts` maps it into each model's units, so both panes turn
+together whatever their sizes; picking uses the same pane camera. Wide screens
+use two scissored panes; below 700 CSS pixels only the selected A/B pane
+renders. Swaps reuse both roots, replacements dispose only one root, and exit
+disposes the renderer and both models.
 
 ## Adding a component
 
@@ -502,8 +510,12 @@ Five integration points, and the tests check both directions of the link:
    of its own inside that menu.
 5. Export and compose the new concepts in `lib/manifest.ts`.
 
-The scale tree drives navigation, breadcrumbs, lighting and the disassembly
-timeline. Do not add a second hand-written route table.
+The scale tree drives navigation, breadcrumbs, lighting, the disassembly
+timeline and the comparison picker. Do not add a second hand-written route
+table. A new subsystem root sets `comparisonCategory` so it and its deeper
+scales file under the right picker heading, and a physical builder that uses
+one uniform millimetre conversion on every axis declares it as
+`millimetersPerUnit` to join true-size comparison.
 
 ## Sourcing rules
 
@@ -529,7 +541,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-116 tests, all through Node's built-in runner.
+125 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -560,12 +572,17 @@ with Node.js 22.
   its filter anywhere in the first half of the disassembly, that every rear
   connector can be seen from behind the machine through the I/O shield, and
   that the front I/O sits on the outside of the roof.
-- `tests/comparison.test.ts` (6) — metadata-driven discovery (including the
-  DDR5/DDR4 memory pair), valid distinct
-  state and group transitions, complete catalogue-backed spec rows, pane-local
-  pointer coordinates at desktop and mobile widths, and common bounds that
-  contain both posed models at assembled, half-disassembled, and inventory
-  positions.
+- `tests/comparison.test.ts` (9) — every level discovered once across all
+  systems, category inheritance through deeper scales, combined category,
+  system and search filters, entry pairs from every scale, every distinct
+  cross pair selectable, true size limited to calibrated models, own-only
+  specifications, label-aligned rows with gaps kept, and pane-local pointer
+  coordinates at desktop and mobile widths.
+- `tests/comparison-framing.test.ts` (6) — fit-each and true-size distances,
+  unknown or invalid units never implying a shared scale, off-centre models
+  contained at phone and wide aspects, one orbit mapping consistently into
+  both panes, picking through the displayed pane camera, and real
+  cross-system hardware and diagram pairs staying framed through disassembly.
 - `tests/ram.test.ts` (20) — both generations' menus and open chains down
   to the cell, the DDR4 bank and cell matching DDR5's parts with their own
   row count and wordline voltage, the dive being at least as deep and as populated as the GPU

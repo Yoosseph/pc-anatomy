@@ -1,4 +1,5 @@
 import type { LevelDef } from './levels.ts';
+import type { ComparisonCategoryId } from './comparison-catalogue.ts';
 
 export type NotebookLevel =
   | 'legion'
@@ -37,6 +38,18 @@ const phases = [
   ['Dissection', 50],
   ['Inventory', 100],
 ] as const;
+const branchCategories: Record<string, ComparisonCategoryId> = {
+  'System board': 'boards',
+  'Logic board': 'boards',
+  Processor: 'processors',
+  'Apple Silicon': 'processors',
+  Graphics: 'graphics',
+  Memory: 'memory',
+  Storage: 'storage',
+  Cooling: 'cooling',
+  Battery: 'power',
+  Display: 'displays',
+};
 const scale = (
   id: NotebookLevel,
   parent: NotebookLevel | null,
@@ -64,7 +77,8 @@ const scale = (
   phases,
   detailed: true,
   branchLabel,
-  ...(parent === null ? { comparisonGroup: 'notebook' } : {}),
+  comparisonCategory: branchLabel ? branchCategories[branchLabel] : undefined,
+  millimetersPerUnit: kind === 'physical' ? 20 : undefined,
 });
 
 export const notebookLevels: Record<NotebookLevel, LevelDef> = {

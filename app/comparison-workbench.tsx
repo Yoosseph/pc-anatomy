@@ -1,48 +1,43 @@
 'use client';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, ChevronLeft, Cpu } from 'lucide-react';
 import {
-  comparisonGroupIds,
-  comparisonGroups,
+  ArrowLeftRight,
+  BarChart3,
+  ChevronLeft,
+  ChevronDown,
+  Columns2,
+} from 'lucide-react';
+import {
+  comparisonCategories,
   comparisonItem,
-  comparisonLevels,
-  initialComparisonState,
-  selectComparisonGroup,
+  createComparisonState,
   selectComparisonItem,
   setComparisonActiveSide,
   setComparisonExplode,
+  setComparisonFraming,
   setComparisonSpecsOpen,
   swapComparisonSides,
-  type ComparisonGroupId,
-  type ComparisonItem,
   type ComparisonLevel,
   type ComparisonSide,
   type ComparisonViewState,
 } from '@/lib/comparison-state';
-import { isPhysical } from '@/lib/levels';
+import { levels } from '@/lib/levels';
+import ComparisonPicker from './comparison-picker';
 import ComparisonViewer from './comparison-viewer';
 import ComparisonSpecs from './comparison-specs';
 import Disassembly from './disassembly';
 import { useDisassemblyPlayback } from './use-disassembly-playback';
+import './comparison.css';
 
-type Props = { onExit: () => void };
+type Props = { initialLevel: ComparisonLevel; onExit: () => void };
 
-export default function ComparisonWorkbench({ onExit }: Props) {
+export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
   const specsButton = useRef<HTMLButtonElement>(null);
-  const [state, setState] = useState(initialComparisonState);
-  const [count, setCount] = useState<number | null>(null);
+  const leftButton = useRef<HTMLButtonElement>(null);
+  const rightButton = useRef<HTMLButtonElement>(null);
+  const [state, setState] = useState(() => createComparisonState(initialLevel));
+  const [picker, setPicker] = useState<ComparisonSide | null>(null);
   const [viewerRevision, setViewerRevision] = useState(0);
-  const group = comparisonGroups[state.group];
-  const items = useMemo(
-    () =>
-      Object.fromEntries(
-        comparisonLevels(state.group).map((level) => [
-          level,
-          comparisonItem(state.group, level),
-        ]),
-      ) as Partial<Record<ComparisonLevel, ComparisonItem>>,
-    [state.group],
-  );
   const updateExplode = useCallback(
     (explode: number) =>
       setState((current) => setComparisonExplode(current, explode)),
@@ -56,58 +51,66 @@ export default function ComparisonWorkbench({ onExit }: Props) {
   } = useDisassemblyPlayback(state.explode, updateExplode);
   const viewerState = useMemo<ComparisonViewState>(
     () => ({
-      group: state.group,
       left: state.left,
       right: state.right,
       activeSide: state.activeSide,
       explode: state.explode,
+      framing: state.framing,
     }),
-    [state.activeSide, state.explode, state.group, state.left, state.right],
+    [state.activeSide, state.explode, state.framing, state.left, state.right],
   );
-
-  const choose = (side: ComparisonSide, level: ComparisonLevel) =>
-    setState((current) => selectComparisonItem(current, side, level));
-
-  const chooseGroup = (nextGroup: ComparisonGroupId) => {
-    stopDisassembly();
-    setState((current) => selectComparisonGroup(current, nextGroup));
-  };
-
+  const leftItem = comparisonItem(state.left);
+  const rightItem = comparisonItem(state.right);
+  const trueSizeAvailable =
+    leftItem.millimetersPerUnit !== null &&
+    rightItem.millimetersPerUnit !== null;
+  const logical = leftItem.kind === 'logical' && rightItem.kind === 'logical';
+  const mixed = leftItem.kind !== rightItem.kind;
   const reset = () => {
     stopDisassembly();
     setState((current) => ({ ...current, explode: 0 }));
     setViewerRevision((revision) => revision + 1);
   };
-
+  const choose = (level: ComparisonLevel) => {
+    if (!picker) return;
+    stopDisassembly();
+    setState((current) => selectComparisonItem(current, picker, level));
+    setPicker(null);
+  };
   const selector = (side: ComparisonSide) => {
-    const level = state[side];
-    const other = state[side === 'left' ? 'right' : 'left'];
-    const item = items[level]!;
+    const item = side === 'left' ? leftItem : rightItem;
     return (
-      <label className={`comparison-selector ${side}`}>
-        <span>{side === 'left' ? 'A' : 'B'}</span>
-        <select
-          value={level}
-          aria-label={`${side === 'left' ? 'Left' : 'Right'} ${group.itemLabel}`}
-          onChange={(event) =>
-            choose(side, event.target.value as ComparisonLevel)
-          }
-        >
-          {comparisonLevels(state.group).map((option) => (
-            <option key={option} value={option} disabled={option === other}>
-              {items[option]!.shortName}
-            </option>
-          ))}
-        </select>
-        <small>{item.note}</small>
-      </label>
+      <button
+        className={`comparison-selector ${side}`}
+        ref={side === 'left' ? leftButton : rightButton}
+        aria-label={`Choose part ${side === 'left' ? 'A' : 'B'}`}
+        aria-haspopup="dialog"
+        onClick={() => {
+          stopDisassembly();
+          setPicker(side);
+        }}
+      >
+        <span className="comparison-letter">{side === 'left' ? 'A' : 'B'}</span>
+        <span className="comparison-selected-part">
+          <small>
+            {
+              comparisonCategories.find(
+                (category) => category.id === item.category,
+              )?.label
+            }{' '}
+            · {levels[item.system].name}
+          </small>
+          <strong>{item.shortName}</strong>
+          <span>
+            {item.kind === 'physical'
+              ? 'Hardware model'
+              : 'Architecture diagram'}
+          </span>
+        </span>
+        <ChevronDown size={17} aria-hidden="true" />
+      </button>
     );
   };
-
-  const leftItem = items[state.left]!;
-  const rightItem = items[state.right]!;
-  const logical = !isPhysical(state.left);
-
   return (
     <main
       className="workbench comparison-workbench"
@@ -115,59 +118,77 @@ export default function ComparisonWorkbench({ onExit }: Props) {
     >
       <header className="comparison-topbar">
         <div className="comparison-brand">
-          <Cpu size={19} />
-          <div>
-            <strong>Component comparison</strong>
-            <span>{group.label}</span>
-          </div>
+          <Columns2 size={20} />
+          <strong>Compare parts</strong>
         </div>
         <div className="comparison-top-actions">
           <button
             ref={specsButton}
             className="comparison-specs-button"
+            aria-label="Specs"
             onClick={() =>
               setState((current) => setComparisonSpecsOpen(current, true))
             }
           >
             <BarChart3 size={16} />
-            Specs
+            <span>Specs</span>
           </button>
-          <button className="comparison-exit" onClick={onExit}>
+          <button
+            className="comparison-exit"
+            onClick={onExit}
+            aria-label="Back to explorer"
+          >
             <ChevronLeft size={17} />
-            Back to explorer
+            <span>Back to explorer</span>
           </button>
         </div>
       </header>
-
       <section className="comparison-setup" aria-label="Comparison pair">
-        <fieldset className="comparison-groups">
-          <legend className="sr-only">Component category</legend>
-          {comparisonGroupIds.map((groupId) => (
-            <button
-              key={groupId}
-              aria-pressed={state.group === groupId}
-              onClick={() => chooseGroup(groupId)}
-            >
-              {comparisonGroups[groupId].label}
-            </button>
-          ))}
-        </fieldset>
         <div className="comparison-pair">
           {selector('left')}
           <button
             className="comparison-swap"
-            onClick={() => setState((current) => swapComparisonSides(current))}
+            onClick={() => setState(swapComparisonSides)}
             aria-label="Swap comparison sides"
           >
             <ArrowLeftRight size={18} />
-            <span>Swap sides</span>
           </button>
           {selector('right')}
         </div>
+        <div className="comparison-framing">
+          <fieldset aria-label="Model scale">
+            <button
+              aria-pressed={state.framing === 'fit'}
+              onClick={() =>
+                setState((current) => setComparisonFraming(current, 'fit'))
+              }
+            >
+              Fit each
+            </button>
+            <button
+              aria-pressed={state.framing === 'scale'}
+              disabled={!trueSizeAvailable}
+              aria-describedby="comparison-scale-note"
+              onClick={() =>
+                setState((current) => setComparisonFraming(current, 'scale'))
+              }
+            >
+              True size
+            </button>
+          </fieldset>
+          <p id="comparison-scale-note">
+            {state.framing === 'scale'
+              ? 'Same physical scale in both panes.'
+              : trueSizeAvailable
+                ? 'Each model fits its pane. Sizes are not relative.'
+                : 'Each model fits its pane. Diagrams and illustrative parts have no physical scale.'}
+          </p>
+        </div>
       </section>
-
-      <fieldset className="comparison-mobile-switch">
-        <legend className="sr-only">Visible comparison side</legend>
+      <fieldset
+        className="comparison-mobile-switch"
+        aria-label="Visible comparison side"
+      >
         {(['left', 'right'] as const).map((side) => (
           <button
             key={side}
@@ -180,31 +201,11 @@ export default function ComparisonWorkbench({ onExit }: Props) {
           </button>
         ))}
       </fieldset>
-
-      <div className="comparison-pane-label left" aria-hidden="true">
-        <span>A</span>
-        <strong>{leftItem.shortName}</strong>
-      </div>
-      <div className="comparison-pane-label right" aria-hidden="true">
-        <span>B</span>
-        <strong>{rightItem.shortName}</strong>
-      </div>
       <div className="comparison-divider" aria-hidden="true" />
-      <ComparisonViewer
-        key={viewerRevision}
-        state={viewerState}
-        onCount={setCount}
-      />
+      <ComparisonViewer key={viewerRevision} state={viewerState} />
       <div className="sr-only" aria-live="polite">
-        Comparing {leftItem.shortName} on the left with {rightItem.shortName} on
-        the right.
+        Comparing {leftItem.name} with {rightItem.name}.
       </div>
-      {count !== null && (
-        <div className="comparison-count" aria-hidden="true">
-          <strong>{count}</strong> parts across pair
-        </div>
-      )}
-
       <Disassembly
         level={state.left}
         explode={state.explode}
@@ -214,12 +215,13 @@ export default function ComparisonWorkbench({ onExit }: Props) {
         onSetExplode={setExplode}
         onReset={reset}
         sectionLabel="Shared disassembly control"
-        title={logical ? 'Expand both' : 'Disassemble both'}
-        sliderLabel={`${logical ? 'Expand' : 'Disassemble'} both ${group.label.toLowerCase()}`}
-        valueText={`${Math.round(state.explode)} percent for both ${group.label.toLowerCase()}`}
+        title={
+          mixed ? 'Explore both' : logical ? 'Expand both' : 'Disassemble both'
+        }
+        sliderLabel="Disassemble or expand both models"
+        valueText={`${Math.round(state.explode)} percent for both models`}
       />
       <ComparisonSpecs
-        group={state.group}
         left={state.left}
         right={state.right}
         open={state.specsOpen}
@@ -228,6 +230,17 @@ export default function ComparisonWorkbench({ onExit }: Props) {
           setState((current) => setComparisonSpecsOpen(current, open))
         }
       />
+      {picker && (
+        <ComparisonPicker
+          key={`${picker}:${state[picker]}`}
+          side={picker}
+          selected={state[picker]}
+          other={state[picker === 'left' ? 'right' : 'left']}
+          returnFocusRef={picker === 'left' ? leftButton : rightButton}
+          onChoose={choose}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </main>
   );
 }

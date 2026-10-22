@@ -273,7 +273,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 125 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 126 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -541,7 +541,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-125 tests, all through Node's built-in runner.
+126 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -572,12 +572,13 @@ with Node.js 22.
   its filter anywhere in the first half of the disassembly, that every rear
   connector can be seen from behind the machine through the I/O shield, and
   that the front I/O sits on the outside of the roof.
-- `tests/comparison.test.ts` (9) — every level discovered once across all
+- `tests/comparison.test.ts` (10) — every level discovered once across all
   systems, category inheritance through deeper scales, combined category,
   system and search filters, entry pairs from every scale, every distinct
   cross pair selectable, true size limited to calibrated models, own-only
-  specifications, label-aligned rows with gaps kept, and pane-local pointer
-  coordinates at desktop and mobile widths.
+  specifications, label-aligned rows with gaps kept, picker labels and
+  paths, which pairs share a table, and pane-local pointer coordinates at
+  desktop and mobile widths.
 - `tests/comparison-framing.test.ts` (6) — fit-each and true-size distances,
   unknown or invalid units never implying a shared scale, off-centre models
   contained at phone and wide aspects, one orbit mapping consistently into

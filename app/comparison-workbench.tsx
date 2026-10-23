@@ -5,11 +5,10 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronDown,
-  Columns2,
+  Cpu,
 } from 'lucide-react';
 import {
   canComparePhysicalScale,
-  comparisonCategoryLabel,
   comparisonItem,
   createComparisonState,
   selectComparisonItem,
@@ -26,7 +25,6 @@ import {
   type ComparisonSide,
   type ComparisonViewState,
 } from '@/lib/comparison-state';
-import { levels } from '@/lib/levels';
 import ComparisonPicker from './comparison-picker';
 import ComparisonViewer from './comparison-viewer';
 import ComparisonSpecs from './comparison-specs';
@@ -67,13 +65,7 @@ function PartSelector({ side, item, buttonRef, onOpen }: PartSelectorProps) {
     >
       <span className="comparison-letter">{sideLetter(side)}</span>
       <span className="comparison-selected-part">
-        <small>
-          {comparisonCategoryLabel(item.category)} · {levels[item.system].name}
-        </small>
         <strong>{item.shortName}</strong>
-        <span>
-          {item.kind === 'physical' ? 'Hardware model' : 'Architecture diagram'}
-        </span>
       </span>
       <ChevronDown size={17} aria-hidden="true" />
     </button>
@@ -143,10 +135,10 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
       data-active-side={state.activeSide}
     >
       <header className="comparison-topbar">
-        <div className="comparison-brand">
-          <Columns2 size={20} />
-          <strong>Compare parts</strong>
-        </div>
+        <a className="comparison-brand" href="/" aria-label="PC Anatomy">
+          <Cpu size={20} aria-hidden="true" />
+          <strong>PC Anatomy</strong>
+        </a>
         <div className="comparison-top-actions">
           <button
             ref={specsButton}

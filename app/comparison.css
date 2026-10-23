@@ -42,6 +42,15 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  text-decoration: none;
+}
+.comparison-brand:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 5px;
+  border-radius: 6px;
+}
+.comparison-brand:hover strong {
+  color: var(--accent-bright);
 }
 .comparison-brand > svg {
   width: 34px;
@@ -150,19 +159,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.comparison-selected-part small {
-  color: #8fb7be;
-  font: 9px monospace;
-  letter-spacing: 0.75px;
-  text-transform: uppercase;
-}
 .comparison-selected-part strong {
   font-size: 14px;
   font-weight: 600;
-}
-.comparison-selected-part > span {
-  color: #8f949b;
-  font-size: 11px;
 }
 .comparison-swap {
   width: 44px;
@@ -181,15 +180,15 @@
 }
 .comparison-framing {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
   gap: 14px;
   padding: 0 16px 10px;
 }
 .comparison-framing fieldset {
+  grid-column: 2;
   display: flex;
-  flex: none;
   padding: 2px;
   background: #101213;
   border: 1px solid #3d4247;
@@ -215,6 +214,7 @@
   cursor: not-allowed;
 }
 .comparison-framing p {
+  grid-column: 3;
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -771,8 +771,7 @@
     gap: 7px;
     padding: 6px 8px;
   }
-  .comparison-selector > svg,
-  .comparison-selected-part > span {
+  .comparison-selector > svg {
     display: none;
   }
   .comparison-letter {
@@ -782,10 +781,6 @@
   }
   .comparison-selected-part strong {
     font-size: 12px;
-  }
-  .comparison-selected-part small {
-    font-size: 8px;
-    letter-spacing: 0.35px;
   }
   .comparison-swap {
     width: 34px;
@@ -936,7 +931,7 @@
 @media (max-height: 500px) and (max-width: 900px) {
   :root {
     --comparison-topbar: 52px;
-    --comparison-setup: 64px;
+    --comparison-setup: 100px;
     --comparison-controls: 88px;
   }
   :is(.comparison-brand > svg, .comparison-specs-button span) {
@@ -946,23 +941,17 @@
     width: 34px;
     padding: 0;
   }
-  .comparison-setup {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 1fr;
-    align-items: center;
-  }
   .comparison-pair {
     padding-block: 6px;
   }
   .comparison-selector {
     max-height: 50px;
   }
-  .comparison-selected-part > span,
   .comparison-framing p {
     display: none;
   }
   .comparison-framing {
-    padding: 0 12px 0 0;
+    padding: 0 12px 6px;
   }
   .comparison-mobile-switch {
     height: 34px;

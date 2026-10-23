@@ -321,7 +321,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 126 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 134 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -516,8 +516,14 @@ explorer. One orbit camera works in a normalized space, and
 `comparison-framing.ts` maps it into each model's units, so both panes turn
 together whatever their sizes; picking uses the same pane camera. Wide screens
 use two scissored panes; below 700 CSS pixels only the selected A/B pane
-renders. Swaps reuse both roots, replacements dispose only one root, and exit
-disposes the renderer and both models.
+renders. Swaps reuse both roots; replacements park the previous model in the
+bounded model shelf and restore a cached model when available. Exit disposes
+the renderer, both active models and every parked model. Each pane retains its
+pose cache and raycast acceleration. Bounds are recalculated when poses or
+layout change, while camera easing continues independently; hover tracks the
+displayed pane's view and projection. Only visible rotors keep the loop awake.
+The comparison smoke test checks idle sleep, pointer wake, orbit, pan, zoom and
+hidden-pane animation alongside the picker and framing flows.
 
 ## Adding a component
 
@@ -589,7 +595,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-126 tests, all through Node's built-in runner.
+134 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -599,7 +605,7 @@ with Node.js 22.
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
   packing without overlap at several aspect ratios, machine depth.
-- `tests/models.test.ts` (20) — geometry presence and identity for every scale,
+- `tests/models.test.ts` (24) — geometry presence and identity for every scale,
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule

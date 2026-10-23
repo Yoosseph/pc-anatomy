@@ -27,9 +27,6 @@ export default function ComparisonViewer({ state }: Props) {
       ),
     (_current, reportError) => ({
       stats: () => {},
-      hover: (name, x, y) => setHover(name ? { name, x, y } : null),
-    (current, reportError) => ({
-      stats: (count) => current().onCount(count),
       hover: (name, x, y) =>
         setHover((previous) =>
           name

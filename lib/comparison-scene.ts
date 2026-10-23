@@ -15,12 +15,10 @@ import {
   type ComparisonFrame,
 } from './comparison-framing.ts';
 import {
-  applyPiecePose,
   ModelPoseCache,
   createModelShelf,
   shelfLimit,
   settledAmount,
-  commonModelBounds,
   disposeModelResources,
   posedModelBounds,
   prepareModelInventory,
@@ -120,7 +118,8 @@ export function createComparisonViewer(
   let fitDirty = true,
     hoverPending = false;
   /** The view the pointer was last resolved against. */
-  const hoverView = new T.Matrix4();
+  const hoverView = new T.Matrix4(),
+    hoverProjection = new T.Matrix4();
   let animated: T.Object3D[] = [];
 
   function collectAnimations() {
@@ -176,15 +175,18 @@ export function createComparisonViewer(
   /** Ease each pane camera toward its model's posed bounds; true while moving. */
   function framePanes(blend: number) {
     const pair = [panes.left, panes.right] as const;
-    for (const pane of pair) {
-      posedModelBounds(
-        pane.model,
-        pane.level,
-        amount,
-        pane.bounds,
-        stageScratch,
-      );
-      pane.frame.radius = pane.bounds.getSize(size).length() / 2;
+    if (fitDirty) {
+      for (const pane of pair) {
+        posedModelBounds(
+          pane.model,
+          pane.level,
+          amount,
+          pane.bounds,
+          stageScratch,
+        );
+        pane.frame.radius = pane.bounds.getSize(size).length() / 2;
+      }
+      fitDirty = false;
     }
     const distances = comparisonFitDistances(
       [panes.left.frame.radius, panes.right.frame.radius],
@@ -233,12 +235,6 @@ export function createComparisonViewer(
   function render(seconds: number, dt: number, reducedMotion: boolean) {
     amount = settledAmount(amount, state.explode / 100, dt, reducedMotion);
     let changed = Math.abs(amount - state.explode / 100) > 0.0001;
-    posePane(panes.left);
-    posePane(panes.right);
-    key.shadow.intensity = isPhysical(state.left)
-      ? 1 - T.MathUtils.smoothstep(amount, 0.62, 0.9)
-      : 0;
-    renderer.shadowMap.autoUpdate = key.shadow.intensity > 0.002;
     const leftChanged = posePane(panes.left);
     const rightChanged = posePane(panes.right);
     fitDirty ||= leftChanged || rightChanged;
@@ -255,16 +251,6 @@ export function createComparisonViewer(
 
     camera.aspect = paneAspect();
     camera.updateProjectionMatrix();
-    if (autoCamera) {
-      if (fitDirty) {
-        fit();
-        fitDirty = false;
-      }
-      const blend = reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
-      camera.position.lerp(targetPosition, blend);
-      controls.target.lerp(targetLook, blend);
-      changed ||= camera.position.distanceToSquared(targetPosition) > 0.00001;
-    }
     controls.update();
     // Always update both camera transforms, including while disassembly is
     // still moving. Short-circuiting here leaves the other pane stale.
@@ -288,15 +274,24 @@ export function createComparisonViewer(
     host.dataset.mode = split ? 'split' : state.activeSide;
 
     // Rotors alone do not move what is under the pointer; see scene.ts.
-    const viewChanged = !hoverView.equals(camera.matrixWorld);
-    hoverView.copy(camera.matrixWorld);
-    if (
-      pointerPosition &&
-      activePointer === null &&
-      (hoverPending || leftChanged || rightChanged || viewChanged)
-    ) {
-      updateHover(pointerPosition);
-      hoverPending = false;
+    if (pointerPosition && activePointer === null) {
+      const point = comparisonPanePoint(
+        pointerPosition.clientX,
+        pointerPosition.clientY,
+        renderer.domElement.getBoundingClientRect(),
+        split,
+        state.activeSide,
+      );
+      const paneCamera = panes[point.side].camera;
+      const viewChanged =
+        !hoverView.equals(paneCamera.matrixWorld) ||
+        !hoverProjection.equals(paneCamera.projectionMatrix);
+      hoverView.copy(paneCamera.matrixWorld);
+      hoverProjection.copy(paneCamera.projectionMatrix);
+      if (hoverPending || leftChanged || rightChanged || viewChanged) {
+        updateHover(pointerPosition);
+        hoverPending = false;
+      }
     }
     return changed;
   }

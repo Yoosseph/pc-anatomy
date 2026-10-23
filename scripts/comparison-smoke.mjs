@@ -33,6 +33,13 @@ try {
       errors.push(message.text());
   });
   await page.addInitScript(() => {
+    const request = window.requestAnimationFrame.bind(window);
+    window.__comparisonFrames = 0;
+    window.requestAnimationFrame = (callback) =>
+      request((time) => {
+        window.__comparisonFrames++;
+        callback(time);
+      });
     sessionStorage.setItem('pc-anatomy-performance-tip-v1', '1');
     localStorage.setItem('pc-anatomy-first-visit-hint-v1', '1');
   });
@@ -317,6 +324,85 @@ try {
   await ready('nvme:maccell', 50);
   await click('Reset camera and assembly');
   await ready('nvme:maccell');
+
+  console.log(
+    'Checking comparison idle sleep, pointer wake and orbit controls',
+  );
+  const frames = () => page.evaluate(() => window.__comparisonFrames);
+  const sleeps = async () => {
+    await page.evaluate(() => {
+      window.__comparisonIdleProbe = {
+        frames: window.__comparisonFrames,
+        changedAt: performance.now(),
+      };
+    });
+    await page.waitForFunction(
+      () => {
+        const probe = window.__comparisonIdleProbe;
+        if (probe.frames !== window.__comparisonFrames) {
+          probe.frames = window.__comparisonFrames;
+          probe.changedAt = performance.now();
+        }
+        return performance.now() - probe.changedAt >= 1000;
+      },
+      undefined,
+      { polling: 100, timeout: 60000 },
+    );
+    const before = await frames();
+    await page.waitForTimeout(500);
+    assert.equal(await frames(), before, 'A static comparison kept rendering');
+  };
+  await sleeps();
+  const viewport = await page.locator('.comparison-viewport').boundingBox();
+  assert.ok(viewport);
+  const x = viewport.x + viewport.width / 4;
+  const y = viewport.y + viewport.height / 2;
+  const beforePointer = await frames();
+  await page.mouse.move(x, y);
+  await sleeps();
+  assert.ok(
+    (await frames()) > beforePointer,
+    'Pointer input did not wake comparison',
+  );
+  const beforeOrbit = await frames();
+  await page.mouse.down();
+  await page.mouse.move(x + 70, y + 30, { steps: 8 });
+  await page.mouse.up();
+  await sleeps();
+  assert.ok(
+    (await frames()) > beforeOrbit,
+    'Orbit input did not wake comparison',
+  );
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(x + 90, y + 45, { steps: 5 });
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.wheel(0, -100);
+  await sleeps();
+
+  console.log(
+    'Checking a hidden phone pane does not keep comparison rendering',
+  );
+  await choose('B', 'fan');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ready('nvme:fan');
+  await sleeps();
+  await click('B · Right');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.comparison-viewport')?.dataset.mode === 'right',
+  );
+  const beforeAnimation = await frames();
+  await page.waitForTimeout(500);
+  assert.ok(
+    (await frames()) > beforeAnimation,
+    'The visible fan stopped animating',
+  );
+  await click('A · Left');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.comparison-viewport')?.dataset.mode === 'left',
+  );
+  await sleeps();
   await click('Back to explorer');
   assert.deepEqual(errors, []);
   console.log(

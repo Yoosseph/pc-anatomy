@@ -45,35 +45,35 @@ export default function StageHeading({
                 : 'Coming apart'
               : scale.title}
         </h1>
-        <div className="stage-meta">
-          <nav className="breadcrumbs" aria-label="Component hierarchy">
-            {path.length > 1 && (
+        {path.length > 1 && (
+          <div className="stage-meta">
+            <nav className="breadcrumbs" aria-label="Component hierarchy">
               <button
                 aria-label="Back one level"
                 onClick={() => onNavigate(path[path.length - 2])}
               >
                 <ArrowLeft size={14} />
               </button>
-            )}
-            {path.map((id, i) => (
-              <span key={id}>
-                {i > 0 && <ChevronRight size={12} />}
-                <button
-                  aria-current={id === level ? 'page' : undefined}
-                  onClick={() => onNavigate(id)}
-                >
-                  {levels[id].name}
-                </button>
-              </span>
-            ))}
-            {selected && selected.shortName !== scale.name && (
-              <span>
-                <ChevronRight size={12} />
-                <span className="crumb-selected">{selected.shortName}</span>
-              </span>
-            )}
-          </nav>
-        </div>
+              {path.map((id, i) => (
+                <span key={id}>
+                  {i > 0 && <ChevronRight size={12} />}
+                  <button
+                    aria-current={id === level ? 'page' : undefined}
+                    onClick={() => onNavigate(id)}
+                  >
+                    {levels[id].name}
+                  </button>
+                </span>
+              ))}
+              {selected && selected.shortName !== scale.name && (
+                <span>
+                  <ChevronRight size={12} />
+                  <span className="crumb-selected">{selected.shortName}</span>
+                </span>
+              )}
+            </nav>
+          </div>
+        )}
         {hint && (
           <p className="first-visit-hint">
             <MousePointerClick size={15} aria-hidden="true" />

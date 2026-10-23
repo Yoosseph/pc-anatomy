@@ -511,6 +511,11 @@ can be shown at true size beside another calibrated one; everything else fits
 its own pane. Specifications are each concept's own, aligned by label only for
 like pairs.
 
+Comparison cards show only the selected part's name. The framing buttons are
+centered beneath the pair, independently of their explanatory note. The
+PC Anatomy brand links to the start page from comparison mode. Explorer root
+views omit the one-item breadcrumb; nested views retain hierarchy navigation.
+
 Its scene coordinator shares `stage-runtime.ts` and `model-stage.ts` with the
 explorer. One orbit camera works in a normalized space, and
 `comparison-framing.ts` maps it into each model's units, so both panes turn

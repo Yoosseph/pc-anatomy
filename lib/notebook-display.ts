@@ -293,9 +293,10 @@ export function buildNotebookDisplay(
     });
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(0, -mm(0.075), 0);
-    screen.geometry.dispose();
     screen.geometry = geometry;
   }
+  // Plate geometry is shared between builds; remap the screen's own copy.
+  else screen.geometry = screen.geometry.clone();
   screen.material = new T.MeshBasicMaterial({ map: screenTexture(mac) });
   const positions = screen.geometry.getAttribute('position'),
     uv = screen.geometry.getAttribute('uv');

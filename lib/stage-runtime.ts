@@ -129,9 +129,13 @@ export function createStageLoop(
     } else frameId = 0;
   }
 
-  function wake(frames = 35) {
+  function wake(frames = 2) {
     remaining = Math.max(remaining, frames);
-    if (!frameId) frameId = requestAnimationFrame(render);
+    if (!frameId) {
+      // Time spent asleep is not animation time for the newly requested move.
+      lastTime = performance.now();
+      frameId = requestAnimationFrame(render);
+    }
   }
 
   const start = () => {
@@ -173,13 +177,21 @@ export function collectAnimatedObjects(...roots: T.Object3D[]) {
 }
 
 export function animateObjects(objects: T.Object3D[], seconds: number) {
+  let active = false;
   for (const object of objects) {
+    // A hidden/isolate-filtered assembly must not keep a blank stage rendering.
+    let ancestor: T.Object3D | null = object;
+    while (ancestor && ancestor.visible && ancestor.scale.lengthSq() > 0)
+      ancestor = ancestor.parent;
+    if (ancestor) continue;
+    active = true;
     const rest = object.userData.restRotationY as number;
     object.rotation.y = object.userData.spinRate
       ? rest + seconds * (object.userData.spinRate as number)
       : rest +
         Math.sin(seconds * 1.35) * (object.userData.seekAmplitude as number);
   }
+  return active;
 }
 
 /** Distinguish a click from a pointer gesture using the shared CSS-pixel slop. */

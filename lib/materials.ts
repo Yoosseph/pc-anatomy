@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { markShared } from './geometry-cache.ts';
 
 /**
  * Surface finishes, authored from how the real parts are actually finished.
@@ -297,23 +298,25 @@ const GRAIN: Record<Recipe['grain'], (() => T.Texture) | null> = {
   none: null,
 };
 
+/** Grain maps are deterministic, so every build shares one of each. */
+const grains = new Map<string, T.Texture>();
+const grainFor = (kind: Recipe['grain']) => {
+  const make = GRAIN[kind];
+  if (!make) return undefined;
+  if (!grains.has(kind)) grains.set(kind, markShared(make()));
+  return grains.get(kind);
+};
+
 /**
  * A finish library for one model build.
  *
- * Grain maps are shared between every finish that uses them and materials are
- * cached per finish-and-colour, so a whole case costs four canvases. Both the
- * maps and the materials are owned by the meshes that use them, which is what
- * lets the scene dispose a model by walking it.
+ * Grain maps are shared between every finish and every build, and materials
+ * are cached per finish-and-colour, so a whole case costs four canvases once.
+ * The materials are owned by the meshes that use them, which is what lets the
+ * scene dispose a model by walking it; the shared maps outlive it.
  */
 export function finishes() {
-  const grains = new Map<string, T.Texture>();
   const cache = new Map<string, T.MeshStandardMaterial>();
-  const grainFor = (kind: Recipe['grain']) => {
-    const make = GRAIN[kind];
-    if (!make) return undefined;
-    if (!grains.has(kind)) grains.set(kind, make());
-    return grains.get(kind);
-  };
   /**
    * `finish('steel')` gives the stock recipe. The second argument recolours it
    * and the third nudges its roughness, so one finish covers a family of parts

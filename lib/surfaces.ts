@@ -1,7 +1,23 @@
 import * as T from 'three';
+import { markShared } from './geometry-cache.ts';
 
-/** Deterministic, locally authored material maps. No downloaded textures. */
-export function surfaceTexture(kind: 'brushed' | 'molded' | 'ceramic') {
+type Surface = 'brushed' | 'molded' | 'ceramic';
+const surfaces = new Map<Surface, T.CanvasTexture>();
+
+/**
+ * Deterministic, locally authored material maps. No downloaded textures.
+ * The same three maps serve every build, so disposing a model keeps them.
+ */
+export function surfaceTexture(kind: Surface) {
+  let texture = surfaces.get(kind);
+  if (!texture) {
+    texture = markShared(drawSurface(kind));
+    surfaces.set(kind, texture);
+  }
+  return texture;
+}
+
+function drawSurface(kind: Surface) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
@@ -17,7 +33,11 @@ export function surfaceTexture(kind: 'brushed' | 'molded' | 'ceramic') {
       const value =
         kind === 'brushed' ? 145 + line + random() * 12 : 130 + random() * 65;
       const offset = (y * 256 + x) * 4;
-      pixels.data.set([value, value, value, 255], offset);
+      pixels.data[offset] =
+        pixels.data[offset + 1] =
+        pixels.data[offset + 2] =
+          value;
+      pixels.data[offset + 3] = 255;
     }
   }
   ctx.putImageData(pixels, 0, 0);

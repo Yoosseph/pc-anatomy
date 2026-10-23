@@ -35,7 +35,16 @@ export default function Viewer({
       stats: (value) => current().onCount(value),
       dived: () => current().onDived(),
       hover: (name, x, y, opens) =>
-        setHover(name ? { name, x, y, opens } : null),
+        setHover((previous) =>
+          name
+            ? previous?.name === name &&
+              previous.x === x &&
+              previous.y === y &&
+              previous.opens === opens
+              ? previous
+              : { name, x, y, opens }
+            : null,
+        ),
       labels: setLabels,
       error: reportError,
     }),

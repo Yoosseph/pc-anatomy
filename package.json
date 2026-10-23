@@ -40,7 +40,8 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "tailwind-merge": "3.6.0",
-    "three": "^0.186.0"
+    "three": "^0.186.0",
+    "three-mesh-bvh": "0.9.15"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

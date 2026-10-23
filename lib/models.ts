@@ -24,7 +24,7 @@ import { buildCoreIo, buildRyzenIo } from './io-die.ts';
 import { packageTexture, surfaceTexture } from './surfaces.ts';
 import { pcbRoughness, pcbTexture, type BoardVariant } from './pcb.ts';
 import * as T from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { roundedBox } from './geometry-cache.ts';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { byId, colors } from './manifest.ts';
 import type { LevelId } from './levels.ts';
@@ -149,8 +149,7 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
 export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
   const root = new T.Group(),
     pieces: Piece[] = [];
-  const geometry = new Map<string, T.BufferGeometry>(),
-    materials = new Map<string, T.MeshStandardMaterial>();
+  const materials = new Map<string, T.MeshStandardMaterial>();
   const surfaces = new Map<string, T.Texture>();
   const material = (color: string, metal = 0.5, rough = 0.4) => {
     const key = [color, metal, rough].join();
@@ -180,13 +179,7 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
   };
   function box(size: Vec3, color: string, metal = 0.5, r = 0.008) {
     r = Math.min(r, Math.min(...size) * 0.2);
-    const key = size.join() + r;
-    let g = geometry.get(key);
-    if (!g) {
-      g = new RoundedBoxGeometry(...size, 2, r);
-      geometry.set(key, g);
-    }
-    return new T.Mesh(g, material(color, metal));
+    return new T.Mesh(roundedBox(...size, 2, r), material(color, metal));
   }
   const put = (parent: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
@@ -353,8 +346,7 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
       ];
     }
     const mesh = new T.InstancedMesh(
-      customGeometry ??
-        new RoundedBoxGeometry(...size, 2, Math.min(...size) * 0.1),
+      customGeometry ?? roundedBox(...size, 2, Math.min(...size) * 0.1),
       blockMaterials,
       positions.length,
     );
@@ -475,9 +467,12 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     for (const [mat, meshes] of groups) {
       if (meshes.length < 2) continue;
       const parts = meshes.map((mesh) => {
+        // Not `clone()`: that calls the subclass constructor with defaults,
+        // which for a RoundedBoxGeometry generates a whole box only for
+        // `copy` to overwrite it. It was the largest cost of a notebook build.
         const g = mesh.geometry.index
           ? mesh.geometry.toNonIndexed()
-          : mesh.geometry.clone();
+          : new T.BufferGeometry().copy(mesh.geometry);
         g.applyMatrix4(
           new T.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld),
         );
@@ -497,7 +492,12 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     }
   }
   root.traverse((o) => {
-    if (o instanceof T.Mesh) retired.delete(o.geometry);
+    if (o instanceof T.Mesh) {
+      retired.delete(o.geometry);
+      // Mesh.raycast only performs its cheap local-box rejection when a box
+      // exists. Merged hardware otherwise tests triangles on every sphere hit.
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    }
   });
   retired.forEach((g) => g.dispose());
   return { root, pieces };

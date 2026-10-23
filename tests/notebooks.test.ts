@@ -21,7 +21,10 @@ import {
 } from '../lib/stage-runtime.ts';
 import { notebookPorts } from '../lib/notebook-chassis.ts';
 import { notebookSpecs, notebookV } from '../lib/notebook-kit.ts';
-import { comparisonItem, comparisonLevels } from '../lib/comparison-state.ts';
+import {
+  comparisonItem,
+  filterComparisonItems,
+} from '../lib/comparison-state.ts';
 import {
   disposeModelResources,
   posedModelBounds,
@@ -168,10 +171,13 @@ await test('every notebook scale renders its catalogue with finite assembled and
 });
 
 await test('notebook comparison retains common physical units and complete specifications', () => {
-  assert.deepEqual(comparisonLevels('notebook'), ['legion', 'macbook']);
+  assert.deepEqual(
+    filterComparisonItems({ category: 'systems' }).map((item) => item.level),
+    ['pc', 'legion', 'macbook'],
+  );
   for (const id of ['legion', 'macbook'] as const) {
     assert.ok(
-      comparisonItem('notebook', id).specs.every(
+      comparisonItem(id).specs.every(
         (spec) => spec.value && spec.value !== '—',
       ),
     );

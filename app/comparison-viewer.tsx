@@ -8,26 +8,25 @@ import { useViewerEngine } from './use-viewer-engine';
 
 type Props = {
   state: ComparisonViewState;
-  onCount: (count: number) => void;
 };
 
-export default function ComparisonViewer({ state, onCount }: Props) {
+export default function ComparisonViewer({ state }: Props) {
   const [hover, setHover] = useState<{
     name: string;
     x: number;
     y: number;
   } | null>(null);
-  const left = comparisonItem(state.group, state.left),
-    right = comparisonItem(state.group, state.right);
+  const left = comparisonItem(state.left),
+    right = comparisonItem(state.right);
   const { host, error, ready } = useViewerEngine(
     state,
-    { onCount },
+    {},
     () =>
       import('@/lib/comparison-scene').then(
         ({ createComparisonViewer }) => createComparisonViewer,
       ),
-    (current, reportError) => ({
-      stats: (count) => current().onCount(count),
+    (_current, reportError) => ({
+      stats: () => {},
       hover: (name, x, y) =>
         setHover((previous) =>
           name

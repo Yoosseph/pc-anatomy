@@ -76,7 +76,7 @@ try {
   console.log('Switching to Mac');
   await page
     .locator('.system-picker button')
-    .filter({ hasText: 'MacBook' })
+    .filter({ hasText: /^Mac$/ })
     .evaluate((button) => button.click());
   await ready('macbook');
   await capture('macbook-assembled');
@@ -91,9 +91,27 @@ try {
   await page
     .getByRole('button', { name: 'Compare components' })
     .evaluate((button) => button.click());
-  await page
-    .getByRole('button', { name: 'Laptops', exact: true })
-    .evaluate((button) => button.click());
+  // Free the first slot even when entering from MacBook seeds Legion on B.
+  for (const [side, level] of [
+    ['B', 'nvme'],
+    ['A', 'legion'],
+    ['B', 'macbook'],
+  ]) {
+    await page
+      .getByRole('button', { name: `Choose part ${side}`, exact: true })
+      .evaluate((button) => button.click());
+    const picker = page.getByRole('dialog', { name: `Choose part ${side}` });
+    await picker.getByRole('textbox', { name: 'Search parts' }).fill('');
+    await picker.getByLabel('System', { exact: true }).selectOption('all');
+    await picker
+      .getByRole('navigation', { name: 'Part categories' })
+      .getByRole('button', { name: 'All parts', exact: true })
+      .evaluate((button) => button.click());
+    await picker
+      .locator(`button[data-level="${level}"]`)
+      .evaluate((button) => button.click());
+    await picker.waitFor({ state: 'hidden' });
+  }
   await page.waitForFunction(
     () =>
       document.querySelector('.comparison-viewport')?.dataset.pair ===

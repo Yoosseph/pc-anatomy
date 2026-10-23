@@ -1,3 +1,4 @@
+import type { ComparisonCategoryId } from './comparison-catalogue.ts';
 import { notebookLevels, type NotebookLevel } from './notebook-levels.ts';
 /**
  * The exploration tree.
@@ -79,12 +80,10 @@ export interface LevelDef {
   phases: readonly (readonly [string, number])[];
   /** Marked false while a branch is still a placeholder. */
   detailed: boolean;
-  /**
-   * Models carrying the same value are eligible for the shared comparison
-   * workbench. The workbench discovers them from this catalogue instead of
-   * maintaining a second list of level and concept ids.
-   */
-  comparisonGroup?: string;
+  /** Optional browser category, inherited by deeper scales in this subsystem. */
+  comparisonCategory?: ComparisonCategoryId;
+  /** Authored uniform physical scale; omit for diagrams or exaggerated axes. */
+  millimetersPerUnit?: number;
   /**
    * Set on a subsystem root, including nested roots such as an M.2 drive. It names the subsystem menu
    * that this scale and everything beneath it are listed under, so a viewer
@@ -129,6 +128,7 @@ const dissectionPhases = [
 export const levels: Record<LevelId, LevelDef> = {
   pc: {
     id: 'pc',
+    millimetersPerUnit: 35,
     parent: null,
     name: 'Desktop PC',
     title: 'The complete machine.',
@@ -142,6 +142,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   motherboard: {
     id: 'motherboard',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
     parent: 'pc',
     name: 'Motherboard',
     title: 'The motherboard.',
@@ -156,6 +158,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   dimm: {
     id: 'dimm',
+    comparisonCategory: 'memory',
+    millimetersPerUnit: 6,
     parent: 'motherboard',
     name: 'DDR5 · FURY Beast',
     title: 'Inside the memory module.',
@@ -169,7 +173,6 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.4,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'memory',
   },
   dram: {
     id: 'dram',
@@ -222,6 +225,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   ddr4: {
     id: 'ddr4',
+    comparisonCategory: 'memory',
+    millimetersPerUnit: 6,
     parent: 'motherboard',
     alternative: true,
     name: 'DDR4 · FURY Beast',
@@ -236,7 +241,6 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.4,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'memory',
   },
   ddr4dram: {
     id: 'ddr4dram',
@@ -289,6 +293,7 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   ryzen: {
     id: 'ryzen',
+    comparisonCategory: 'processors',
     parent: 'motherboard',
     name: 'Ryzen 9 9950X',
     title: 'Sixteen cores, on three dies.',
@@ -298,7 +303,6 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'ryzenpackage',
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'cpu',
   },
   ryzenio: {
     id: 'ryzenio',
@@ -314,6 +318,7 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   corei9: {
     id: 'corei9',
+    comparisonCategory: 'processors',
     parent: 'motherboard',
     // The board is modelled with the AMD part seated, so the Intel package is
     // the alternative: same socket position, different processor entirely.
@@ -326,7 +331,6 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'corepackage',
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'cpu',
   },
   coreio: {
     id: 'coreio',
@@ -342,6 +346,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   psu: {
     id: 'psu',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
     parent: 'pc',
     name: 'Modular · TUF Gaming 850W Gold',
     title: 'Inside a modular power supply.',
@@ -353,10 +359,11 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'psu',
   },
   psubronze: {
     id: 'psubronze',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
     parent: 'pc',
     alternative: true,
     name: 'Non-modular · TUF Gaming 750W Bronze',
@@ -369,10 +376,11 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'psu',
   },
   fan: {
     id: 'fan',
+    comparisonCategory: 'cooling',
+    millimetersPerUnit: 9,
     parent: 'pc',
     name: 'Case fan',
     title: 'Inside a fan.',
@@ -387,6 +395,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   cooler: {
     id: 'cooler',
+    comparisonCategory: 'cooling',
+    millimetersPerUnit: 11,
     parent: 'pc',
     name: 'CPU cooler',
     title: 'Inside the cooler.',
@@ -401,6 +411,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   liquid: {
     id: 'liquid',
+    comparisonCategory: 'cooling',
+    millimetersPerUnit: 14,
     parent: 'pc',
     // The machine is built with the air tower bolted to the socket, so the
     // liquid loop is the alternative: same job, same socket, different answer.
@@ -418,6 +430,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   ssd: {
     id: 'ssd',
+    comparisonCategory: 'storage',
+    millimetersPerUnit: 8,
     parent: 'pc',
     name: 'SATA SSD',
     title: 'Inside the solid-state drive.',
@@ -429,10 +443,11 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.7,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'storage',
   },
   nvme: {
     id: 'nvme',
+    comparisonCategory: 'storage',
+    millimetersPerUnit: 8,
     parent: 'motherboard',
     name: 'M.2 NVMe SSD',
     title: 'Inside an M.2 SSD.',
@@ -444,10 +459,11 @@ export const levels: Record<LevelId, LevelDef> = {
     spread: 1.5,
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'storage',
   },
   card: {
     id: 'card',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
     parent: 'pc',
     name: 'RTX 5090',
     title: 'The complete assembly.',
@@ -460,7 +476,6 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'card',
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'gpu',
   },
   die: {
     id: 'die',
@@ -512,6 +527,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   rx9070: {
     id: 'rx9070',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
     parent: 'pc',
     // The tower is built around the RTX 5090, and one primary slot holds one
     // card. The Radeon is a second, complete card you can take apart from the
@@ -528,7 +545,6 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'rxcard',
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'gpu',
   },
   navi48: {
     id: 'navi48',
@@ -580,6 +596,8 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   arcb580: {
     id: 'arcb580',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
     parent: 'pc',
     // Like the Radeon, a complete second card listed under GPU rather than a
     // part fitted to the tower.
@@ -595,7 +613,6 @@ export const levels: Record<LevelId, LevelDef> = {
     concept: 'arccard',
     phases: dissectionPhases,
     detailed: true,
-    comparisonGroup: 'gpu',
   },
   bmg: {
     id: 'bmg',

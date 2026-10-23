@@ -49,6 +49,7 @@ export default function Home() {
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
+      if (mode === 'comparison') return;
       // A key pressed while nothing is focused reports the document, not an
       // element, and on some soft keyboards the target is the window itself.
       // Reaching for closest() on either throws out of the handler.
@@ -74,11 +75,12 @@ export default function Home() {
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  }, [about, choose, navigate, search, state.level]);
+  }, [about, choose, mode, navigate, search, state.level]);
 
   if (mode === 'comparison')
     return (
       <ComparisonWorkbench
+        initialLevel={state.level}
         onExit={() => {
           setMode('explorer');
           requestAnimationFrame(() =>

@@ -1,12 +1,19 @@
 # PC Anatomy
 
-PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor — and a DDR5 memory module down to the transistor and capacitor that hold one bit.
+[![CI](https://github.com/Yoosseph/pc-anatomy/actions/workflows/ci.yml/badge.svg)](https://github.com/Yoosseph/pc-anatomy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/Yoosseph/pc-anatomy)](LICENSE)
+[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Fpc-anatomy.com&label=demo)](https://pc-anatomy.com/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.13-339933?logo=node.js&logoColor=white)](#quick-start)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![three.js](https://img.shields.io/badge/three.js-000000?logo=threedotjs&logoColor=white)](https://threejs.org/)
+
+PC Anatomy is an open-source 3D explorer that takes a desktop computer apart from the assembled ATX tower down to a single GPU streaming multiprocessor, and a DDR5 memory module down to the transistor and capacitor that hold one bit.
 
 ## [**Explore the live demo →**](https://pc-anatomy.com/)
 
 Ideas worth building are collected on the [**roadmap and Kanban board →**](https://github.com/users/Yoosseph/projects/1). If you would like to contribute but have nothing particular in mind, start there: the Backlog column holds the suggestions and feedback waiting to be picked up.
 
-Before changing any code, read [**ARCHITECTURE.md →**](ARCHITECTURE.md). It is the full technical picture of the project — the scale tree, where every module lives, the conventions behind the geometry, and the traps that are not obvious from reading the source. It is written to be read start to finish by whoever is doing the work, person or language model.
+Before changing any code, read [**ARCHITECTURE.md →**](ARCHITECTURE.md). It is the full technical picture of the project: the scale tree, where every module lives, the conventions behind the geometry, and the traps that are not obvious from reading the source. It is written to be read start to finish by whoever is doing the work, person or language model.
 
 Every polygon is generated in TypeScript with three.js. There are no imported models, image textures, or other runtime asset files. The more than 590 selectable components each carry a name, a description, an explanation of their purpose, specifications, and citations instead of stopping at a label.
 

@@ -34,7 +34,7 @@ const statusWord: Record<CheckStatus, string> = {
 
 type Props = {
   build: DesktopBuild;
-  onSetPart: (slot: BuildSlot, part: DesktopBuild[BuildSlot]) => void;
+  onSetPart: <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) => void;
   onRestore: () => void;
   onClose: () => void;
 };
@@ -102,14 +102,13 @@ export default function BuildPanel({
             <legend>{label}</legend>
             {slotOptions(slot).map((option) => {
               const chosen = build[slot] === option.id;
-              const part = option.id as DesktopBuild[BuildSlot];
-              const clash = conflicts(build, slot, part);
+              const clash = conflicts(build, slot, option.id);
               return (
                 <button
                   key={option.id}
                   className="build-option"
                   aria-pressed={chosen}
-                  onClick={() => onSetPart(slot, part)}
+                  onClick={() => onSetPart(slot, option.id)}
                 >
                   <span>
                     <strong>{option.name}</strong>
@@ -143,7 +142,7 @@ export default function BuildPanel({
                   <strong>{check.title}</strong>
                   <p>{check.detail}</p>
                   <span className="build-sources">
-                    {[...new Set(check.sources)].map((id) => (
+                    {check.sources.map((id) => (
                       <a
                         key={id}
                         href={sources[id].url}

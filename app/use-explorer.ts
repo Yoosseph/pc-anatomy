@@ -320,7 +320,7 @@ export function useExplorer() {
    * Put a part in one slot of the desktop build. Touches nothing else: the
    * camera stays where it is, so the new card or supply appears in place.
    */
-  const setBuildPart = (slot: BuildSlot, part: DesktopBuild[BuildSlot]) =>
+  const setBuildPart = <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) =>
     setState((s) => ({ ...s, build: { ...s.build, [slot]: part } }));
   const restoreBuild = () => setState((s) => ({ ...s, build: defaultBuild }));
 

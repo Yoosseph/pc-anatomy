@@ -179,17 +179,19 @@ export const slots: { id: BuildSlot; label: string }[] = [
   { id: 'power', label: 'Power supply' },
 ];
 
+const optionTables: { [S in BuildSlot]: Record<DesktopBuild[S], Option> } = {
+  processor: processorOptions,
+  memory: memoryOptions,
+  graphics: graphicsOptions,
+  power: powerOptions,
+};
+
 /** The options for one slot, in menu order. */
-export function slotOptions(slot: BuildSlot) {
-  const table = {
-    processor: processorOptions,
-    memory: memoryOptions,
-    graphics: graphicsOptions,
-    power: powerOptions,
-  }[slot] as Record<string, Option>;
-  return Object.entries(table).map(([id, option]) => ({
-    id: id as LevelId,
-    ...option,
+export function slotOptions<S extends BuildSlot>(slot: S) {
+  const table: Record<DesktopBuild[S], Option> = optionTables[slot];
+  return (Object.keys(table) as DesktopBuild[S][]).map((id) => ({
+    id,
+    ...table[id],
   }));
 }
 
@@ -202,12 +204,143 @@ export function slotOptions(slot: BuildSlot) {
 export const caseCardClearance = 420;
 
 export type CheckStatus = 'ok' | 'warn' | 'fail';
+type CheckId =
+  | 'socket'
+  | 'memory'
+  | 'supply'
+  | 'connector'
+  | 'length'
+  | 'budget';
 export interface BuildCheck {
-  id: 'socket' | 'memory' | 'supply' | 'connector' | 'length' | 'budget';
+  id: CheckId;
   status: CheckStatus;
   title: string;
   detail: string;
+  /** Each source once. */
   sources: SourceId[];
+}
+
+/** Whether a part can physically go into the fixed board. */
+const socketFits = (cpu: ProcessorOption) => cpu.socket === board.socket;
+const memoryFits = (ram: MemoryOption) => ram.generation === board.memory;
+
+/** One check's result, filed under its id with the sources it rests on. */
+const checkOf =
+  (id: CheckId, sources: SourceId[]) =>
+  (status: CheckStatus, title: string, detail: string): BuildCheck => ({
+    id,
+    status,
+    title,
+    detail,
+    sources: [...new Set(sources)],
+  });
+
+function socketCheck(cpu: ProcessorOption) {
+  const result = checkOf('socket', [...cpu.sources, ...board.sources]);
+  return socketFits(cpu)
+    ? result(
+        'ok',
+        'Processor fits the socket',
+        `The ${cpu.name} is an ${cpu.socket} processor, and the board has an ${board.socket} socket.`,
+      )
+    : result(
+        'fail',
+        'Processor does not fit the socket',
+        `The ${cpu.name} needs an ${cpu.socket} socket. This board has ${board.socket}, so the processor is not installed.`,
+      );
+}
+
+function memoryCheck(ram: MemoryOption) {
+  if (memoryFits(ram))
+    return checkOf('memory', [...ram.sources, ...board.sources])(
+      'ok',
+      'Memory fits the slots',
+      `${ram.generation} modules in ${board.memory} slots.`,
+    );
+  // The failure rests on the key positions, which the module's own sources
+  // do not describe.
+  return checkOf('memory', [
+    'jedecmo329',
+    'ddr5architecture',
+    ...board.sources,
+  ])(
+    'fail',
+    'Memory does not fit the slots',
+    `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot's, so it cannot be pushed in. The modules are not installed.`,
+  );
+}
+
+function supplyCheck(gpu: GraphicsOption, psu: PowerOption) {
+  const result = checkOf('supply', [...gpu.sources, ...psu.sources]);
+  const detail = `${gpu.psuSource} gives ${gpu.psu} W as the ${gpu.psuKind} supply for the ${gpu.name}. The ${psu.name} is rated ${psu.watts} W.`;
+  if (psu.watts >= gpu.psu)
+    return result('ok', 'Supply meets the card maker’s figure', detail);
+  return gpu.psuKind === 'minimum'
+    ? result('fail', 'Supply is below the card’s minimum', detail)
+    : result('warn', 'Supply is below the card maker’s recommendation', detail);
+}
+
+function connectorCheck(gpu: GraphicsOption, psu: PowerOption) {
+  const result = checkOf('connector', [...gpu.sources, ...psu.sources]);
+  if (gpu.connector === '8-pin')
+    return result(
+      'ok',
+      'Power cable matches the card',
+      `The card takes one 8-pin PCIe lead, which the ${psu.name} has.`,
+    );
+  if (psu.sixteenPin)
+    return result(
+      'ok',
+      'Power cable matches the card',
+      `The card takes a 16-pin 12V-2x6 lead, which the ${psu.name} has.`,
+    );
+  return gpu.adapter
+    ? result(
+        'warn',
+        'Card needs its adapter',
+        `The ${psu.name} has no 16-pin 12V-2x6 lead. The card comes with a ${gpu.adapter} adapter for 8-pin leads.`,
+      )
+    : result(
+        'warn',
+        'No 16-pin lead for the card',
+        `The ${psu.name} has only 8-pin PCIe leads, and the card has a 16-pin 12V-2x6 socket. It needs a 12V-2x6 cable or an adapter.`,
+      );
+}
+
+function lengthCheck(gpu: GraphicsOption) {
+  const result = checkOf('length', gpu.sources);
+  return gpu.length <= caseCardClearance
+    ? result(
+        'ok',
+        'Card fits the case',
+        `${gpu.length} mm long, and the case takes cards up to about ${caseCardClearance} mm.`,
+      )
+    : result(
+        'fail',
+        'Card is too long for the case',
+        `${gpu.length} mm long, but the case only takes about ${caseCardClearance} mm.`,
+      );
+}
+
+function budgetCheck(
+  cpu: ProcessorOption,
+  gpu: GraphicsOption,
+  psu: PowerOption,
+) {
+  const result = checkOf('budget', [
+    ...cpu.sources,
+    ...gpu.sources,
+    ...psu.sources,
+  ]);
+  const draw = cpu.watts + gpu.watts;
+  const detail = `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.`;
+  return draw <= psu.watts
+    ? result('ok', 'Processor and card are within the supply’s rating', detail)
+    : result(
+        'fail',
+        'Processor and card add up to more than the supply',
+        detail,
+      );
 }
 
 /** Rated draw: the processor's and the card's published power figures. */
@@ -224,117 +357,18 @@ export function checkBuild(build: DesktopBuild): BuildCheck[] {
     ram = memoryOptions[build.memory],
     gpu = graphicsOptions[build.graphics],
     psu = powerOptions[build.power];
-  const checks: BuildCheck[] = [];
-
-  checks.push(
-    cpu.socket === board.socket
-      ? {
-          id: 'socket',
-          status: 'ok',
-          title: 'Processor fits the socket',
-          detail: `The ${cpu.name} is an ${cpu.socket} processor, and the board has an ${board.socket} socket.`,
-          sources: [...cpu.sources, ...board.sources],
-        }
-      : {
-          id: 'socket',
-          status: 'fail',
-          title: 'Processor does not fit the socket',
-          detail: `The ${cpu.name} needs an ${cpu.socket} socket. This board has ${board.socket}, so the processor is not installed.`,
-          sources: [...cpu.sources, ...board.sources],
-        },
-  );
-
-  checks.push(
-    ram.generation === board.memory
-      ? {
-          id: 'memory',
-          status: 'ok',
-          title: 'Memory fits the slots',
-          detail: `${ram.generation} modules in ${board.memory} slots.`,
-          sources: [...ram.sources, ...board.sources],
-        }
-      : {
-          id: 'memory',
-          status: 'fail',
-          title: 'Memory does not fit the slots',
-          detail: `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot's, so it cannot be pushed in. The modules are not installed.`,
-          sources: ['jedecmo329', 'ddr5architecture', ...board.sources],
-        },
-  );
-
-  const short = psu.watts < gpu.psu;
-  checks.push({
-    id: 'supply',
-    status: !short ? 'ok' : gpu.psuKind === 'minimum' ? 'fail' : 'warn',
-    title: !short
-      ? 'Supply meets the card maker’s figure'
-      : gpu.psuKind === 'minimum'
-        ? 'Supply is below the card’s minimum'
-        : 'Supply is below the card maker’s recommendation',
-    detail: `${gpu.psuSource} gives ${gpu.psu} W as the ${gpu.psuKind} supply for the ${gpu.name}. The ${psu.name} is rated ${psu.watts} W.`,
-    sources: [...gpu.sources, ...psu.sources],
-  });
-
-  checks.push(
-    gpu.connector === '8-pin' || psu.sixteenPin
-      ? {
-          id: 'connector',
-          status: 'ok',
-          title: 'Power cable matches the card',
-          detail:
-            gpu.connector === '8-pin'
-              ? `The card takes one 8-pin PCIe lead, which the ${psu.name} has.`
-              : `The card takes a 16-pin 12V-2x6 lead, which the ${psu.name} has.`,
-          sources: [...gpu.sources, ...psu.sources],
-        }
-      : {
-          id: 'connector',
-          status: 'warn',
-          title: gpu.adapter
-            ? 'Card needs its adapter'
-            : 'No 16-pin lead for the card',
-          detail: gpu.adapter
-            ? `The ${psu.name} has no 16-pin 12V-2x6 lead. The card comes with a ${gpu.adapter} adapter for 8-pin leads.`
-            : `The ${psu.name} has only 8-pin PCIe leads, and the card has a 16-pin 12V-2x6 socket. It needs a 12V-2x6 cable or an adapter.`,
-          sources: [...gpu.sources, ...psu.sources],
-        },
-  );
-
-  checks.push(
-    gpu.length <= caseCardClearance
-      ? {
-          id: 'length',
-          status: 'ok',
-          title: 'Card fits the case',
-          detail: `${gpu.length} mm long, and the case takes cards up to about ${caseCardClearance} mm.`,
-          sources: gpu.sources,
-        }
-      : {
-          id: 'length',
-          status: 'fail',
-          title: 'Card is too long for the case',
-          detail: `${gpu.length} mm long, but the case only takes about ${caseCardClearance} mm.`,
-          sources: gpu.sources,
-        },
-  );
-
-  const draw = ratedDraw(build);
-  checks.push({
-    id: 'budget',
-    status: draw <= psu.watts ? 'ok' : 'fail',
-    title:
-      draw <= psu.watts
-        ? 'Processor and card are within the supply’s rating'
-        : 'Processor and card add up to more than the supply',
-    detail: `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.`,
-    sources: [...cpu.sources, ...gpu.sources, ...psu.sources],
-  });
-
-  return checks;
+  return [
+    socketCheck(cpu),
+    memoryCheck(ram),
+    supplyCheck(gpu, psu),
+    connectorCheck(gpu, psu),
+    lengthCheck(gpu),
+    budgetCheck(cpu, gpu, psu),
+  ];
 }
 
 /** The checks each slot's part takes part in. */
-const slotChecks: Record<BuildSlot, BuildCheck['id'][]> = {
+const slotChecks: Record<BuildSlot, CheckId[]> = {
   processor: ['socket', 'budget'],
   memory: ['memory'],
   graphics: ['supply', 'connector', 'length', 'budget'],
@@ -346,10 +380,10 @@ const slotChecks: Record<BuildSlot, BuildCheck['id'][]> = {
  * fails a check the part is involved in. A problem elsewhere in the build
  * does not mark every option in every slot.
  */
-export function conflicts(
+export function conflicts<S extends BuildSlot>(
   build: DesktopBuild,
-  slot: BuildSlot,
-  part: DesktopBuild[BuildSlot],
+  slot: S,
+  part: DesktopBuild[S],
 ) {
   return checkBuild({ ...build, [slot]: part }).some(
     (c) => c.status === 'fail' && slotChecks[slot].includes(c.id),
@@ -372,14 +406,12 @@ export function buildStatus(checks: BuildCheck[]): CheckStatus {
 export function installedBuild(build: DesktopBuild): DesktopBuild {
   return {
     ...build,
-    processor:
-      processorOptions[build.processor].socket === board.socket
-        ? build.processor
-        : defaultBuild.processor,
-    memory:
-      memoryOptions[build.memory].generation === board.memory
-        ? build.memory
-        : defaultBuild.memory,
+    processor: socketFits(processorOptions[build.processor])
+      ? build.processor
+      : defaultBuild.processor,
+    memory: memoryFits(memoryOptions[build.memory])
+      ? build.memory
+      : defaultBuild.memory,
   };
 }
 
@@ -392,26 +424,29 @@ export function towerKey(build: DesktopBuild) {
 }
 
 /**
- * The concept a tower piece describes under this build.
+ * The tower pieces whose part the build chooses, and the slot choosing it.
  *
- * The tower keeps its piece ids, `graphicscard` and `psu`, whatever is
- * installed: the power routes, the hidden list and the selection all hold
- * onto them. What the reader is shown, and where opening the piece leads,
- * follow the part that is actually in the slot.
+ * The tower keeps these piece ids whatever is installed: the power routes,
+ * the hidden list and the selection all hold onto them. What the reader is
+ * shown, and where opening the piece leads, follow the part in the slot.
  */
+const towerPieces = new Map<string, 'graphics' | 'power'>([
+  ['graphicscard', 'graphics'],
+  ['psu', 'power'],
+]);
+
+/** The concept a tower piece describes under this build. */
 export function standIn(id: string, build: DesktopBuild) {
-  if (id === 'graphicscard' && build.graphics !== defaultBuild.graphics)
-    return levels[build.graphics].concept;
-  if (id === 'psu' && build.power !== defaultBuild.power)
-    return levels[build.power].concept;
-  return id;
+  const slot = towerPieces.get(id);
+  return slot && build[slot] !== defaultBuild[slot]
+    ? levels[build[slot]].concept
+    : id;
 }
 
 /** Where opening a piece leads under this build. */
 export function opensTo(id: string, build: DesktopBuild): LevelId | null {
-  if (id === 'graphicscard') return build.graphics;
-  if (id === 'psu') return build.power;
-  return openLevel(id);
+  const slot = towerPieces.get(id);
+  return slot ? build[slot] : openLevel(id);
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   ratedDraw,
   slotOptions,
   slots,
+  type BuildCheck,
   type BuildSlot,
   type CheckStatus,
   type DesktopBuild,
@@ -32,9 +33,10 @@ const statusWord: Record<CheckStatus, string> = {
   fail: 'Problem',
 };
 
+type SetPart = <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) => void;
 type Props = {
   build: DesktopBuild;
-  onSetPart: <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) => void;
+  onSetPart: SetPart;
   onRestore: () => void;
   onClose: () => void;
 };
@@ -50,13 +52,7 @@ export default function BuildPanel({
   onClose,
 }: Props) {
   const checks = checkBuild(build);
-  const overall = buildStatus(checks);
-  const problems = checks.filter((c) => c.status === 'fail').length,
-    notes = checks.filter((c) => c.status === 'warn').length;
-  const draw = ratedDraw(build),
-    supply = powerOptions[build.power].watts;
   const changed = slots.some(({ id }) => build[id] !== defaultBuild[id]);
-  const OverallIcon = statusIcon[overall];
   return (
     <section className="build-section" aria-label="Build your own PC">
       <div className="section-heading">
@@ -70,94 +66,26 @@ export default function BuildPanel({
         say whether the parts work together.
       </p>
       {/* The verdict stays in view; the parts and the checks scroll. */}
-      <output className={'build-summary status-' + overall}>
-        <OverallIcon size={15} aria-hidden="true" />
-        <strong>
-          {overall === 'ok'
-            ? 'Everything works together'
-            : overall === 'warn'
-              ? `Works, with ${notes} ${notes === 1 ? 'thing' : 'things'} to check`
-              : `${problems} ${problems === 1 ? 'problem' : 'problems'} to fix`}
-        </strong>
-      </output>
-      <div className="build-power">
-        <div>
-          <span>Processor and card, rated</span>
-          <strong>
-            {draw} W / {supply} W
-          </strong>
-        </div>
-        <meter
-          min={0}
-          max={supply}
-          value={Math.min(draw, supply)}
-          high={supply * 0.9}
-          optimum={supply * 0.5}
-          aria-label={`Rated draw ${draw} watts of a ${supply} watt supply`}
-        />
-      </div>
+      <Verdict checks={checks} />
+      <RatedPower build={build} />
       <div className="build-scroll">
-        {slots.map(({ id: slot, label }) => (
-          <fieldset className="build-slot" key={slot}>
-            <legend>{label}</legend>
-            {slotOptions(slot).map((option) => {
-              const chosen = build[slot] === option.id;
-              const clash = conflicts(build, slot, option.id);
-              return (
-                <button
-                  key={option.id}
-                  className="build-option"
-                  aria-pressed={chosen}
-                  onClick={() => onSetPart(slot, option.id)}
-                >
-                  <span>
-                    <strong>{option.name}</strong>
-                    <small>{option.summary}</small>
-                  </span>
-                  {clash && (
-                    <em
-                      title="This part does not work with the rest of the build"
-                      aria-label="does not work with the rest of the build"
-                    >
-                      ✕
-                    </em>
-                  )}
-                </button>
-              );
-            })}
-          </fieldset>
+        {slots.map(({ id, label }) => (
+          <SlotPicker
+            key={id}
+            slot={id}
+            label={label}
+            build={build}
+            onSetPart={onSetPart}
+          />
         ))}
         <p className="build-fixed">
           Fixed in every build: the AM5 motherboard with four DDR5 slots, the
           tower air cooler, the SATA SSD and the case.
         </p>
-
         <ul className="build-checks">
-          {checks.map((check) => {
-            const Icon = statusIcon[check.status];
-            return (
-              <li key={check.id} className={'status-' + check.status}>
-                <Icon size={14} aria-label={statusWord[check.status]} />
-                <div>
-                  <strong>{check.title}</strong>
-                  <p>{check.detail}</p>
-                  <span className="build-sources">
-                    {check.sources.map((id) => (
-                      <a
-                        key={id}
-                        href={sources[id].url}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={sources[id].name}
-                      >
-                        {sources[id].name}
-                      </a>
-                    ))}
-                  </span>
-                </div>
-              </li>
-            );
-          })}
+          {checks.map((check) => (
+            <CheckRow key={check.id} check={check} />
+          ))}
         </ul>
         <p className="build-note">
           Figures are each maker’s published numbers. A supply below a
@@ -172,5 +100,121 @@ export default function BuildPanel({
         )}
       </div>
     </section>
+  );
+}
+
+/** The build's worst result, counted. */
+function Verdict({ checks }: { checks: BuildCheck[] }) {
+  const overall = buildStatus(checks);
+  const count = (status: CheckStatus) =>
+    checks.filter((c) => c.status === status).length;
+  const plural = (n: number, word: string) =>
+    `${n} ${word}${n === 1 ? '' : 's'}`;
+  const Icon = statusIcon[overall];
+  return (
+    <output className={'build-summary status-' + overall}>
+      <Icon size={15} aria-hidden="true" />
+      <strong>
+        {overall === 'ok'
+          ? 'Everything works together'
+          : overall === 'warn'
+            ? `Works, with ${plural(count('warn'), 'thing')} to check`
+            : `${plural(count('fail'), 'problem')} to fix`}
+      </strong>
+    </output>
+  );
+}
+
+/** The processor's and card's published power against the supply's rating. */
+function RatedPower({ build }: { build: DesktopBuild }) {
+  const draw = ratedDraw(build),
+    supply = powerOptions[build.power].watts;
+  return (
+    <div className="build-power">
+      <div>
+        <span>Processor and card, rated</span>
+        <strong>
+          {draw} W / {supply} W
+        </strong>
+      </div>
+      <meter
+        min={0}
+        max={supply}
+        value={Math.min(draw, supply)}
+        high={supply * 0.9}
+        optimum={supply * 0.5}
+        aria-label={`Rated draw ${draw} watts of a ${supply} watt supply`}
+      />
+    </div>
+  );
+}
+
+/**
+ * The parts one slot can take. A ✕ marks a part that fails a check it is
+ * involved in, given the rest of the build.
+ */
+function SlotPicker({
+  slot,
+  label,
+  build,
+  onSetPart,
+}: {
+  slot: BuildSlot;
+  label: string;
+  build: DesktopBuild;
+  onSetPart: SetPart;
+}) {
+  return (
+    <fieldset className="build-slot">
+      <legend>{label}</legend>
+      {slotOptions(slot).map((option) => (
+        <button
+          key={option.id}
+          className="build-option"
+          aria-pressed={build[slot] === option.id}
+          onClick={() => onSetPart(slot, option.id)}
+        >
+          <span>
+            <strong>{option.name}</strong>
+            <small>{option.summary}</small>
+          </span>
+          {conflicts(build, slot, option.id) && (
+            <em
+              title="This part does not work with the rest of the build"
+              aria-label="does not work with the rest of the build"
+            >
+              ✕
+            </em>
+          )}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** One check: its result, what it compared, and the sources it rests on. */
+function CheckRow({ check }: { check: BuildCheck }) {
+  const Icon = statusIcon[check.status];
+  return (
+    <li className={'status-' + check.status}>
+      <Icon size={14} aria-label={statusWord[check.status]} />
+      <div>
+        <strong>{check.title}</strong>
+        <p>{check.detail}</p>
+        <span className="build-sources">
+          {check.sources.map((id) => (
+            <a
+              key={id}
+              href={sources[id].url}
+              target="_blank"
+              rel="noreferrer"
+              title={sources[id].name}
+            >
+              {sources[id].name}
+            </a>
+          ))}
+        </span>
+      </div>
+    </li>
   );
 }

@@ -29,7 +29,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { byId, colors } from './manifest.ts';
 import type { LevelId } from './levels.ts';
 import type { Vec3 } from './layout.ts';
-import type { DesktopBuild } from './desktop-build.ts';
+import { defaultBuild, type DesktopBuild } from './desktop-build.ts';
 export interface Piece {
   key: string;
   concept: string;
@@ -105,10 +105,7 @@ const notebookBuilders = Object.fromEntries(
       buildNotebook(id as NotebookLevel, tools, root),
   ]),
 ) as Record<NotebookLevel, (tools: ModelTools, root: T.Group) => void>;
-const builders: Record<
-  LevelId,
-  (tools: ModelTools, root: T.Group, build?: DesktopBuild) => void
-> = {
+const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ...notebookBuilders,
   pc: buildMachine,
   motherboard: buildMotherboard,
@@ -126,7 +123,7 @@ const builders: Record<
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,
   coreio: buildCoreIo,
-  psu: (tools, root) => buildPowerSupply(tools, root),
+  psu: buildPowerSupply,
   psubronze: (tools, root) => buildPowerSupply(tools, root, 'fixed'),
   fan: buildFanUnit,
   cooler: buildCooler,
@@ -156,7 +153,7 @@ const builders: Record<
  */
 export function buildModel(
   level: LevelId,
-  build?: DesktopBuild,
+  build: DesktopBuild = defaultBuild,
 ): { root: T.Group; pieces: Piece[] } {
   const root = new T.Group(),
     pieces: Piece[] = [];
@@ -451,9 +448,8 @@ export function buildModel(
     return model.root;
   };
   builders[level](
-    { add, instances, box, pcb, material, label, assembly, airflow },
+    { build, add, instances, box, pcb, material, label, assembly, airflow },
     root,
-    build,
   );
   // Consolidate authored submeshes within each selectable assembly. Lead pins,
   // frame rails and socket contacts retain the assembly's picking identity.

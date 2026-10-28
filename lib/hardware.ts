@@ -1,4 +1,5 @@
 import type { LevelId } from './levels.ts';
+import type { DesktopBuild } from './desktop-build.ts';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Piece } from './models.ts';
@@ -10,6 +11,11 @@ import { buildCardCooler, CARD, cardStack } from './graphics-card.ts';
 import { buildCapacitor, buildChip, buildHeader, buildScrew } from './parts.ts';
 
 export type ModelTools = {
+  /**
+   * The parts installed in the desktop tower. Only the tower reads it; every
+   * other scale is built one way.
+   */
+  build: DesktopBuild;
   /** Reuse a detailed scale as a single installed, selectable assembly. */
   assembly: (level: LevelId) => T.Group;
   /**

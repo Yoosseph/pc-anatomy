@@ -16,12 +16,7 @@ import { buildChassis, plateWithHoles, type CaseShell } from './chassis.ts';
 import { cardStack } from './graphics-card.ts';
 import { finishes, type Finish } from './materials.ts';
 import { roundedBox } from './geometry-cache.ts';
-import {
-  defaultBuild,
-  powerOptions,
-  type DesktopBuild,
-  type GraphicsChoice,
-} from './desktop-build.ts';
+import { powerOptions, type GraphicsChoice } from './desktop-build.ts';
 
 /**
  * The assembled desktop machine.
@@ -144,12 +139,8 @@ const cardMounts: Record<
   },
 };
 
-export function buildMachine(
-  tools: ModelTools,
-  root: T.Group,
-  build: DesktopBuild = defaultBuild,
-) {
-  const { add, airflow, instances, material, label } = tools;
+export function buildMachine(tools: ModelTools, root: T.Group) {
+  const { build, add, airflow, instances, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -481,7 +472,7 @@ export function buildMachine(
       ]);
   label(
     psu,
-    supply.modular ? 'TUF GAMING 850W GOLD' : 'TUF GAMING 750W BRONZE',
+    supply.name.replace(/^ASUS /, '').toUpperCase(),
     [0, ph / 2 + 0.01, -mm(20)],
     2.2,
     '#9d9b8e',

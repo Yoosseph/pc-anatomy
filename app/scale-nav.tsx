@@ -16,6 +16,7 @@ import {
   Microscope,
   Monitor,
   PcCase,
+  Wrench,
   X,
   Zap,
 } from 'lucide-react';
@@ -109,6 +110,9 @@ type Props = {
   onOpenSubmenu: (submenu: LevelId | 'none' | null) => void;
   onNavigate: (level: LevelId) => void;
   onCompare: () => void;
+  /** Whether the build panel is open, and the move that opens or closes it. */
+  building: boolean;
+  onBuild: () => void;
   onClose: () => void;
 };
 
@@ -120,6 +124,8 @@ export default function ScaleNav({
   onOpenSubmenu,
   onNavigate,
   onCompare,
+  building,
+  onBuild,
   onClose,
 }: Props) {
   const rootLevel = systemRoot(level);
@@ -161,6 +167,17 @@ export default function ScaleNav({
         <GitCompareArrows size={16} />
         <span>
           <strong>Compare components</strong>
+        </span>
+        <ChevronRight size={14} />
+      </button>
+      <button
+        className="compare-button build-button"
+        aria-pressed={building}
+        onClick={onBuild}
+      >
+        <Wrench size={16} />
+        <span>
+          <strong>Build your own PC</strong>
         </span>
         <ChevronRight size={14} />
       </button>

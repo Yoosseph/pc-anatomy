@@ -2964,3 +2964,229 @@ a {
     white-space: nowrap;
   }
 }
+
+/* Build your own PC. The entry sits under Compare; the panel takes the place
+   of the visibility list in the rail while it is open. */
+.build-button {
+  margin-top: 6px;
+}
+.build-button[aria-pressed='true'] {
+  background: linear-gradient(180deg, #23383e 0%, #1a2d32 100%);
+  border-color: var(--accent-bright);
+}
+.build-button + .scale-navigation {
+  margin-top: 10px;
+}
+.build-section {
+  --build-ok: #7de0b7;
+  --build-warn: #e8b860;
+  --build-fail: #f08a80;
+  padding: 14px 0 10px;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+.build-intro {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #a9aeb5;
+}
+.build-scroll {
+  flex: 1 1 160px;
+  min-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #60636a transparent;
+  scrollbar-gutter: stable;
+  padding: 2px 6px 4px 0;
+  border-top: 1px solid #ffffff0c;
+}
+.build-slot {
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.build-slot legend {
+  padding: 0;
+  margin: 0 0 4px;
+  font: 600 9px monospace;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #848992;
+}
+.build-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  text-align: left;
+  color: #c7cacf;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+.build-option:hover {
+  background: #26292e;
+}
+.build-option[aria-pressed='true'] {
+  background: #1b2d32;
+  border-color: #4f8792;
+  color: #eef6f7;
+}
+.build-option > span {
+  flex: 1;
+  min-width: 0;
+}
+.build-option strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.build-option small {
+  display: block;
+  font-size: 10.5px;
+  color: #8f959c;
+}
+.build-option em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--build-fail);
+}
+.build-fixed,
+.build-note {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #8f959c;
+}
+.build-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 12px;
+}
+.build-summary strong {
+  font-weight: 500;
+}
+.build-summary.status-ok {
+  color: var(--build-ok);
+  border-color: #2f5f50;
+  background: #15241f;
+}
+.build-summary.status-warn {
+  color: var(--build-warn);
+  border-color: #62513b;
+  background: #241f17;
+}
+.build-summary.status-fail {
+  color: var(--build-fail);
+  border-color: #6a3a36;
+  background: #261817;
+}
+.build-power {
+  margin: 8px 0 10px;
+}
+.build-power > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #a9aeb5;
+}
+.build-power strong {
+  font-weight: 500;
+  color: #dfe3e6;
+  font-variant-numeric: tabular-nums;
+}
+.build-power meter {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 5px;
+}
+.build-checks {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.build-checks li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.build-checks li > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.build-checks .status-ok > svg {
+  color: var(--build-ok);
+}
+.build-checks .status-warn > svg {
+  color: var(--build-warn);
+}
+.build-checks .status-fail > svg {
+  color: var(--build-fail);
+}
+.build-checks li > div {
+  min-width: 0;
+}
+.build-checks strong {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #dfe3e6;
+}
+.build-checks p {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #a9aeb5;
+}
+.build-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 3px;
+}
+.build-sources a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--accent-muted);
+}
+.build-sources a:hover {
+  color: var(--accent-bright);
+}
+.build-restore {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 4px;
+  padding: 6px 9px;
+  border: 1px solid #3a3e44;
+  border-radius: 5px;
+  font-size: 11px;
+  color: #c7cacf;
+}
+.build-restore:hover {
+  background: #26292e;
+  color: #fff;
+}

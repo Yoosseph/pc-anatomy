@@ -3,6 +3,7 @@ import { categories, type Category } from './concept.ts';
 import { isPhysical, rootLevel, type LevelId } from './levels.ts';
 import type { AirflowMode } from './airflow-policy.ts';
 import type { PowerTarget } from './power-flow-policy.ts';
+import { defaultBuild, type DesktopBuild } from './desktop-build.ts';
 
 /**
  * What the explorer is currently showing, and the moves that change it.
@@ -33,6 +34,12 @@ export type ExplorerState = {
   /** Desktop power annotations persist across navigation until Reset. */
   power: boolean;
   powerTarget: PowerTarget;
+  /**
+   * The parts chosen for the desktop tower in build mode. Like the power
+   * preference it belongs to the machine, not to one scale, so it survives
+   * navigation and Reset; only the build panel puts the original parts back.
+   */
+  build: DesktopBuild;
   cameraRevision: number;
   focusRevision: number;
   /** The component being opened, while the isolate-and-close-in ramp runs. */
@@ -52,6 +59,7 @@ export const initialState: ExplorerState = {
   airflow: 'auto',
   power: false,
   powerTarget: 'all',
+  build: defaultBuild,
   cameraRevision: 0,
   focusRevision: 0,
   diveInto: null,

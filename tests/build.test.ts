@@ -6,6 +6,7 @@ import { disposeModelResources } from '../lib/model-stage.ts';
 import { byId } from '../lib/manifest.ts';
 import { sources } from '../lib/sources.ts';
 import { initialState } from '../lib/explorer-state.ts';
+import { powerPanelState } from '../lib/power-flow-policy.ts';
 import { levels } from '../lib/levels.ts';
 import {
   buildStatus,
@@ -146,10 +147,6 @@ await test('the card’s power socket is matched against the supply’s leads', 
     check({ ...bronze, graphics: 'arcb580' }, 'connector').status,
     'ok',
   );
-  assert.equal(
-    graphicsFeed({ ...bronze, graphics: 'arcb580' }).label,
-    '8-pin PCIe',
-  );
 });
 
 await test('only a part involved in a failure is marked as the problem', () => {
@@ -169,6 +166,27 @@ await test('only a part involved in a failure is marked as the problem', () => {
   assert.equal(conflicts(build, 'memory', 'dimm'), false);
   assert.equal(conflicts(build, 'processor', 'corei9'), true);
   assert.equal(conflicts(build, 'memory', 'ddr4'), true);
+});
+
+await test('the power legend names the installed card’s own feed', () => {
+  const legend = (build: DesktopBuild) =>
+    powerPanelState({
+      ...initialState,
+      power: true,
+      powerTarget: 'gpu',
+      build,
+    });
+  const original = legend(defaultBuild);
+  const gpu = original.routes.find((route) => route.id === 'gpu')!;
+  assert.equal(gpu.label, '12V-2x6');
+  assert.match(gpu.description, /RTX 5090/);
+  assert.equal(graphicsFeed(defaultBuild), null);
+  const arc = legend({ ...defaultBuild, graphics: 'arcb580' });
+  const arcFeed = arc.routes.find((route) => route.id === 'gpu')!;
+  assert.equal(arcFeed.label, '8-pin PCIe');
+  assert.match(arcFeed.description, /Arc B580/);
+  // The explanation is the feed's own description, not the 5090's.
+  assert.equal(arc.explanation, arcFeed.description);
 });
 
 await test('rated draw adds the published processor and card figures', () => {

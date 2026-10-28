@@ -7,7 +7,6 @@ import {
   type PowerTarget,
 } from '@/lib/power-flow-policy';
 import type { ExplorerState } from '@/lib/explorer-state';
-import { defaultBuild, graphicsFeed } from '@/lib/desktop-build';
 
 const targets: { id: PowerTarget; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -29,19 +28,7 @@ export default function PowerControls({
 }) {
   const [expanded, setExpanded] = useState(false);
   if (!hasPowerFlow(state.level)) return null;
-  const panel = powerPanelState(state);
-  const { visible, status } = panel;
-  // The card's own feed is named for the card the build installed.
-  let { routes, explanation } = panel;
-  if (state.build.graphics !== defaultBuild.graphics) {
-    const feed = graphicsFeed(state.build);
-    const gpu = routes.find((route) => route.id === 'gpu');
-    if (explanation && explanation === gpu?.description)
-      explanation = feed.description;
-    routes = routes.map((route) =>
-      route.id === 'gpu' ? { ...route, ...feed } : route,
-    );
-  }
+  const { routes, visible, explanation, status } = powerPanelState(state);
   return (
     <>
       <button

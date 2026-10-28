@@ -414,8 +414,12 @@ export function opensTo(id: string, build: DesktopBuild): LevelId | null {
   return openLevel(id);
 }
 
-/** The auxiliary feed to the installed card, for the power legend. */
+/**
+ * The auxiliary feed to an installed card other than the original 5090, for
+ * the power legend. The original's route keeps its own wording.
+ */
 export function graphicsFeed(build: DesktopBuild) {
+  if (build.graphics === defaultBuild.graphics) return null;
   const gpu = graphicsOptions[build.graphics];
   return {
     label: gpu.connector === '8-pin' ? '8-pin PCIe' : '12V-2x6',

@@ -323,7 +323,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 145 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-mode checks and every card and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 146 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-mode checks and every card and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -344,6 +344,7 @@ subsystems stop touching.
 | `label(parent, text, pos, width, color?)` | 3-D text, sized to a width rather than a font size. |
 | `assembly(level)` | Reuses a detailed scale as one installed, selectable assembly — how the motherboard and the card appear inside the tower, and the DDR5 module in the motherboard's slots. |
 | `airflow(streams)` | Chevrons marching along the paths this build moves air along. Scenery, not parts: see the convention below. |
+| `build` | The parts chosen for the desktop tower in build mode. Only `machine.ts` reads it; `buildModel(level, build)` defaults it to the original machine. |
 
 `delta` is the direction a piece travels as the machine comes apart. `reveal` is
 the disassembly fraction below which a piece is hidden, and it defaults to 0.
@@ -559,8 +560,10 @@ yet. Only the card and the supply change the tower (`towerKey`). A processor or
 module that cannot seat is reported and left out, and the board keeps the one
 it was built with (`installedBuild`).
 
-`buildModel(level, build)` hands the build to the tower builder, and every
-other scale ignores it. `machine.ts` installs the chosen card through
+`buildModel(level, build)` hands the build to every builder as
+`ModelTools.build`, and only the tower reads it. It is a field rather than a
+third builder argument because some builders already take one of their own:
+the supply builder's is its cable variant. `machine.ts` installs the chosen card through
 `tools.assembly`. All three card builders share the 5090's millimetre scale, so
 one factor installs any of them at true length. Each bracket stands against the
 rear panel. Across the slot, each card is moved so its edge connector lands
@@ -575,7 +578,9 @@ The tower keeps the piece ids `graphicscard` and `psu` whatever is installed,
 because power routes, the hidden list and selections hold onto them.
 `standIn` says which concept the piece describes (the installed card's or
 supply's own root concept), and `opensTo` says where opening it leads. The
-detail panel, the dive and the power legend's card feed go through those two.
+detail panel and the dive go through those two. `powerPanelState` names the
+installed card's own feed (`graphicsFeed`), so the Arc's route reads 8-pin
+PCIe, and its explanation follows.
 The scene parks tower models under `pc:<card>+<supply>`, so switching back to
 an earlier build reuses the parked model.
 
@@ -657,7 +662,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-145 tests, all through Node's built-in runner.
+146 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -718,8 +723,9 @@ with Node.js 22.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/build.test.ts` (11) — the build mode's checks: what fails, what
-  warns, which option is marked as the problem, and rated draw. Also every
+- `tests/build.test.ts` (12) — the build mode's checks: what fails, what
+  warns, which option is marked as the problem, rated draw, and the power
+  legend naming the installed card's feed. Also every
   card and supply built into the tower: seated on the slot at true length,
   clear of the case and the cooler, and fed by a loom that ends on the card.
 

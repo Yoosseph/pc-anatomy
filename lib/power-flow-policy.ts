@@ -2,6 +2,7 @@ import type { Category } from './concept.ts';
 import type { LevelId } from './levels.ts';
 import type { SourceId } from './sources.ts';
 import { smoothstep } from './layout.ts';
+import { graphicsFeed, type DesktopBuild } from './desktop-build.ts';
 
 /** Three-free metadata shared by the controls and the authored overlay. */
 export type PowerTarget = 'all' | 'cpu' | 'gpu' | 'storage';
@@ -141,10 +142,16 @@ const explanationRoutes: Record<Exclude<PowerTarget, 'all'>, PowerRouteId> = {
 };
 
 /** Derive the legend independently of React and the animation clock. */
-export function powerPanelState(state: PowerView & { explode: number }) {
-  const routes = powerRoutes.filter((route) =>
-    matchesPowerTarget(route, state.powerTarget),
-  );
+export function powerPanelState(
+  state: PowerView & { explode: number; build?: DesktopBuild },
+) {
+  // The card's own feed is named for the card the build installed.
+  const feed = state.build && graphicsFeed(state.build);
+  const routes = powerRoutes
+    .filter((route) => matchesPowerTarget(route, state.powerTarget))
+    .map((route) =>
+      feed && route.id === 'gpu' ? { ...route, ...feed } : route,
+    );
   const visible = visiblePowerRoutes(state);
   const explanationId =
     state.powerTarget === 'all' ? null : explanationRoutes[state.powerTarget];

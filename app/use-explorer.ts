@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { byId, categories, openLevel, type Category } from '@/lib/manifest';
+import { byId, categories, type Category } from '@/lib/manifest';
 import { airflowShown } from '@/lib/airflow-policy';
 import {
   initialState,
@@ -18,6 +18,13 @@ import {
   type LevelId,
 } from '@/lib/levels';
 import { searchToPlace, type Place } from '@/lib/deep-link';
+import {
+  defaultBuild,
+  opensTo,
+  standIn,
+  type BuildSlot,
+  type DesktopBuild,
+} from '@/lib/desktop-build';
 import { useDisassemblyPlayback } from './use-disassembly-playback';
 import { useAddress } from './use-address';
 
@@ -54,8 +61,14 @@ export function useExplorer() {
   // the part being opened. Showing its panel would flash the outer component's
   // description, and its "Take apart" button, for a few hundred milliseconds
   // before the deeper scale replaces it. The panel appears on arrival instead.
+  // A tower piece describes the part the build put in its slot.
   const selected =
-    state.selection && !state.diveInto ? byId[state.selection.concept] : null;
+    state.selection && !state.diveInto
+      ? byId[standIn(state.selection.concept, state.build)]
+      : null;
+  const opens = state.selection
+    ? opensTo(state.selection.concept, state.build)
+    : null;
   const logical = !isPhysical(state.level);
   const updateExplode = useCallback(
     (explode: number) =>
@@ -116,6 +129,7 @@ export function useExplorer() {
     setState((s) => ({
       ...initialState,
       level: systemRoot(s.level),
+      build: s.build,
       cameraRevision: s.cameraRevision + 1,
     }));
     setLayers(false);
@@ -129,7 +143,7 @@ export function useExplorer() {
   // a dive in flight, so cancelling one is just clearing it.
   const dive = useCallback(
     (conceptId: string) => {
-      const target = openLevel(conceptId);
+      const target = opensTo(conceptId, state.build);
       if (!target) return false;
       // GPU diagrams open directly. The outgoing isolation animation selected
       // every repeated block and tinted the old scale green before replacing it.
@@ -157,17 +171,19 @@ export function useExplorer() {
       );
       return true;
     },
-    [navigate, stopDisassembly],
+    [navigate, state.build, stopDisassembly],
   );
 
   const arrive = useCallback(() => {
-    const arrivedLevel = state.diveInto ? openLevel(state.diveInto) : null;
+    const arrivedLevel = state.diveInto
+      ? opensTo(state.diveInto, state.build)
+      : null;
     if (!arrivedLevel) return;
     setHiddenMenuOpen(false);
     setOpenMenu(menuRoot(arrivedLevel));
     setOpenSubmenu(null);
     setState((s) => {
-      const target = s.diveInto ? openLevel(s.diveInto) : null;
+      const target = s.diveInto ? opensTo(s.diveInto, s.build) : null;
       if (!target || target !== arrivedLevel) return s;
       return {
         ...s,
@@ -184,7 +200,7 @@ export function useExplorer() {
         selection: { concept: levels[target].concept },
       };
     });
-  }, [state.diveInto]);
+  }, [state.build, state.diveInto]);
 
   const choose = useCallback(
     (selection: Selection | null, intent: 'open' | 'inspect' = 'inspect') => {
@@ -300,6 +316,14 @@ export function useExplorer() {
   const setPowerTarget = (powerTarget: ExplorerState['powerTarget']) =>
     setState((s) => ({ ...s, powerTarget }));
 
+  /**
+   * Put a part in one slot of the desktop build. Touches nothing else: the
+   * camera stays where it is, so the new card or supply appears in place.
+   */
+  const setBuildPart = <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) =>
+    setState((s) => ({ ...s, build: { ...s.build, [slot]: part } }));
+  const restoreBuild = () => setState((s) => ({ ...s, build: defaultBuild }));
+
   const toggleIsolate = () =>
     setState((s) => ({
       ...s,
@@ -329,6 +353,7 @@ export function useExplorer() {
   return {
     state,
     selected,
+    opens,
     logical,
     playing,
     layers,
@@ -358,6 +383,8 @@ export function useExplorer() {
     toggleAirflow,
     togglePower,
     setPowerTarget,
+    setBuildPart,
+    restoreBuild,
     toggleIsolate,
     refocus,
     hide,

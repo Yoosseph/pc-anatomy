@@ -114,6 +114,25 @@ paths remain visible through the case, fade during disassembly, and use static
 arrows when reduced motion is enabled. Colors identify routes; the animation
 shows direction rather than measured speed or watts.
 
+## Build your own PC
+
+Press **Build your own PC** under Compare to choose the processor, memory,
+graphics card and power supply that go into the desktop. The tower on the stage
+changes to match: the RTX 5090, Radeon RX 9070 XT or Arc B580 is seated in the
+slot at its own length with its power cable on its own socket, and the 850W
+modular or 750W fixed-cable supply sits under the shroud. The installed parts
+can still be inspected and taken apart like any other.
+
+The panel checks the build and cites every figure it uses: whether the
+processor fits the AM5 socket, whether the memory fits the DDR5 slots, whether
+the supply meets the card maker's minimum or recommendation, whether the supply
+has the lead the card's power socket takes, and whether the card fits the case.
+It also adds up the processor's and card's rated power against the supply. A
+part that cannot physically fit is reported and left out of the tower. The
+board, cooler, SSD and case are the same in every build.
+
+![Build mode: the parts panel in the rail beside the tower with a Radeon RX 9070 XT installed](docs/screenshots/build-mode.png)
+
 ## Quick start
 
 PC Anatomy requires Node.js 22.13 or newer.

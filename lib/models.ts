@@ -29,6 +29,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { byId, colors } from './manifest.ts';
 import type { LevelId } from './levels.ts';
 import type { Vec3 } from './layout.ts';
+import { defaultBuild, type DesktopBuild } from './desktop-build.ts';
 export interface Piece {
   key: string;
   concept: string;
@@ -146,7 +147,14 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   xve: (tools, root) => buildArcArchitecture('xve', tools, root),
 };
 
-export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
+/**
+ * Build one scale. `build` chooses the parts installed in the desktop tower
+ * and is ignored by every other scale.
+ */
+export function buildModel(
+  level: LevelId,
+  build: DesktopBuild = defaultBuild,
+): { root: T.Group; pieces: Piece[] } {
   const root = new T.Group(),
     pieces: Piece[] = [];
   const materials = new Map<string, T.MeshStandardMaterial>();
@@ -440,7 +448,7 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     return model.root;
   };
   builders[level](
-    { add, instances, box, pcb, material, label, assembly, airflow },
+    { build, add, instances, box, pcb, material, label, assembly, airflow },
     root,
   );
   // Consolidate authored submeshes within each selectable assembly. Lead pins,

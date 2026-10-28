@@ -13,6 +13,7 @@ import { airflowShown, airflowStrength } from './airflow.ts';
 import { powerStrength, visiblePowerRoutes } from './power-flow-policy.ts';
 import type { PowerTick } from './power-flow.ts';
 import { byId, openLevel } from './manifest';
+import { towerKey } from './desktop-build.ts';
 import type { ExplorerState, Selection } from './explorer-state.ts';
 import { isPhysical, levels } from './levels.ts';
 import { smoothstep } from './layout';
@@ -74,6 +75,13 @@ function hasTransmission(root: T.Object3D) {
   return found;
 }
 
+/**
+ * What a built model is parked and compared under. The tower is a different
+ * model for each card and supply installed in it; every other scale is one.
+ */
+const modelKey = (state: ExplorerState) =>
+  state.level === 'pc' ? 'pc:' + towerKey(state.build) : state.level;
+
 export function createViewer(
   host: HTMLDivElement,
   initial: ExplorerState,
@@ -82,7 +90,7 @@ export function createViewer(
   const runtime = createStageRuntime(host, callbacks.error);
   const { scene, renderer, key, camera, controls } = runtime;
   let state = initial,
-    model = buildModel(state.level),
+    model = buildModel(state.level, state.build),
     amount = state.explode / 100,
     autoCamera = true,
     dragStart: [number, number] = [0, 0],
@@ -689,11 +697,12 @@ export function createViewer(
       const arriving = dive?.phase === 'out' && next.level !== state.level;
       if (next.diveRevision !== state.diveRevision && next.diveInto)
         dive = { concept: next.diveInto, t: 0, phase: 'out' };
-      if (next.level !== state.level) {
+      // A new scale, or the same tower with another card or supply in it.
+      if (modelKey(next) !== modelKey(state)) {
         cancelAcceleration();
         scene.remove(model.root);
-        const parked = shelf.exchange(next.level, state.level, model);
-        model = parked ?? buildModel(next.level);
+        const parked = shelf.exchange(modelKey(next), modelKey(state), model);
+        model = parked ?? buildModel(next.level, next.build);
         poses = new ModelPoseCache(model, next.level);
         cancelAcceleration = scheduleRaycastAcceleration(model.root);
         collectAnimations();

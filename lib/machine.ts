@@ -16,6 +16,7 @@ import { buildChassis, plateWithHoles, type CaseShell } from './chassis.ts';
 import { cardStack } from './graphics-card.ts';
 import { finishes, type Finish } from './materials.ts';
 import { roundedBox } from './geometry-cache.ts';
+import { powerOptions, type GraphicsChoice } from './desktop-build.ts';
 
 /**
  * The assembled desktop machine.
@@ -93,8 +94,53 @@ export function buildMotherboardAssembly(tools: ModelTools) {
   return group;
 }
 
+/**
+ * Where each card meets the slot and its power cable, in millimetres in the
+ * card's own frame (`card-kit.ts`: +X away from the bracket, +Y out of the
+ * board towards the fans, +Z towards the PCIe edge).
+ *
+ * The three builders share one millimetre scale, so they install at the same
+ * size. What differs is how long each one is and where its edge connector
+ * and power socket sit.
+ * `faces` says which way the socket opens: on the long top edge, or out of the
+ * back of the board, which faces up once the card hangs cooler-downward.
+ */
+const cardMounts: Record<
+  GraphicsChoice,
+  {
+    length: number;
+    /** The PCIe edge connector's centre, along and across the card. */
+    edge: [x: number, z: number];
+    socket: Vec3;
+    faces: 'edge' | 'back';
+    fan: number;
+  }
+> = {
+  card: {
+    length: 348,
+    edge: [-78, 66],
+    socket: [32, 8, -68],
+    faces: 'edge',
+    fan: cardStack(348).fan,
+  },
+  rx9070: {
+    length: 330.8,
+    edge: [-64, 60],
+    socket: [70, -10, -30],
+    faces: 'back',
+    fan: 51,
+  },
+  arcb580: {
+    length: 272,
+    edge: [-42, 55],
+    socket: [-8, 7, -52],
+    faces: 'edge',
+    fan: 31.5,
+  },
+};
+
 export function buildMachine(tools: ModelTools, root: T.Group) {
-  const { add, airflow, instances, material, label } = tools;
+  const { build, add, airflow, instances, material, label } = tools;
   const place = (group: T.Group, obj: T.Object3D, pos: Vec3) => {
     obj.position.set(...pos);
     group.add(obj);
@@ -402,11 +448,20 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     mm(38),
   ]);
 
-  // Front face: the modular connector panel, facing into the case.
-  const panel = buildModularPanel(material, ph * 0.86, pd * 0.5, 0.09);
-  panel.rotation.y = Math.PI / 2;
-  panel.rotation.z = Math.PI / 2;
-  place(psu, panel, [pw / 2 + 0.02, 0, 0]);
+  // Front face, facing into the case: the modular connector panel, or on the
+  // fixed-cable unit the grommeted opening its permanent leads come out of.
+  const supply = powerOptions[build.power];
+  if (supply.modular) {
+    const panel = buildModularPanel(material, ph * 0.86, pd * 0.5, 0.09);
+    panel.rotation.y = Math.PI / 2;
+    panel.rotation.z = Math.PI / 2;
+    place(psu, panel, [pw / 2 + 0.02, 0, 0]);
+  } else
+    place(psu, slab([0.08, ph * 0.5, pd * 0.42], 'rubber', undefined, 0.03), [
+      pw / 2 + 0.03,
+      0,
+      mm(18),
+    ]);
 
   for (const sy of [-1, 1])
     for (const sz of [-1, 1])
@@ -417,12 +472,29 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
       ]);
   label(
     psu,
-    'TUF GAMING 850W GOLD',
+    supply.name.replace(/^ASUS /, '').toUpperCase(),
     [0, ph / 2 + 0.01, -mm(20)],
     2.2,
     '#9d9b8e',
   );
   add('psu', psu, [REAR + mm(100), FLOOR + mm(46), -0.4], [-1.2, -2.4, 0]);
+
+  // Where the installed card sits, worked out here because its power cable
+  // has to end on its socket. The card is placed further down, after the
+  // board. Every bracket stands against the rear panel, as a bracket has to.
+  // Across the slot, each card is moved so its edge connector lands where the
+  // 5090's does; along it, the builders put their connectors up to 5 mm apart.
+  const mount = cardMounts[build.graphics];
+  const CARD_L = mm(348);
+  const CARD_Y = SLOT1_Y - mm(2);
+  const CARD_X = REAR + 0.16 + mm(mount.length) / 2;
+  const CARD_Z = BOARD_Z + mm(71) + mm(mount.edge[1] - cardMounts.card.edge[1]);
+  // The card hangs turned half a turn about X, so its Y and Z swap sign.
+  const socket: Vec3 = [
+    CARD_X + mm(mount.socket[0]),
+    CARD_Y - mm(mount.socket[1]),
+    CARD_Z - mm(mount.socket[2]),
+  ];
 
   // Cable looms from the supply up to the board and the card.
   //
@@ -507,16 +579,19 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     [EPS_X, BOARD_Y + mm(145), BOARD_Z + mm(10)],
   ];
   loom(epsPath, 0.1, '#1f2325');
-  // 12V-2x6 to the card: out of the shroud, forward of everything, and down
-  // onto the socket on the card's top face.
+  // The card's own feed: out of the shroud, forward of everything, then over
+  // the card and onto its socket, in from the window edge or down onto the
+  // back of the board, whichever way the socket opens.
   const gpuPath: Vec3[] = [
     [REAR + mm(175) + 0.04, FLOOR + mm(46), -0.1],
     [0.5, FLOOR + 1.8, 1.4],
     [3.4, FLOOR + 3.1, 0.4],
     [2.3, FLOOR + 3.65, 1.5],
     [0.6, SLOT1_Y + 0.6, 1.9],
-    [-0.554, SLOT1_Y + 0.6, 1.75],
-    [-0.554, SLOT1_Y - mm(10), BOARD_Z + mm(139)],
+    mount.faces === 'edge'
+      ? [socket[0], SLOT1_Y + 0.6, 1.75]
+      : [socket[0], SLOT1_Y + 0.6, socket[2]],
+    socket,
   ];
   loom(gpuPath, 0.13, '#1d2124');
   const sataPath: Vec3[] = [
@@ -768,22 +843,17 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   // A card in a tower hangs cooler-downward, which is the half turn about X
   // below. The turn also swaps the card's two long edges, so the lit wordmark
   // is asked for on the far edge in order to end up facing the window.
-  const CARD_L = mm(348);
+  // All three card builders share one millimetre scale, the 5090's, so one
+  // factor installs whichever card the build asks for at its true length.
   const card = new T.Group();
-  const detailedCard = tools.assembly('card');
+  const detailedCard = tools.assembly(build.graphics);
   detailedCard.scale.setScalar(CARD_L / 8.93);
   card.add(detailedCard);
   // Cooler-downward, and seated on the slot rather than hovering over it: the
   // board inside the card lands on the connector, and the card's height then
   // reaches out from the tray toward the window.
   card.rotation.x = Math.PI;
-  const CARD_Y = SLOT1_Y - mm(2);
-  add(
-    'graphicscard',
-    card,
-    [REAR + 0.16 + CARD_L / 2, CARD_Y, BOARD_Z + mm(71)],
-    [0, 0, 3.0],
-  );
+  add('graphicscard', card, [CARD_X, CARD_Y, CARD_Z], [0, 0, 3.0]);
 
   // ── Airflow ─────────────────────────────────────────────────────────────
   //
@@ -804,7 +874,7 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
     SOCK_Y + STACK_Y,
     SOCK_Z + STACK_Z,
   ];
-  const CARD_INTAKE = CARD_Y - cardStack(CARD_L).fan;
+  const CARD_INTAKE = CARD_Y - mm(mount.fan);
   const PSU_X = REAR + mm(100),
     PSU_Y = FLOOR + mm(46);
   airflow([

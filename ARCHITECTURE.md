@@ -308,6 +308,7 @@ subsystems stop touching.
 | `lib/comparison-state.ts` | Pure comparison transitions (entry pair, pick, swap, framing) and pane coordinate math. |
 | `lib/comparison-framing.ts` | Per-pane camera distances for fit-each and true-size framing, and the mapping from the shared orbit camera to each pane camera. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels, each with its own camera and lighting. |
+| `lib/desktop-build.ts` | Build mode without three.js: the parts each tower slot can take, their published figures and sources, `checkBuild` and the other compatibility questions, and `standIn` / `opensTo`, which say what an installed tower piece describes and opens. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/raycast-acceleration.ts` | Idle-time bounds trees for heavy geometry, behind three.js's own sphere and box rejection. Picks are unchanged; only unreachable triangles are skipped. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
@@ -317,14 +318,16 @@ subsystems stop touching.
 | `app/use-address.ts` | Keeps the address bar, title and canonical link on the place shown: a scale change pushes history, a selection or slider move replaces it, and the back button moves the explorer. |
 | `app/use-first-visit-hint.ts` | The one-time line under the heading that says what clicking or tapping does. |
 | `app/use-disassembly-playback.ts` | Shared request-animation-frame playback for explorer and comparison disassembly controls. |
+| `app/build-panel.tsx` | The build panel: one choice per slot, the verdict, the rated power meter and the cited checks. It takes the visibility list's place in the rail while open. |
 | `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx` | One panel each. |
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 134 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 146 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-mode checks and every card and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
+| `scripts/build-smoke.mjs` | Build mode in headless Edge: swaps parts, reads the verdict, opens the installed card, survives Reset, and checks phone widths. Screenshots go to `outputs/build`. |
 | `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
 
 ## The interfaces you will touch
@@ -341,6 +344,7 @@ subsystems stop touching.
 | `label(parent, text, pos, width, color?)` | 3-D text, sized to a width rather than a font size. |
 | `assembly(level)` | Reuses a detailed scale as one installed, selectable assembly — how the motherboard and the card appear inside the tower, and the DDR5 module in the motherboard's slots. |
 | `airflow(streams)` | Chevrons marching along the paths this build moves air along. Scenery, not parts: see the convention below. |
+| `build` | The parts chosen for the desktop tower in build mode. Only `machine.ts` reads it; `buildModel(level, build)` defaults it to the original machine. |
 
 `delta` is the direction a piece travels as the machine comes apart. `reveal` is
 the disassembly fraction below which a piece is hidden, and it defaults to 0.
@@ -351,7 +355,8 @@ its visibility. The scene animates pieces; it never re-reads the catalogue.
 
 **`ExplorerState`** (`lib/explorer-state.ts`) is the whole of what the viewer is
 looking at: level, explode 0–100, visible categories, hidden ids, selection,
-isolated, camera view, the airflow mode, and three revision counters. `cameraRevision` and
+isolated, camera view, the airflow mode, the power preferences, the desktop
+build, and three revision counters. `cameraRevision` and
 `focusRevision` exist so that asking for the same camera twice still moves it;
 `diveRevision` starts a dive. The scene watches the revisions, not the values.
 
@@ -453,8 +458,8 @@ zero, heaped at the origin.
 
 `app/page.tsx` is composition and nothing else: it renders the panels in order
 and wires them to `useExplorer`. It holds only the state no panel owns — whether
-the app is in explorer or comparison mode, whether the search palette and
-about dialog are open, and the part count the viewer reports.
+the app is in explorer or comparison mode, whether the build panel, search
+palette and about dialog are open, and the part count the viewer reports.
 
 `app/use-explorer.ts` owns everything else about the current view and exposes it
 as named moves rather than state patches. A panel calls `navigate`, `dive`,
@@ -530,6 +535,63 @@ displayed pane's view and projection. Only visible rotors keep the loop awake.
 The comparison smoke test checks idle sleep, pointer wake, orbit, pan, zoom and
 hidden-pane animation alongside the picker and framing flows.
 
+## Build mode
+
+The **Build your own PC** button under Compare opens a panel in the rail, in
+place of the visibility list, with one choice per slot: processor, memory,
+graphics card and power supply. The options are scales the project already
+models, so every choice is a part the explorer can take apart. The board, the
+tower cooler, the SATA SSD and the case are fixed; there is one of each.
+
+`lib/desktop-build.ts` holds the rules, without three.js. Every figure is a
+vendor's published number with its source id: socket, memory generation, rated
+power, the card maker's supply figure and whether it is a minimum (Sapphire)
+or a recommendation (ASUS, Intel), the card's power socket and length, and each
+supply's wattage and leads. The checks keep two kinds of claim apart. A part
+that cannot physically seat (an LGA 1851 processor in the AM5 socket, a DDR4
+module in a DDR5 slot) or a supply below a stated minimum is a failure; a
+supply below a recommendation is a warning. The rated draw is the processor's
+and the card's published figures added up, labelled as exactly that. It is not
+a whole-system estimate, and nothing here invents one.
+
+`ExplorerState.build` holds the choice. It survives navigation and Reset; only
+the panel's own button puts the original parts back. It is not in the address
+yet. Only the card and the supply change the tower (`towerKey`). A processor or
+module that cannot seat is reported and left out, and the board keeps the one
+it was built with (`installedBuild`).
+
+`buildModel(level, build)` hands the build to every builder as
+`ModelTools.build`, and only the tower reads it. It is a field rather than a
+third builder argument because some builders already take one of their own:
+the supply builder's is its cable variant. `machine.ts` installs the chosen card through
+`tools.assembly`. All three card builders share the 5090's millimetre scale, so
+one factor installs any of them at true length. Each bracket stands against the
+rear panel. Across the slot, each card is moved so its edge connector lands
+where the 5090's does; along the slot the builders' connectors differ by up to
+5 mm. `cardMounts` records each card's connector, socket and fan height, so the
+GPU loom ends on the socket the card actually has: in from the window edge on
+the 5090 and Arc, down onto the back of the board on the Radeon. The
+fixed-cable supply gets a harness opening instead of the modular panel, and its
+own label.
+
+The tower keeps the piece ids `graphicscard` and `psu` whatever is installed,
+because power routes, the hidden list and selections hold onto them.
+`standIn` says which concept the piece describes (the installed card's or
+supply's own root concept), and `opensTo` says where opening it leads. The
+detail panel and the dive go through those two. `powerPanelState` names the
+installed card's own feed (`graphicsFeed`), so the Arc's route reads 8-pin
+PCIe, and its explanation follows.
+The scene parks tower models under `pc:<card>+<supply>`, so switching back to
+an earlier build reuses the parked model.
+
+`tests/build.test.ts` covers the rules and builds the tower with every card and
+supply. It checks that each edge connector sits on the slot, that each card is
+its true length and clears the intake fans, the deck, the cooler, the roof and
+the glass, that the case clearance the checks quote matches the model, and that
+the GPU loom ends on the card. It does not check that a card's connector
+placement matches the retail product; those builders' own accuracy notes still
+apply.
+
 ## Adding a component
 
 A component joins the written catalogue to selectable geometry through its id.
@@ -600,7 +662,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-134 tests, all through Node's built-in runner.
+146 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -660,6 +722,12 @@ with Node.js 22.
   module standing in both populated motherboard slots, the 78-ball grid with
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
+
+- `tests/build.test.ts` (12) — the build mode's checks: what fails, what
+  warns, which option is marked as the problem, rated draw, and the power
+  legend naming the installed card's feed. Also every
+  card and supply built into the tower: seated on the slot at true length,
+  clear of the case and the cooler, and fed by a loom that ends on the card.
 
 - `tests/discovery.test.ts` (10) — every scale and every part surviving a
   round trip through a link, instances and disassembly kept, nonsense links

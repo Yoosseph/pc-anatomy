@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { EyeOff } from 'lucide-react';
-import { levelPath } from '@/lib/levels';
+import { levelPath, systemRoot } from '@/lib/levels';
 import { useExplorer } from './use-explorer';
 import { useFirstVisitHint } from './use-first-visit-hint';
 import Viewer from './viewer';
@@ -17,6 +17,7 @@ import SearchDialog from './search-dialog';
 import DetailPanel from './detail-panel';
 import AboutDialog from './about-dialog';
 import ComparisonWorkbench from './comparison-workbench';
+import BuildPanel from './build-panel';
 
 export default function Home() {
   const explorer = useExplorer();
@@ -26,11 +27,20 @@ export default function Home() {
     [query, setQuery] = useState(''),
     [about, setAbout] = useState(false),
     [mode, setMode] = useState<'explorer' | 'comparison'>('explorer'),
+    // The build panel takes the place of the visibility list while it is
+    // open. It only means anything on the desktop, so another system closes it.
+    [buildOpen, setBuildOpen] = useState(false),
     // `null` until the viewer has reported for the first time. Zero means the
     // viewer is running and nothing is switched on, which is a different thing
     // to say to the reader, and saying the wrong one was what put "No
     // structures visible" on screen for the whole of a cold load.
     [count, setCount] = useState<number | null>(null);
+
+  const building = buildOpen && systemRoot(state.level) === 'pc';
+  const toggleBuild = () => {
+    if (!building && systemRoot(state.level) !== 'pc') navigate('pc');
+    setBuildOpen(!building);
+  };
 
   const { hint, dismissHint } = useFirstVisitHint(
     state,
@@ -129,17 +139,28 @@ export default function Home() {
           onOpenSubmenu={explorer.showSubmenu}
           onNavigate={navigate}
           onCompare={() => setMode('comparison')}
+          building={building}
+          onBuild={toggleBuild}
           onClose={() => explorer.setLayers(false)}
         />
-        <SystemsList
-          level={state.level}
-          visible={state.visible}
-          hidden={state.hidden}
-          onToggleCategory={explorer.toggleCategory}
-          onToggleAll={explorer.toggleAllCategories}
-          onSetConceptVisible={explorer.setConceptVisible}
-          onSelectConcept={selectResult}
-        />
+        {building ? (
+          <BuildPanel
+            build={state.build}
+            onSetPart={explorer.setBuildPart}
+            onRestore={explorer.restoreBuild}
+            onClose={() => setBuildOpen(false)}
+          />
+        ) : (
+          <SystemsList
+            level={state.level}
+            visible={state.visible}
+            hidden={state.hidden}
+            onToggleCategory={explorer.toggleCategory}
+            onToggleAll={explorer.toggleAllCategories}
+            onSetConceptVisible={explorer.setConceptVisible}
+            onSelectConcept={selectResult}
+          />
+        )}
       </aside>
       <StageHeading
         level={state.level}
@@ -204,6 +225,7 @@ export default function Home() {
       <DetailPanel
         selected={selected}
         selection={state.selection}
+        opens={explorer.opens}
         level={state.level}
         isolated={state.isolated}
         onClose={() => choose(null)}

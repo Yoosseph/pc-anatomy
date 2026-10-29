@@ -1,9 +1,37 @@
 # PC Anatomy: Go deeper
 
-Production brief for a 30-second, 9:16 vertical direct-response ad. This package
-contains the script and visual prompts; a rendered video is not included.
+Production brief and rendered 30-second, 9:16 vertical direct-response ad.
+
+**[Watch or download the finished MP4](media/pc-anatomy-ad-30s.mp4)**
+
+[![PC Anatomy ad preview](media/pc-anatomy-ad-poster.png)](media/pc-anatomy-ad-30s.mp4)
+
+The finished cut uses actual app recordings, animated titles, captions, and an
+original synthesized electronic soundtrack. It has no presenter or voiceover.
+The UGC script below remains an alternative production treatment. In the rendered
+cut, the 14–18s scene focuses on power routes; the 18–23s scene shows real memory
+selection and compatibility-check captures.
+
 The opening request's 30-second duration takes precedence over the conflicting
 25-second and 15-second durations in the supplied template.
+
+## Reproducing the video
+
+With dependencies installed, start `npm run dev -- --host 127.0.0.1`, then run:
+
+```sh
+node scripts/capture-ad.mjs
+node scripts/capture-ad.mjs --build-only
+node scripts/render-ad.mjs
+node scripts/verify-ad.mjs
+```
+
+The scripts use the existing Playwright dependency and Microsoft Edge on Windows.
+Set `BROWSER_EXECUTABLE` for another Chromium browser with H.264/AAC MediaRecorder
+support. Intermediate captures and review frames go to ignored `outputs/ad-video/`;
+the deliverable and poster go to `docs/media/`. Rendering records 30 seconds in
+real time; encoding may add a small fraction of a second to the container duration.
+No new runtime dependency or production app code is introduced.
 
 ## Campaign
 
@@ -18,16 +46,16 @@ The opening request's 30-second duration takes precedence over the conflicting
 
 ## Shot-by-shot script
 
-| Time | Narration | Camera and edit direction | On-screen text |
-| --- | --- | --- | --- |
-| 0-2s | "Don't unscrew your PC." | Tight handheld selfie. Presenter raises a screwdriver; immediate punch-in. Cut to the app before two seconds. | PUT THE SCREWDRIVER DOWN. |
-| 2-6s | "Take this one apart instead. This is PC Anatomy." | Actual screen recording: drag the disassembly slider. Tower panels separate on the beat. Brief presenter reaction inset. | PC Anatomy |
-| 6-10s | "Peel back the graphics card. Then go deeper." | Open the RTX 5090. Jump-cut from assembled card to separated fans, heatsink, and board. Push toward the processor. | YES, YOU CAN GO DEEPER. |
-| 10-14s | "Explore memory, right down to a single bit." | Three rhythmic cuts: DDR5 module, DRAM die, then cell diagram. Hold the final diagram long enough to register. | RAM → CHIP → ONE BIT |
-| 14-18s | "See where air moves—and where power goes." | Return to the assembled tower. Show Airflow, then Power. Follow each visualization with a tight crop. | FOLLOW THE AIR. → FOLLOW THE POWER. |
-| 18-23s | "Pick parts. Check compatibility. Understand what actually fits together." | Open Build your own PC. Show DDR4's slot mismatch, then select DDR5 and hold on "Memory fits the slots." | DO THESE PARTS FIT? → CHECK BEFORE YOU BUILD. |
-| 23-26s | "All free. Right in your browser." | Presenter returns, pointing toward the app. Match-cut to a satisfying assembled-tower orbit. | FREE • IN YOUR BROWSER |
-| 26-30s | "Visit pc-anatomy dot com. Take your first PC apart." | Hold a clean end card over slowly moving actual product footage. Logo, URL, and one clear CTA. | pc-anatomy.com / Explore free → |
+| Time   | Narration                                                                  | Camera and edit direction                                                                                                | On-screen text                                |
+| ------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| 0-2s   | "Don't unscrew your PC."                                                   | Tight handheld selfie. Presenter raises a screwdriver; immediate punch-in. Cut to the app before two seconds.            | PUT THE SCREWDRIVER DOWN.                     |
+| 2-6s   | "Take this one apart instead. This is PC Anatomy."                         | Actual screen recording: drag the disassembly slider. Tower panels separate on the beat. Brief presenter reaction inset. | PC Anatomy                                    |
+| 6-10s  | "Peel back the graphics card. Then go deeper."                             | Open the RTX 5090. Jump-cut from assembled card to separated fans, heatsink, and board. Push toward the processor.       | YES, YOU CAN GO DEEPER.                       |
+| 10-14s | "Explore memory, right down to a single bit."                              | Three rhythmic cuts: DDR5 module, DRAM die, then cell diagram. Hold the final diagram long enough to register.           | RAM → CHIP → ONE BIT                          |
+| 14-18s | "See where air moves—and where power goes."                                | Return to the assembled tower. Show Airflow, then Power. Follow each visualization with a tight crop.                    | FOLLOW THE AIR. → FOLLOW THE POWER.           |
+| 18-23s | "Pick parts. Check compatibility. Understand what actually fits together." | Open Build your own PC. Show DDR4's slot mismatch, then select DDR5 and hold on "Memory fits the slots."                 | DO THESE PARTS FIT? → CHECK BEFORE YOU BUILD. |
+| 23-26s | "All free. Right in your browser."                                         | Presenter returns, pointing toward the app. Match-cut to a satisfying assembled-tower orbit.                             | FREE • IN YOUR BROWSER                        |
+| 26-30s | "Visit pc-anatomy dot com. Take your first PC apart."                      | Hold a clean end card over slowly moving actual product footage. Logo, URL, and one clear CTA.                           | pc-anatomy.com / Explore free →               |
 
 ## Visual prompts
 

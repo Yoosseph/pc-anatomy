@@ -236,6 +236,25 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
+## Build mode figures · November 3, 2026
+
+The build panel adds the processor's and the card's power against the supply,
+so both processors are counted by the same kind of figure: the most the socket
+is allowed to draw.
+
+- [Intel's Core Ultra 9 285K specifications](https://www.intel.com/content/www/us/en/products/sku/241060/intel-core-ultra-9-processor-285k-36m-cache-up-to-5-70-ghz/specifications.html)
+  publish a 250 W maximum turbo power.
+- [AMD's Ryzen 9 9950X specifications](https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html)
+  publish only the 170 W default TDP, which is a cooling figure. The 200 W
+  socket power limit (PPT) is from
+  [The FPS Review](https://www.thefpsreview.com/2024/08/14/amd-ryzen-9-9950x-cpu-review-16-core-zen-5-at-649/8),
+  an **independent review**, and is named as such.
+- The supplies' 8-pin PCIe lead counts are from the ASUS specification pages
+  already cited: three on the TUF Gaming 850W Gold, beside its 16-pin lead,
+  and four 6+2-pin leads on the TUF Gaming 750W Bronze.
+- The DDR4 option is two of the 16 GB modules in Kingston's KF432C16BB/16 data
+  sheet.
+
 ## Architecture and specifications
 
 - [NVIDIA RTX Blackwell architecture whitepaper, v1.1](https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf), printed pp. 8–12 and 46–48. RTX 5090: 11 GPCs, 85 TPCs, 170 SMs, 21,760 CUDA cores, 680 Tensor cores, 170 RT cores, 96 MB L2. Full GB202: 12 GPCs, 96 TPCs, 192 SMs; these are not the shipping 5090 counts. A full GPC contains 8 TPCs and a TPC contains 2 SMs. Per SM: 128 CUDA cores, 4 Tensor cores, 1 RT core, 4 texture units, 256 KB registers, 128 KB L1/shared memory. The representative GPC is not a claim about which TPCs are disabled in a particular 5090.

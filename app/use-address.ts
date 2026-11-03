@@ -1,12 +1,12 @@
-'use client';
-import { useEffect, useRef } from 'react';
-import type { ExplorerState } from '@/lib/explorer-state';
+"use client";
+import { useEffect, useRef } from "react";
+import type { ExplorerState } from "@/lib/explorer-state";
 import {
   placeTitle,
   placeToSearch,
   searchToPlace,
   type Place,
-} from '@/lib/deep-link';
+} from "@/lib/deep-link";
 
 /** How long the slider has to rest before its position is written down. */
 const SETTLE_MS = 250;
@@ -17,7 +17,8 @@ const SETTLE_MS = 250;
  *
  * Changing scale is a step you can take back, so it pushes a history entry.
  * Selecting a part or moving the slider refines where you already are, so it
- * replaces the current entry instead; otherwise backing out of a scale would
+ * replaces the current entry instead, and so does swapping a part in the
+ * build; otherwise backing out of a scale would
  * first replay every part you had clicked on it. Slider moves are also
  * settled before they are written, because playback changes the position
  * every frame and browsers throttle pages that rewrite history that often.
@@ -26,11 +27,11 @@ const SETTLE_MS = 250;
  */
 export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
   const writtenLevel = useRef(state.level);
-  const { level, selection, explode, diveInto } = state;
+  const { level, selection, explode, diveInto, build } = state;
 
   useEffect(() => {
     if (diveInto) return;
-    const place: Place = { level, selection, explode };
+    const place: Place = { level, selection, explode, build };
     const search = placeToSearch(place);
     document.title = placeTitle(place);
     const url = location.pathname + search + location.hash;
@@ -38,15 +39,15 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
     if (search === location.search) return;
     if (level !== writtenLevel.current) {
       writtenLevel.current = level;
-      history.pushState(null, '', url);
+      history.pushState(null, "", url);
       return;
     }
     const settle = setTimeout(
-      () => history.replaceState(null, '', url),
+      () => history.replaceState(null, "", url),
       SETTLE_MS,
     );
     return () => clearTimeout(settle);
-  }, [level, selection, explode, diveInto]);
+  }, [level, selection, explode, diveInto, build]);
 
   useEffect(() => {
     const back = () => {
@@ -54,8 +55,8 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
       writtenLevel.current = place.level;
       goTo(place);
     };
-    window.addEventListener('popstate', back);
-    return () => window.removeEventListener('popstate', back);
+    window.addEventListener("popstate", back);
+    return () => window.removeEventListener("popstate", back);
   }, [goTo]);
 }
 
@@ -65,6 +66,6 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
  * the home page, so it follows the place too.
  */
 function setCanonical(href: string) {
-  const link = document.querySelector<HTMLLinkElement>('link[rel=canonical]');
+  const link = document.querySelector<HTMLLinkElement>("link[rel=canonical]");
   if (link && link.href !== href) link.href = href;
 }

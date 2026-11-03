@@ -1,13 +1,13 @@
-import { after, test } from 'node:test';
-import assert from 'node:assert/strict';
-import * as T from 'three';
-import { buildModel, type Piece } from '../lib/models.ts';
-import { disposeModelResources } from '../lib/model-stage.ts';
-import { byId } from '../lib/manifest.ts';
-import { sources } from '../lib/sources.ts';
-import { initialState } from '../lib/explorer-state.ts';
-import { powerPanelState } from '../lib/power-flow-policy.ts';
-import { levels } from '../lib/levels.ts';
+import { after, test } from "node:test";
+import assert from "node:assert/strict";
+import * as T from "three";
+import { buildModel, type Piece } from "../lib/models.ts";
+import { disposeModelResources } from "../lib/model-stage.ts";
+import { byId } from "../lib/manifest.ts";
+import { sources } from "../lib/sources.ts";
+import { initialState } from "../lib/explorer-state.ts";
+import { powerPanelState } from "../lib/power-flow-policy.ts";
+import { levels } from "../lib/levels.ts";
 import {
   buildStatus,
   caseCardClearance,
@@ -17,6 +17,7 @@ import {
   graphicsFeed,
   graphicsOptions,
   installedBuild,
+  lengthCheck,
   opensTo,
   powerOptions,
   ratedDraw,
@@ -27,8 +28,8 @@ import {
   type DesktopBuild,
   type GraphicsChoice,
   type PowerChoice,
-} from '../lib/desktop-build.ts';
-import type { Vec3 } from '../lib/layout.ts';
+} from "../lib/desktop-build.ts";
+import type { Vec3 } from "../lib/layout.ts";
 
 // Geometry needs the canvas texture API, not a WebGL context.
 const previousDocument = globalThis.document;
@@ -41,7 +42,7 @@ globalThis.document = {
         {},
         {
           get: (_, key) =>
-            key === 'createImageData'
+            key === "createImageData"
               ? (w: number, h: number) => ({
                   data: new Uint8ClampedArray(w * h * 4),
                 })
@@ -56,7 +57,7 @@ const power = Object.keys(powerOptions) as PowerChoice[];
 // Built up front, while the canvas stub is in place.
 const towers = new Map(
   [...allBuilds()].map((build) => {
-    const model = buildModel('pc', build);
+    const model = buildModel("pc", build);
     model.root.updateMatrixWorld(true);
     return [towerKey(build), model] as const;
   }),
@@ -75,19 +76,19 @@ const box = (p: Piece) => new T.Box3().setFromObject(p.object);
 const check = (build: DesktopBuild, id: string) =>
   checkBuild(build).find((c) => c.id === id)!;
 
-await test('the explorer starts on the machine it has always shown, and that build passes', () => {
+await test("the explorer starts on the machine it has always shown, and that build passes", () => {
   assert.deepEqual(initialState.build, defaultBuild);
   const checks = checkBuild(defaultBuild);
   // The 5090's maker asks for more than the 850 W unit, which is a warning,
   // and nothing else in the original machine is in question.
-  assert.equal(buildStatus(checks), 'warn');
+  assert.equal(buildStatus(checks), "warn");
   assert.deepEqual(
-    checks.filter((c) => c.status !== 'ok').map((c) => c.id),
-    ['supply'],
+    checks.filter((c) => c.status !== "ok").map((c) => c.id),
+    ["supply"],
   );
 });
 
-await test('every slot offers the scales the project models, and every option is cited', () => {
+await test("every slot offers the scales the project models, and every option is cited", () => {
   for (const { id } of slots) {
     const options = slotOptions(id);
     assert.ok(options.length >= 2, id);
@@ -103,135 +104,172 @@ await test('every slot offers the scales the project models, and every option is
       for (const source of c.sources) assert.ok(source in sources, source);
 });
 
-await test('parts that cannot physically seat fail, and stay out of the tower', () => {
-  const intel = { ...defaultBuild, processor: 'corei9' } as const;
-  assert.equal(check(intel, 'socket').status, 'fail');
-  assert.match(check(intel, 'socket').detail, /LGA 1851/);
-  assert.equal(installedBuild(intel).processor, 'ryzen');
-  const ddr4 = { ...defaultBuild, memory: 'ddr4' } as const;
-  assert.equal(check(ddr4, 'memory').status, 'fail');
-  assert.equal(installedBuild(ddr4).memory, 'dimm');
+await test("parts that cannot physically seat fail, and stay out of the tower", () => {
+  const intel = { ...defaultBuild, processor: "corei9" } as const;
+  assert.equal(check(intel, "socket").status, "fail");
+  assert.match(check(intel, "socket").detail, /LGA 1851/);
+  assert.equal(installedBuild(intel).processor, "ryzen");
+  const ddr4 = { ...defaultBuild, memory: "ddr4" } as const;
+  assert.equal(check(ddr4, "memory").status, "fail");
+  assert.equal(installedBuild(ddr4).memory, "dimm");
   // Neither changes the tower, so neither rebuilds it.
   assert.equal(towerKey(intel), towerKey(defaultBuild));
   assert.equal(towerKey(ddr4), towerKey(defaultBuild));
 });
 
-await test('a maker’s minimum is a failure; a recommendation is a warning', () => {
-  const radeon = { ...defaultBuild, graphics: 'rx9070' } as const;
-  assert.equal(check(radeon, 'supply').status, 'ok');
+await test("a maker’s minimum is a failure; a recommendation is a warning", () => {
+  const radeon = { ...defaultBuild, graphics: "rx9070" } as const;
+  assert.equal(check(radeon, "supply").status, "ok");
   assert.equal(
-    check({ ...radeon, power: 'psubronze' }, 'supply').status,
-    'fail',
+    check({ ...radeon, power: "psubronze" }, "supply").status,
+    "fail",
   );
   assert.equal(
-    check({ ...defaultBuild, power: 'psubronze' }, 'supply').status,
-    'warn',
+    check({ ...defaultBuild, power: "psubronze" }, "supply").status,
+    "warn",
   );
   for (const p of power)
     assert.equal(
-      check({ ...defaultBuild, graphics: 'arcb580', power: p }, 'supply')
+      check({ ...defaultBuild, graphics: "arcb580", power: p }, "supply")
         .status,
-      'ok',
+      "ok",
     );
 });
 
-await test('the card’s power socket is matched against the supply’s leads', () => {
-  assert.equal(check(defaultBuild, 'connector').status, 'ok');
-  const bronze = { ...defaultBuild, power: 'psubronze' } as const;
-  assert.equal(check(bronze, 'connector').status, 'warn');
+await test("the card’s power socket is matched against the supply’s leads", () => {
+  assert.equal(check(defaultBuild, "connector").status, "ok");
+  const bronze = { ...defaultBuild, power: "psubronze" } as const;
+  assert.equal(check(bronze, "connector").status, "warn");
   assert.match(
-    check({ ...bronze, graphics: 'rx9070' }, 'connector').detail,
+    check({ ...bronze, graphics: "rx9070" }, "connector").detail,
     /3 × 8-pin adapter/,
   );
   assert.equal(
-    check({ ...bronze, graphics: 'arcb580' }, 'connector').status,
-    'ok',
+    check({ ...bronze, graphics: "arcb580" }, "connector").status,
+    "ok",
+  );
+  // The adapter is only a way out if the supply has the leads to fill it.
+  const radeonBronze = { ...bronze, graphics: "rx9070" } as const;
+  assert.equal(check(radeonBronze, "connector").status, "warn");
+  assert.match(check(radeonBronze, "connector").detail, /4 8-pin PCIe leads/);
+  const original = powerOptions.psubronze.eightPin;
+  try {
+    powerOptions.psubronze.eightPin = 2;
+    assert.equal(check(radeonBronze, "connector").status, "fail");
+    powerOptions.psubronze.eightPin = 0;
+    assert.equal(
+      check({ ...bronze, graphics: "arcb580" }, "connector").status,
+      "fail",
+    );
+  } finally {
+    powerOptions.psubronze.eightPin = original;
+  }
+});
+
+await test("a card longer than the case takes fails the length check", () => {
+  const sources = graphicsOptions.card.sources;
+  assert.equal(
+    lengthCheck({ length: caseCardClearance, sources }).status,
+    "ok",
+  );
+  assert.equal(
+    lengthCheck({ length: caseCardClearance + 1, sources }).status,
+    "fail",
   );
 });
 
-await test('only a part involved in a failure is marked as the problem', () => {
+await test("only a part involved in a failure is marked as the problem", () => {
   // The Radeon on the 750 W unit is below Sapphire’s minimum.
   const build = {
     ...defaultBuild,
-    graphics: 'rx9070',
-    power: 'psubronze',
+    graphics: "rx9070",
+    power: "psubronze",
   } as const;
-  assert.equal(buildStatus(checkBuild(build)), 'fail');
-  assert.equal(conflicts(build, 'graphics', 'rx9070'), true);
-  assert.equal(conflicts(build, 'power', 'psubronze'), true);
-  assert.equal(conflicts(build, 'power', 'psu'), false);
-  assert.equal(conflicts(build, 'graphics', 'arcb580'), false);
+  assert.equal(buildStatus(checkBuild(build)), "fail");
+  assert.equal(conflicts(build, "graphics", "rx9070"), true);
+  assert.equal(conflicts(build, "power", "psubronze"), true);
+  assert.equal(conflicts(build, "power", "psu"), false);
+  assert.equal(conflicts(build, "graphics", "arcb580"), false);
   // Nothing about the processor or memory is in question.
-  assert.equal(conflicts(build, 'processor', 'ryzen'), false);
-  assert.equal(conflicts(build, 'memory', 'dimm'), false);
-  assert.equal(conflicts(build, 'processor', 'corei9'), true);
-  assert.equal(conflicts(build, 'memory', 'ddr4'), true);
+  assert.equal(conflicts(build, "processor", "ryzen"), false);
+  assert.equal(conflicts(build, "memory", "dimm"), false);
+  assert.equal(conflicts(build, "processor", "corei9"), true);
+  assert.equal(conflicts(build, "memory", "ddr4"), true);
 });
 
-await test('the power legend names the installed card’s own feed', () => {
+await test("the power legend names the installed card’s own feed", () => {
   const legend = (build: DesktopBuild) =>
     powerPanelState({
       ...initialState,
       power: true,
-      powerTarget: 'gpu',
+      powerTarget: "gpu",
       build,
     });
   const original = legend(defaultBuild);
-  const gpu = original.routes.find((route) => route.id === 'gpu')!;
-  assert.equal(gpu.label, '12V-2x6');
+  const gpu = original.routes.find((route) => route.id === "gpu")!;
+  assert.equal(gpu.label, "12V-2x6");
   assert.match(gpu.description, /RTX 5090/);
   assert.equal(graphicsFeed(defaultBuild), null);
-  const arc = legend({ ...defaultBuild, graphics: 'arcb580' });
-  const arcFeed = arc.routes.find((route) => route.id === 'gpu')!;
-  assert.equal(arcFeed.label, '8-pin PCIe');
+  const arc = legend({ ...defaultBuild, graphics: "arcb580" });
+  const arcFeed = arc.routes.find((route) => route.id === "gpu")!;
+  assert.equal(arcFeed.label, "8-pin PCIe");
   assert.match(arcFeed.description, /Arc B580/);
   // The explanation is the feed's own description, not the 5090's.
   assert.equal(arc.explanation, arcFeed.description);
 });
 
-await test('rated draw adds the published processor and card figures', () => {
-  assert.equal(ratedDraw(defaultBuild), 170 + 575);
+await test("rated draw adds the published processor and card figures", () => {
+  // Both processors are counted by their peak socket power, not one by its
+  // cooling figure and the other by its peak.
+  assert.equal(ratedDraw(defaultBuild), 200 + 575);
   const intel = {
     ...defaultBuild,
-    processor: 'corei9',
-    power: 'psubronze',
+    processor: "corei9",
+    power: "psubronze",
   } as const;
   assert.equal(ratedDraw(intel), 250 + 575);
-  assert.equal(check(intel, 'budget').status, 'fail');
-  assert.equal(check(defaultBuild, 'budget').status, 'ok');
+  assert.equal(check(intel, "budget").status, "fail");
+  // A processor that cannot seat is still counted, and the check says so.
+  assert.match(check(intel, "budget").detail, /does not fit this board/);
+  assert.doesNotMatch(check(defaultBuild, "budget").detail, /does not fit/);
+  assert.equal(check(defaultBuild, "budget").status, "ok");
+  assert.equal(
+    check({ ...defaultBuild, power: "psubronze" }, "budget").status,
+    "fail",
+  );
 });
 
-await test('installed pieces keep their ids and describe what is actually in the slot', () => {
+await test("installed pieces keep their ids and describe what is actually in the slot", () => {
   const radeon = {
     ...defaultBuild,
-    graphics: 'rx9070',
-    power: 'psubronze',
+    graphics: "rx9070",
+    power: "psubronze",
   } as const;
-  assert.equal(standIn('graphicscard', defaultBuild), 'graphicscard');
-  assert.equal(byId[standIn('graphicscard', radeon)].level, 'rx9070');
-  assert.equal(byId[standIn('psu', radeon)].level, 'psubronze');
-  assert.equal(standIn('motherboard', radeon), 'motherboard');
-  assert.equal(opensTo('graphicscard', defaultBuild), 'card');
-  assert.equal(opensTo('graphicscard', radeon), 'rx9070');
-  assert.equal(opensTo('psu', radeon), 'psubronze');
-  assert.equal(opensTo('motherboard', radeon), 'motherboard');
+  assert.equal(standIn("graphicscard", defaultBuild), "graphicscard");
+  assert.equal(byId[standIn("graphicscard", radeon)].level, "rx9070");
+  assert.equal(byId[standIn("psu", radeon)].level, "psubronze");
+  assert.equal(standIn("motherboard", radeon), "motherboard");
+  assert.equal(opensTo("graphicscard", defaultBuild), "card");
+  assert.equal(opensTo("graphicscard", radeon), "rx9070");
+  assert.equal(opensTo("psu", radeon), "psubronze");
+  assert.equal(opensTo("motherboard", radeon), "motherboard");
   for (const g of graphics) {
     const model = tower({ ...defaultBuild, graphics: g });
-    assert.ok(piece(model, 'graphicscard'), g);
-    assert.ok(piece(model, 'psu'), g);
+    assert.ok(piece(model, "graphicscard"), g);
+    assert.ok(piece(model, "psu"), g);
   }
 });
 
-await test('every card seats on the same slot, at its true length', () => {
+await test("every card seats on the same slot, at its true length", () => {
   // The edge connector of each card, carried into the tower by the installed
   // assembly's own transform.
   const edge = (g: GraphicsChoice) => {
     const installed = piece(
       tower({ ...defaultBuild, graphics: g }),
-      'graphicscard',
+      "graphicscard",
     );
     const detailed = installed.object.children[0];
-    const id = { card: 'pcie', rx9070: 'rxpcie', arcb580: 'arcpcie' }[g];
+    const id = { card: "pcie", rx9070: "rxpcie", arcb580: "arcpcie" }[g];
     return piece(cards.get(g)!, id)
       .base.clone()
       .applyMatrix4(detailed.matrixWorld);
@@ -239,14 +277,14 @@ await test('every card seats on the same slot, at its true length', () => {
   // Brackets all stand against the rear panel, and the builders place their
   // connectors up to 5 mm apart along the card, so along the slot that much
   // is allowed. Into the slot and off the board there is no slack.
-  const slot = edge('card');
+  const slot = edge("card");
   for (const g of graphics) {
     const e = edge(g);
-    assert.ok(Math.abs(e.x - slot.x) < 6 / 35, g + ' along the slot');
-    assert.ok(Math.abs(e.y - slot.y) < 0.01, g + ' off the board');
-    assert.ok(Math.abs(e.z - slot.z) < 0.01, g + ' into the slot');
+    assert.ok(Math.abs(e.x - slot.x) < 6 / 35, g + " along the slot");
+    assert.ok(Math.abs(e.y - slot.y) < 0.01, g + " off the board");
+    assert.ok(Math.abs(e.z - slot.z) < 0.01, g + " into the slot");
     const size = box(
-      piece(tower({ ...defaultBuild, graphics: g }), 'graphicscard'),
+      piece(tower({ ...defaultBuild, graphics: g }), "graphicscard"),
     ).getSize(new T.Vector3());
     const length = size.x * 35;
     assert.ok(
@@ -256,25 +294,25 @@ await test('every card seats on the same slot, at its true length', () => {
   }
 });
 
-await test('every card fits the case: clear of the fans, the deck, the cooler, the roof and the glass', () => {
+await test("every card fits the case: clear of the fans, the deck, the cooler, the roof and the glass", () => {
   for (const g of graphics) {
     const model = tower({ ...defaultBuild, graphics: g });
-    const card = box(piece(model, 'graphicscard'));
-    const cooler = box(piece(model, 'cpucooler'));
+    const card = box(piece(model, "graphicscard"));
+    const cooler = box(piece(model, "cpucooler"));
     const fans = model.pieces
-      .filter((p) => p.concept === 'casefan')
+      .filter((p) => p.concept === "casefan")
       .map(box)
       .filter((b) => b.min.x > 4);
     assert.equal(fans.length, 3);
     for (const fan of fans)
       assert.ok(
         card.max.x < fan.min.x,
-        g + ' must stop short of the intake fans',
+        g + " must stop short of the intake fans",
       );
-    assert.ok(card.min.x > -6.65, g + ' rear');
-    assert.ok(card.min.y > -3.35, g + ' must clear the PSU deck');
-    assert.ok(card.max.z < 3, g + ' must clear the side glass');
-    assert.ok(cooler.min.y > card.max.y, g + ' must clear the CPU cooler');
+    assert.ok(card.min.x > -6.65, g + " rear");
+    assert.ok(card.min.y > -3.35, g + " must clear the PSU deck");
+    assert.ok(card.max.z < 3, g + " must clear the side glass");
+    assert.ok(cooler.min.y > card.max.y, g + " must clear the CPU cooler");
     // The clearance the checks quote is the one the model has.
     const bracket = -6.44;
     const room = (Math.min(...fans.map((f) => f.min.x)) - bracket) * 35;
@@ -285,29 +323,29 @@ await test('every card fits the case: clear of the fans, the deck, the cooler, t
   }
 });
 
-await test('the card’s cable ends on its socket, and the supply’s face matches its cabling', () => {
+await test("the card’s cable ends on its socket, and the supply’s face matches its cabling", () => {
   for (const build of allBuilds()) {
     const model = tower(build);
     const overlay = model.root.children.find((o) => o.userData.powerTick)!;
-    const gpu = overlay.children.find((g) => g.name === 'gpu')!;
+    const gpu = overlay.children.find((g) => g.name === "gpu")!;
     const path = gpu.userData.path as Vec3[];
     const end = new T.Vector3(...path[path.length - 1]);
-    const card = box(piece(model, 'graphicscard')).expandByScalar(0.2);
+    const card = box(piece(model, "graphicscard")).expandByScalar(0.2);
     assert.ok(card.containsPoint(end), towerKey(build));
   }
   const triangles = (p: Piece) => {
     let n = 0;
     p.object.traverse((o) => {
-      if (o instanceof T.Mesh) n += o.geometry.getAttribute('position').count;
+      if (o instanceof T.Mesh) n += o.geometry.getAttribute("position").count;
     });
     return n;
   };
-  const modular = piece(tower(defaultBuild), 'psu');
-  const fixed = piece(tower({ ...defaultBuild, power: 'psubronze' }), 'psu');
+  const modular = piece(tower(defaultBuild), "psu");
+  const fixed = piece(tower({ ...defaultBuild, power: "psubronze" }), "psu");
   assert.notEqual(
     triangles(fixed),
     triangles(modular),
-    'the fixed unit has a cable exit, not a socket panel',
+    "the fixed unit has a cable exit, not a socket panel",
   );
 });
 

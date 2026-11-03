@@ -294,7 +294,7 @@ subsystems stop touching.
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
 | `lib/airflow.ts` | Where the air goes: the chevron, the sampling and marching of a path, `cardAirflow` for the three cards, and `airflowStrength`, the curve that takes it off screen as the machine opens. Re-exports the policy below so builders keep one import. |
 | `lib/airflow-policy.ts` | `airflowLevels`, `hasAirflow`, `AirflowMode` and `airflowShown`, which decides whether a scale draws air at all. No three.js, so the interface can import it. |
-| `lib/deep-link.ts` | A place (scale, described part, disassembly) to and from the address bar's query string, and the page title for it. Unknown or contradictory links fall back rather than guess. |
+| `lib/deep-link.ts` | A place (scale, described part, disassembly, build) to and from the address bar's query string, and the page title for it. Unknown or contradictory links fall back rather than guess. |
 | `lib/pointer-intent.ts` | `tapIntent`: a mouse click opens, a tap describes first. |
 | `lib/inventory-labels.ts` | Which laid-out parts get a name on screen: biggest first, one per part, no overlaps, nothing off the stage. |
 | `lib/parts.ts` | Shared realistic parts: fans, grilles, fin stacks, capacitors, chokes, slots, ports, screws, `glowMaterial`, `buildLightStrip`. |
@@ -323,7 +323,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 146 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-mode checks and every card and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 148 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-mode checks and every card and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -482,10 +482,11 @@ These interaction decisions are settled, and re-opening them has been tried:
   whose "Take apart" button opens it; tapping the selected part again also
   opens it where the card leaves it in reach. `tapIntent` is the rule.
 - **The address is the place, not the view.** `?scale=`, `&part=` (with
-  `&n=` for the n-th identical part) and `&open=` for the disassembly. Camera,
+  `&n=` for the n-th identical part), `&open=` for the disassembly, and
+  `&cpu=`, `&ram=`, `&gpu=`, `&psu=` for a changed build. Camera,
   hidden parts and the airflow preference stay out: they are how one person is
-  looking, not where. Scale changes are history steps; selections and slider
-  moves replace the current entry, the slider only once it has settled.
+  looking, not where. Scale changes are history steps; selections, part swaps
+  and slider moves replace the current entry, the slider only once it has settled.
 - **The detail panel is suppressed mid-dive.** `selected` is null while
   `diveInto` is set, or the outer component's panel flashes for a few hundred
   milliseconds before the deeper scale replaces it.
@@ -555,8 +556,9 @@ and the card's published figures added up, labelled as exactly that. It is not
 a whole-system estimate, and nothing here invents one.
 
 `ExplorerState.build` holds the choice. It survives navigation and Reset; only
-the panel's own button puts the original parts back. It is not in the address
-yet. Only the card and the supply change the tower (`towerKey`). A processor or
+the panel's own button puts the original parts back. It is in the address as
+`&cpu=`, `&ram=`, `&gpu=` and `&psu=`, written only for slots that differ
+from the original machine, so a link without them is the original build. Only the card and the supply change the tower (`towerKey`). A processor or
 module that cannot seat is reported and left out, and the board keeps the one
 it was built with (`installedBuild`).
 
@@ -662,7 +664,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-146 tests, all through Node's built-in runner.
+148 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -723,14 +725,14 @@ with Node.js 22.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/build.test.ts` (12) — the build mode's checks: what fails, what
-  warns, which option is marked as the problem, rated draw, and the power
+- `tests/build.test.ts` (13) — the build mode's checks: what fails, what
+  warns, the adapter's lead count, a card too long for the case, which option is marked as the problem, rated draw, and the power
   legend naming the installed card's feed. Also every
   card and supply built into the tower: seated on the slot at true length,
   clear of the case and the cooler, and fed by a loom that ends on the card.
 
-- `tests/discovery.test.ts` (10) — every scale and every part surviving a
-  round trip through a link, instances and disassembly kept, nonsense links
+- `tests/discovery.test.ts` (11) — every scale and every part surviving a
+  round trip through a link, instances, disassembly and the build kept, nonsense links
   falling back to the nearest sensible place, titles, the committed sitemap
   matching the catalogue, tap versus click, part names never overlapping or
   leaving the stage, and the interface's own modules staying free of three.js.

@@ -1,6 +1,13 @@
-import { byId, isLevelRoot } from './manifest.ts';
-import { isPhysical, levels, rootLevel, type LevelId } from './levels.ts';
-import type { Selection } from './explorer-state.ts';
+import { byId, isLevelRoot } from "./manifest.ts";
+import { isPhysical, levels, rootLevel, type LevelId } from "./levels.ts";
+import type { Selection } from "./explorer-state.ts";
+import {
+  defaultBuild,
+  slotOptions,
+  slots,
+  type BuildSlot,
+  type DesktopBuild,
+} from "./desktop-build.ts";
 
 /**
  * Where you are, written into the address bar.
@@ -8,9 +15,9 @@ import type { Selection } from './explorer-state.ts';
  * Navigation lives in explorer state, so until this the address was always
  * the bare site: a link to the RTX 5090's streaming multiprocessor arrived on
  * the assembled tower, and the back button left the site rather than climbing
- * a scale. A place is the three things that decide what is on screen and are
- * worth sharing: the scale, the part described, and how far apart the
- * hardware is. Camera angle, hidden parts and the airflow preference are
+ * a scale. A place is the things that decide what is on screen and are worth
+ * sharing: the scale, the part described, how far apart the hardware is, and
+ * which parts the desktop build put in the tower. Camera angle, hidden parts and the airflow preference are
  * deliberately left out; they are how one person is looking, not where.
  *
  * Query parameters rather than paths, so every place is served by the same
@@ -21,6 +28,7 @@ import type { Selection } from './explorer-state.ts';
  *   /?scale=motherboard&part=vrm    the board with its VRM described
  *   /?scale=pc&open=48              the tower half taken apart
  *   /?scale=pc&part=fan&n=3         the third of several identical fans
+ *   /?scale=pc&gpu=arcb580&psu=psubronze   a build with other parts
  *
  * Anything unknown or contradictory is dropped rather than guessed at: a link
  * that names a part on the wrong scale opens the scale without it, and a link
@@ -31,7 +39,24 @@ export type Place = {
   level: LevelId;
   selection: Selection | null;
   explode: number;
+  /**
+   * The parts chosen in build mode. Left out when the link names none, which
+   * means the original machine.
+   */
+  build?: DesktopBuild;
 };
+
+/** The address parameter for each build slot. Only parts that differ from
+ * the original machine are written. */
+const buildParams: Record<BuildSlot, string> = {
+  processor: "cpu",
+  memory: "ram",
+  graphics: "gpu",
+  power: "psu",
+};
+
+const customised = (build: DesktopBuild | undefined) =>
+  !!build && slots.some(({ id }) => build[id] !== defaultBuild[id]);
 
 export const homePlace: Place = {
   level: rootLevel,
@@ -52,30 +77,37 @@ function belongsTo(concept: string, level: LevelId) {
 export function placeToSearch(place: Place): string {
   const params = new URLSearchParams();
   const atHome =
-    place.level === rootLevel && !place.selection && place.explode === 0;
-  if (atHome) return '';
-  params.set('scale', place.level);
+    place.level === rootLevel &&
+    !place.selection &&
+    place.explode === 0 &&
+    !customised(place.build);
+  if (atHome) return "";
+  params.set("scale", place.level);
   if (place.selection && belongsTo(place.selection.concept, place.level)) {
-    params.set('part', place.selection.concept);
+    params.set("part", place.selection.concept);
     // Instances count from one in a link, the way the hover label numbers them.
     if (place.selection.instance)
-      params.set('n', String(place.selection.instance + 1));
+      params.set("n", String(place.selection.instance + 1));
   }
   const explode = Math.round(place.explode);
   if (explode > 0 && isPhysical(place.level))
-    params.set('open', String(Math.min(100, explode)));
-  return '?' + params.toString();
+    params.set("open", String(Math.min(100, explode)));
+  if (place.build)
+    for (const { id } of slots)
+      if (place.build[id] !== defaultBuild[id])
+        params.set(buildParams[id], place.build[id]);
+  return "?" + params.toString();
 }
 
 export function searchToPlace(search: string): Place {
   const params = new URLSearchParams(search);
-  const scale = params.get('scale');
+  const scale = params.get("scale");
   if (!scale || !Object.prototype.hasOwnProperty.call(levels, scale))
     return homePlace;
   const level = scale as LevelId;
 
-  const part = params.get('part');
-  const n = Number(params.get('n') ?? '1');
+  const part = params.get("part");
+  const n = Number(params.get("n") ?? "1");
   const instance = Number.isInteger(n) && n >= 1 && n <= 999 ? n - 1 : 0;
   const selection =
     part && belongsTo(part, level)
@@ -84,22 +116,41 @@ export function searchToPlace(search: string): Place {
         : { concept: part }
       : null;
 
-  const open = Number(params.get('open') ?? '0');
+  const open = Number(params.get("open") ?? "0");
   const explode =
     isPhysical(level) && Number.isFinite(open)
       ? Math.max(0, Math.min(100, Math.round(open)))
       : 0;
 
-  return { level, selection, explode };
+  const build = readBuild(params);
+  return build
+    ? { level, selection, explode, build }
+    : { level, selection, explode };
+}
+
+/** The build a link names, or nothing when it names no known part. A part
+ * that does not exist for its slot is dropped, and the slot keeps the
+ * original. */
+function readBuild(params: URLSearchParams): DesktopBuild | undefined {
+  const build: DesktopBuild = { ...defaultBuild };
+  let named = false;
+  for (const { id } of slots) {
+    const value = params.get(buildParams[id]);
+    if (value && slotOptions(id).some((option) => option.id === value)) {
+      (build as Record<BuildSlot, string>)[id] = value;
+      named = true;
+    }
+  }
+  return named && customised(build) ? build : undefined;
 }
 
 /** The page title for a place: the part when one is described, else the scale. */
 export function placeTitle(place: Place): string {
-  if (place.level === rootLevel && !place.selection) return 'PC Anatomy';
+  if (place.level === rootLevel && !place.selection) return "PC Anatomy";
   const name = place.selection
     ? byId[place.selection.concept]?.name
     : levels[place.level].name;
-  return name ? `${name} · PC Anatomy` : 'PC Anatomy';
+  return name ? `${name} · PC Anatomy` : "PC Anatomy";
 }
 
 /** Same place, ignoring how a selection reached it. */

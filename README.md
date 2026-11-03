@@ -129,7 +129,8 @@ the supply meets the card maker's minimum or recommendation, whether the supply
 has the lead the card's power socket takes, and whether the card fits the case.
 It also adds up the processor's and card's rated power against the supply. A
 part that cannot physically fit is reported and left out of the tower. The
-board, cooler, SSD and case are the same in every build.
+board, cooler, SSD and case are the same in every build. The parts you choose
+are written into the address, so a build can be shared as a link.
 
 ![Build mode: the parts panel in the rail beside the tower with a Radeon RX 9070 XT installed](docs/screenshots/build-mode.png)
 

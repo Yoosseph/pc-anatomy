@@ -1,12 +1,12 @@
-"use client";
-import { useEffect, useRef } from "react";
-import type { ExplorerState } from "@/lib/explorer-state";
+'use client';
+import { useEffect, useRef } from 'react';
+import type { ExplorerState } from '@/lib/explorer-state';
 import {
   placeTitle,
   placeToSearch,
   searchToPlace,
   type Place,
-} from "@/lib/deep-link";
+} from '@/lib/deep-link';
 
 /** How long the slider has to rest before its position is written down. */
 const SETTLE_MS = 250;
@@ -39,11 +39,11 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
     if (search === location.search) return;
     if (level !== writtenLevel.current) {
       writtenLevel.current = level;
-      history.pushState(null, "", url);
+      history.pushState(null, '', url);
       return;
     }
     const settle = setTimeout(
-      () => history.replaceState(null, "", url),
+      () => history.replaceState(null, '', url),
       SETTLE_MS,
     );
     return () => clearTimeout(settle);
@@ -55,8 +55,8 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
       writtenLevel.current = place.level;
       goTo(place);
     };
-    window.addEventListener("popstate", back);
-    return () => window.removeEventListener("popstate", back);
+    window.addEventListener('popstate', back);
+    return () => window.removeEventListener('popstate', back);
   }, [goTo]);
 }
 
@@ -66,6 +66,6 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
  * the home page, so it follows the place too.
  */
 function setCanonical(href: string) {
-  const link = document.querySelector<HTMLLinkElement>("link[rel=canonical]");
+  const link = document.querySelector<HTMLLinkElement>('link[rel=canonical]');
   if (link && link.href !== href) link.href = href;
 }

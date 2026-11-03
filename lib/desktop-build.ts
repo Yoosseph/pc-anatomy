@@ -1,6 +1,6 @@
-import { openLevel } from "./manifest.ts";
-import { levels, type LevelId } from "./levels.ts";
-import type { SourceId } from "./sources.ts";
+import { openLevel } from './manifest.ts';
+import { levels, type LevelId } from './levels.ts';
+import type { SourceId } from './sources.ts';
 
 /**
  * Build your own desktop: which part goes in each slot, and whether the
@@ -20,10 +20,10 @@ import type { SourceId } from "./sources.ts";
  * machine will fail.
  */
 
-export type ProcessorChoice = "ryzen" | "corei9";
-export type MemoryChoice = "dimm" | "ddr4";
-export type GraphicsChoice = "card" | "rx9070" | "arcb580";
-export type PowerChoice = "psu" | "psubronze";
+export type ProcessorChoice = 'ryzen' | 'corei9';
+export type MemoryChoice = 'dimm' | 'ddr4';
+export type GraphicsChoice = 'card' | 'rx9070' | 'arcb580';
+export type PowerChoice = 'psu' | 'psubronze';
 
 export interface DesktopBuild {
   processor: ProcessorChoice;
@@ -35,17 +35,17 @@ export type BuildSlot = keyof DesktopBuild;
 
 /** The machine as the explorer has always shown it. */
 export const defaultBuild: DesktopBuild = {
-  processor: "ryzen",
-  memory: "dimm",
-  graphics: "card",
-  power: "psu",
+  processor: 'ryzen',
+  memory: 'dimm',
+  graphics: 'card',
+  power: 'psu',
 };
 
 /** What the fixed motherboard accepts. */
 export const board = {
-  socket: "AM5",
-  memory: "DDR5",
-  sources: ["mainboardmanual"] as SourceId[],
+  socket: 'AM5',
+  memory: 'DDR5',
+  sources: ['mainboardmanual'] as SourceId[],
 };
 
 interface Option {
@@ -61,15 +61,15 @@ export interface ProcessorOption extends Option {
   wattsLabel: string;
 }
 export interface MemoryOption extends Option {
-  generation: "DDR5" | "DDR4";
+  generation: 'DDR5' | 'DDR4';
 }
 export interface GraphicsOption extends Option {
   watts: number;
   /** The supply the card's maker asks for, and whether it is a floor. */
   psu: number;
-  psuKind: "minimum" | "recommended";
+  psuKind: 'minimum' | 'recommended';
   psuSource: string;
-  connector: "12V-2x6" | "8-pin";
+  connector: '12V-2x6' | '8-pin';
   /** An adapter from 8-pin leads, in the box, and how many leads it takes. */
   adapter?: { name: string; leads: number };
   /** Overall length, millimetres. */
@@ -86,104 +86,104 @@ export interface PowerOption extends Option {
 
 export const processorOptions: Record<ProcessorChoice, ProcessorOption> = {
   ryzen: {
-    name: "AMD Ryzen 9 9950X",
-    summary: "16 cores · AM5",
-    socket: "AM5",
+    name: 'AMD Ryzen 9 9950X',
+    summary: '16 cores · AM5',
+    socket: 'AM5',
     // AMD publishes only the 170 W default TDP, a cooling figure. The socket
     // power limit is the like-for-like number to Intel's maximum turbo power,
     // and comes from an independent review.
     watts: 200,
-    wattsLabel: "socket power limit (PPT)",
-    sources: ["ryzen", "fpsreview9950x"],
+    wattsLabel: 'socket power limit (PPT)',
+    sources: ['ryzen', 'fpsreview9950x'],
   },
   corei9: {
-    name: "Intel Core Ultra 9 285K",
-    summary: "24 cores · LGA 1851",
-    socket: "LGA 1851",
+    name: 'Intel Core Ultra 9 285K',
+    summary: '24 cores · LGA 1851',
+    socket: 'LGA 1851',
     watts: 250,
-    wattsLabel: "maximum turbo power",
-    sources: ["corei9"],
+    wattsLabel: 'maximum turbo power',
+    sources: ['corei9'],
   },
 };
 
 export const memoryOptions: Record<MemoryChoice, MemoryOption> = {
   dimm: {
-    name: "Kingston FURY Beast DDR5-6000",
-    summary: "2 × 16 GB · DDR5",
-    generation: "DDR5",
-    sources: ["kf560", "ddr5architecture"],
+    name: 'Kingston FURY Beast DDR5-6000',
+    summary: '2 × 16 GB · DDR5',
+    generation: 'DDR5',
+    sources: ['kf560', 'ddr5architecture'],
   },
   ddr4: {
-    name: "Kingston FURY Beast DDR4-3200",
-    summary: "2 × 16 GB · DDR4",
-    generation: "DDR4",
-    sources: ["kf432", "jedecmo329"],
+    name: 'Kingston FURY Beast DDR4-3200',
+    summary: '2 × 16 GB · DDR4',
+    generation: 'DDR4',
+    sources: ['kf432', 'jedecmo329'],
   },
 };
 
 export const graphicsOptions: Record<GraphicsChoice, GraphicsOption> = {
   card: {
-    name: "GeForce RTX 5090",
-    summary: "575 W · 348 mm",
+    name: 'GeForce RTX 5090',
+    summary: '575 W · 348 mm',
     watts: 575,
     psu: 1000,
-    psuKind: "recommended",
-    psuSource: "ASUS",
-    connector: "12V-2x6",
+    psuKind: 'recommended',
+    psuSource: 'ASUS',
+    connector: '12V-2x6',
     length: 348,
-    sources: ["specs", "tuf5090specs"],
+    sources: ['specs', 'tuf5090specs'],
   },
   rx9070: {
-    name: "Radeon RX 9070 XT",
-    summary: "330 W · 331 mm",
+    name: 'Radeon RX 9070 XT',
+    summary: '330 W · 331 mm',
     watts: 330,
     psu: 850,
-    psuKind: "minimum",
-    psuSource: "Sapphire",
-    connector: "12V-2x6",
-    adapter: { name: "3 × 8-pin", leads: 3 },
+    psuKind: 'minimum',
+    psuSource: 'Sapphire',
+    connector: '12V-2x6',
+    adapter: { name: '3 × 8-pin', leads: 3 },
     length: 330.8,
-    sources: ["nitro9070"],
+    sources: ['nitro9070'],
   },
   arcb580: {
-    name: "Intel Arc B580",
-    summary: "190 W · 272 mm",
+    name: 'Intel Arc B580',
+    summary: '190 W · 272 mm',
     watts: 190,
     psu: 600,
-    psuKind: "recommended",
-    psuSource: "Intel",
-    connector: "8-pin",
+    psuKind: 'recommended',
+    psuSource: 'Intel',
+    connector: '8-pin',
     length: 272,
-    sources: ["arcb580"],
+    sources: ['arcb580'],
   },
 };
 
 export const powerOptions: Record<PowerChoice, PowerOption> = {
   psu: {
-    name: "ASUS TUF Gaming 850W Gold",
-    summary: "850 W · modular",
+    name: 'ASUS TUF Gaming 850W Gold',
+    summary: '850 W · modular',
     watts: 850,
     modular: true,
     sixteenPin: true,
     eightPin: 3,
-    sources: ["tuf850g"],
+    sources: ['tuf850g'],
   },
   psubronze: {
-    name: "ASUS TUF Gaming 750W Bronze",
-    summary: "750 W · fixed cables",
+    name: 'ASUS TUF Gaming 750W Bronze',
+    summary: '750 W · fixed cables',
     watts: 750,
     modular: false,
     sixteenPin: false,
     eightPin: 4,
-    sources: ["tuf750b"],
+    sources: ['tuf750b'],
   },
 };
 
 export const slots: { id: BuildSlot; label: string }[] = [
-  { id: "processor", label: "Processor" },
-  { id: "memory", label: "Memory" },
-  { id: "graphics", label: "Graphics card" },
-  { id: "power", label: "Power supply" },
+  { id: 'processor', label: 'Processor' },
+  { id: 'memory', label: 'Memory' },
+  { id: 'graphics', label: 'Graphics card' },
+  { id: 'power', label: 'Power supply' },
 ];
 
 const optionTables: { [S in BuildSlot]: Record<DesktopBuild[S], Option> } = {
@@ -210,9 +210,14 @@ export function slotOptions<S extends BuildSlot>(slot: S) {
  */
 export const caseCardClearance = 420;
 
-export type CheckStatus = "ok" | "warn" | "fail";
+export type CheckStatus = 'ok' | 'warn' | 'fail';
 type CheckId =
-  "socket" | "memory" | "supply" | "connector" | "length" | "budget";
+  | 'socket'
+  | 'memory'
+  | 'supply'
+  | 'connector'
+  | 'length'
+  | 'budget';
 export interface BuildCheck {
   id: CheckId;
   status: CheckStatus;
@@ -238,105 +243,105 @@ const checkOf =
   });
 
 function socketCheck(cpu: ProcessorOption) {
-  const result = checkOf("socket", [...cpu.sources, ...board.sources]);
+  const result = checkOf('socket', [...cpu.sources, ...board.sources]);
   return socketFits(cpu)
     ? result(
-        "ok",
-        "Processor fits the socket",
+        'ok',
+        'Processor fits the socket',
         `The ${cpu.name} is an ${cpu.socket} processor, and the board has an ${board.socket} socket.`,
       )
     : result(
-        "fail",
-        "Processor does not fit the socket",
+        'fail',
+        'Processor does not fit the socket',
         `The ${cpu.name} needs an ${cpu.socket} socket. This board has ${board.socket}, so the processor is not installed.`,
       );
 }
 
 function memoryCheck(ram: MemoryOption) {
   if (memoryFits(ram))
-    return checkOf("memory", [...ram.sources, ...board.sources])(
-      "ok",
-      "Memory fits the slots",
+    return checkOf('memory', [...ram.sources, ...board.sources])(
+      'ok',
+      'Memory fits the slots',
       `${ram.generation} modules in ${board.memory} slots.`,
     );
   // The failure rests on the key positions, which the module's own sources
   // do not describe.
-  return checkOf("memory", [
-    "jedecmo329",
-    "ddr5architecture",
+  return checkOf('memory', [
+    'jedecmo329',
+    'ddr5architecture',
     ...board.sources,
   ])(
-    "fail",
-    "Memory does not fit the slots",
+    'fail',
+    'Memory does not fit the slots',
     `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot's, so it cannot be pushed in. The modules are not installed.`,
   );
 }
 
 function supplyCheck(gpu: GraphicsOption, psu: PowerOption) {
-  const result = checkOf("supply", [...gpu.sources, ...psu.sources]);
+  const result = checkOf('supply', [...gpu.sources, ...psu.sources]);
   const detail = `${gpu.psuSource} gives ${gpu.psu} W as the ${gpu.psuKind} supply for the ${gpu.name}. The ${psu.name} is rated ${psu.watts} W.`;
   if (psu.watts >= gpu.psu)
-    return result("ok", "Supply meets the card maker’s figure", detail);
-  return gpu.psuKind === "minimum"
-    ? result("fail", "Supply is below the card’s minimum", detail)
-    : result("warn", "Supply is below the card maker’s recommendation", detail);
+    return result('ok', 'Supply meets the card maker’s figure', detail);
+  return gpu.psuKind === 'minimum'
+    ? result('fail', 'Supply is below the card’s minimum', detail)
+    : result('warn', 'Supply is below the card maker’s recommendation', detail);
 }
 
 function connectorCheck(gpu: GraphicsOption, psu: PowerOption) {
-  const result = checkOf("connector", [...gpu.sources, ...psu.sources]);
-  const leads = plural(psu.eightPin, "8-pin PCIe lead");
-  if (gpu.connector === "8-pin")
+  const result = checkOf('connector', [...gpu.sources, ...psu.sources]);
+  const leads = plural(psu.eightPin, '8-pin PCIe lead');
+  if (gpu.connector === '8-pin')
     return psu.eightPin >= 1
       ? result(
-          "ok",
-          "Power cable matches the card",
+          'ok',
+          'Power cable matches the card',
           `The card takes one 8-pin PCIe lead, and the ${psu.name} has ${leads}.`,
         )
       : result(
-          "fail",
-          "No lead for the card",
+          'fail',
+          'No lead for the card',
           `The card takes an 8-pin PCIe lead, and the ${psu.name} has none.`,
         );
   if (psu.sixteenPin)
     return result(
-      "ok",
-      "Power cable matches the card",
+      'ok',
+      'Power cable matches the card',
       `The card takes a 16-pin 12V-2x6 lead, which the ${psu.name} has.`,
     );
   if (!gpu.adapter)
     return result(
-      "warn",
-      "No 16-pin lead for the card",
+      'warn',
+      'No 16-pin lead for the card',
       `The ${psu.name} has only 8-pin PCIe leads, and the card has a 16-pin 12V-2x6 socket. It needs a 12V-2x6 cable or an adapter.`,
     );
   return psu.eightPin >= gpu.adapter.leads
     ? result(
-        "warn",
-        "Card needs its adapter",
+        'warn',
+        'Card needs its adapter',
         `The ${psu.name} has no 16-pin 12V-2x6 lead. The card comes with a ${gpu.adapter.name} adapter, and the supply has ${leads} to fill it.`,
       )
     : result(
-        "fail",
-        "Not enough leads for the card’s adapter",
+        'fail',
+        'Not enough leads for the card’s adapter',
         `The ${psu.name} has no 16-pin 12V-2x6 lead, and the card’s ${gpu.adapter.name} adapter needs ${gpu.adapter.leads} leads where the supply has ${psu.eightPin}.`,
       );
 }
 
 const plural = (n: number, thing: string) =>
-  `${n} ${thing}${n === 1 ? "" : "s"}`;
+  `${n} ${thing}${n === 1 ? '' : 's'}`;
 
 /** Exported so the tests can try a card longer than any on offer. */
-export function lengthCheck(gpu: Pick<GraphicsOption, "length" | "sources">) {
-  const result = checkOf("length", gpu.sources);
+export function lengthCheck(gpu: Pick<GraphicsOption, 'length' | 'sources'>) {
+  const result = checkOf('length', gpu.sources);
   return gpu.length <= caseCardClearance
     ? result(
-        "ok",
-        "Card fits the case",
+        'ok',
+        'Card fits the case',
         `${gpu.length} mm long, and the case takes cards up to about ${caseCardClearance} mm.`,
       )
     : result(
-        "fail",
-        "Card is too long for the case",
+        'fail',
+        'Card is too long for the case',
         `${gpu.length} mm long, but the case only takes about ${caseCardClearance} mm.`,
       );
 }
@@ -346,7 +351,7 @@ function budgetCheck(
   gpu: GraphicsOption,
   psu: PowerOption,
 ) {
-  const result = checkOf("budget", [
+  const result = checkOf('budget', [
     ...cpu.sources,
     ...gpu.sources,
     ...psu.sources,
@@ -355,14 +360,14 @@ function budgetCheck(
   // The figure is for the parts chosen, so it still answers whether this
   // supply would carry them when the processor cannot go into this board.
   const unseated = socketFits(cpu)
-    ? ""
+    ? ''
     : ` The ${cpu.name} is counted as chosen, though it does not fit this board.`;
   const detail = `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.${unseated}`;
   return draw <= psu.watts
-    ? result("ok", "Processor and card are within the supply’s rating", detail)
+    ? result('ok', 'Processor and card are within the supply’s rating', detail)
     : result(
-        "fail",
-        "Processor and card add up to more than the supply",
+        'fail',
+        'Processor and card add up to more than the supply',
         detail,
       );
 }
@@ -393,10 +398,10 @@ export function checkBuild(build: DesktopBuild): BuildCheck[] {
 
 /** The checks each slot's part takes part in. */
 const slotChecks: Record<BuildSlot, CheckId[]> = {
-  processor: ["socket", "budget"],
-  memory: ["memory"],
-  graphics: ["supply", "connector", "length", "budget"],
-  power: ["supply", "connector", "budget"],
+  processor: ['socket', 'budget'],
+  memory: ['memory'],
+  graphics: ['supply', 'connector', 'length', 'budget'],
+  power: ['supply', 'connector', 'budget'],
 };
 
 /**
@@ -410,17 +415,17 @@ export function conflicts<S extends BuildSlot>(
   part: DesktopBuild[S],
 ) {
   return checkBuild({ ...build, [slot]: part }).some(
-    (c) => c.status === "fail" && slotChecks[slot].includes(c.id),
+    (c) => c.status === 'fail' && slotChecks[slot].includes(c.id),
   );
 }
 
 /** The worst result across every check. */
 export function buildStatus(checks: BuildCheck[]): CheckStatus {
-  return checks.some((c) => c.status === "fail")
-    ? "fail"
-    : checks.some((c) => c.status === "warn")
-      ? "warn"
-      : "ok";
+  return checks.some((c) => c.status === 'fail')
+    ? 'fail'
+    : checks.some((c) => c.status === 'warn')
+      ? 'warn'
+      : 'ok';
 }
 
 /**
@@ -444,7 +449,7 @@ export function installedBuild(build: DesktopBuild): DesktopBuild {
  * geometry; the processor and memory sit inside the board assembly.
  */
 export function towerKey(build: DesktopBuild) {
-  return build.graphics + "+" + build.power;
+  return build.graphics + '+' + build.power;
 }
 
 /**
@@ -454,9 +459,9 @@ export function towerKey(build: DesktopBuild) {
  * the hidden list and the selection all hold onto them. What the reader is
  * shown, and where opening the piece leads, follow the part in the slot.
  */
-const towerPieces = new Map<string, "graphics" | "power">([
-  ["graphicscard", "graphics"],
-  ["psu", "power"],
+const towerPieces = new Map<string, 'graphics' | 'power'>([
+  ['graphicscard', 'graphics'],
+  ['psu', 'power'],
 ]);
 
 /** The concept a tower piece describes under this build. */
@@ -481,7 +486,7 @@ export function graphicsFeed(build: DesktopBuild) {
   if (build.graphics === defaultBuild.graphics) return null;
   const gpu = graphicsOptions[build.graphics];
   return {
-    label: gpu.connector === "8-pin" ? "8-pin PCIe" : "12V-2x6",
+    label: gpu.connector === '8-pin' ? '8-pin PCIe' : '12V-2x6',
     description: `The installed ${gpu.name} has a direct auxiliary feed from the PSU as well as slot power. Regulators on the card produce lower voltages for the GPU and memory.`,
   };
 }

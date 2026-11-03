@@ -1,13 +1,13 @@
-"use client";
-import { useCallback, useState } from "react";
-import { byId, categories, type Category } from "@/lib/manifest";
-import { airflowShown } from "@/lib/airflow-policy";
+'use client';
+import { useCallback, useState } from 'react';
+import { byId, categories, type Category } from '@/lib/manifest';
+import { airflowShown } from '@/lib/airflow-policy';
 import {
   initialState,
   selectSearch,
   type ExplorerState,
   type Selection,
-} from "@/lib/explorer-state";
+} from '@/lib/explorer-state';
 import {
   isPhysical,
   systemRoot,
@@ -16,20 +16,20 @@ import {
   menuRoot,
   submenuRoot,
   type LevelId,
-} from "@/lib/levels";
-import { searchToPlace, type Place } from "@/lib/deep-link";
+} from '@/lib/levels';
+import { searchToPlace, type Place } from '@/lib/deep-link';
 import {
   defaultBuild,
   opensTo,
   standIn,
   type BuildSlot,
   type DesktopBuild,
-} from "@/lib/desktop-build";
-import { useDisassemblyPlayback } from "./use-disassembly-playback";
-import { useAddress } from "./use-address";
+} from '@/lib/desktop-build';
+import { useDisassemblyPlayback } from './use-disassembly-playback';
+import { useAddress } from './use-address';
 
 /** Graphics cards whose chip diagrams open directly, without a dive. */
-const gpuRoots = new Set<LevelId>(["card", "rx9070", "arcb580"]);
+const gpuRoots = new Set<LevelId>(['card', 'rx9070', 'arcb580']);
 
 /**
  * Every move the explorer can make, in one place.
@@ -42,7 +42,7 @@ export function useExplorer() {
   // A shared link opens where it points. Read once, before the first render,
   // so the viewer never builds the tower only to throw it away.
   const [state, setState] = useState<ExplorerState>(() =>
-    typeof location === "undefined"
+    typeof location === 'undefined'
       ? initialState
       : placeState(initialState, searchToPlace(location.search)),
   );
@@ -53,10 +53,10 @@ export function useExplorer() {
   const [openMenu, setOpenMenu] = useState<LevelId | null>(null);
   // The card dropdown open inside the GPU menu. `null` follows wherever you
   // are; `'none'` means you deliberately folded it away.
-  const [openSubmenu, setOpenSubmenu] = useState<LevelId | "none" | null>(null);
+  const [openSubmenu, setOpenSubmenu] = useState<LevelId | 'none' | null>(null);
   const shownMenu = openMenu ?? menuRoot(state.level);
   const shownSubmenu =
-    openSubmenu === "none" ? null : (openSubmenu ?? submenuRoot(state.level));
+    openSubmenu === 'none' ? null : (openSubmenu ?? submenuRoot(state.level));
   // While a dive is in flight the selection exists only to aim the camera at
   // the part being opened. Showing its panel would flash the outer component's
   // description, and its "Take apart" button, for a few hundred milliseconds
@@ -99,7 +99,7 @@ export function useExplorer() {
         cameraRevision: s.cameraRevision + 1,
         visible: [...categories],
         hidden: [],
-        view: "perspective",
+        view: 'perspective',
       }));
       setLayers(false);
     },
@@ -192,7 +192,7 @@ export function useExplorer() {
         visible: [...categories],
         hidden: [],
         isolated: false,
-        view: "perspective",
+        view: 'perspective',
         diveInto: null,
         focusRevision: 0,
         cameraRevision: s.cameraRevision + 1,
@@ -203,8 +203,8 @@ export function useExplorer() {
   }, [state.build, state.diveInto]);
 
   const choose = useCallback(
-    (selection: Selection | null, intent: "open" | "inspect" = "inspect") => {
-      if (selection && intent === "open" && dive(selection.concept)) return;
+    (selection: Selection | null, intent: 'open' | 'inspect' = 'inspect') => {
+      if (selection && intent === 'open' && dive(selection.concept)) return;
       setState((s) => ({
         ...s,
         selection,
@@ -301,10 +301,10 @@ export function useExplorer() {
   const toggleAirflow = () =>
     setState((s) => ({
       ...s,
-      airflow: airflowShown(s.airflow, s.level) ? "off" : "on",
+      airflow: airflowShown(s.airflow, s.level) ? 'off' : 'on',
     }));
 
-  const setView = (view: ExplorerState["view"]) =>
+  const setView = (view: ExplorerState['view']) =>
     setState((s) => ({
       ...s,
       view,
@@ -313,7 +313,7 @@ export function useExplorer() {
     }));
 
   const togglePower = () => setState((s) => ({ ...s, power: !s.power }));
-  const setPowerTarget = (powerTarget: ExplorerState["powerTarget"]) =>
+  const setPowerTarget = (powerTarget: ExplorerState['powerTarget']) =>
     setState((s) => ({ ...s, powerTarget }));
 
   /**
@@ -409,7 +409,7 @@ function placeState(s: ExplorerState, place: Place): ExplorerState {
     isolated: false,
     visible: [...categories],
     hidden: [],
-    view: "perspective",
+    view: 'perspective',
     focusRevision: place.selection ? s.focusRevision + 1 : 0,
     cameraRevision: s.cameraRevision + 1,
   };

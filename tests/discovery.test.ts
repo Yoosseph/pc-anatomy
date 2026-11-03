@@ -106,6 +106,46 @@ await test('a link carries the parts chosen in build mode', () => {
   assert.equal(searchToPlace('?scale=pc&psu=toString').build, undefined);
 });
 
+await test('a link can open the build workspace, with the cooler and the drives', () => {
+  const build = {
+    ...defaultBuild,
+    cooler: 'liquid',
+    storage: 'nvme',
+  } as const;
+  const place: Place = {
+    level: 'pc',
+    selection: null,
+    explode: 0,
+    build,
+    workspace: 'build',
+  };
+  const search = placeToSearch(place);
+  assert.equal(search, '?scale=pc&mode=build&cooler=liquid&storage=nvme');
+  assert.deepEqual(searchToPlace(search), place);
+  // The workspace with the original machine still has an address.
+  assert.equal(
+    placeToSearch({ ...homePlace, workspace: 'build' }),
+    '?scale=pc&mode=build',
+  );
+  // In the workspace a pointed-at part and the slider are not the place.
+  assert.equal(
+    placeToSearch({
+      ...place,
+      selection: { concept: 'graphicscard' },
+      explode: 40,
+    }),
+    search,
+  );
+  // The workspace only exists on the tower.
+  const elsewhere = levelIds.find((id) => id !== 'pc')!;
+  assert.equal(
+    searchToPlace(`?scale=${elsewhere}&mode=build`).workspace,
+    undefined,
+  );
+  assert.equal(searchToPlace('?scale=pc&mode=nonsense').workspace, undefined);
+  assert.equal(placeTitle(place), 'Build your PC · PC Anatomy');
+});
+
 await test('a place is titled after what it shows', () => {
   assert.equal(placeTitle(homePlace), 'PC Anatomy');
   const part = manifest.find((c) => c.level === 'pc' && !isLevelRoot(c))!;

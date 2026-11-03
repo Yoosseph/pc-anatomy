@@ -1,0 +1,669 @@
+/* Build your own PC ------------------------------------------------------- */
+/* The workspace shares the page's viewer with the explorer. Everything here
+   lays out around it: the parts on the left, the report on the right, and the
+   tower between them. On a phone the tower sits on top and the parts and the
+   report take turns underneath. */
+.build-workbench {
+  --build-top: 72px;
+  --build-parts: 344px;
+  --build-report: 372px;
+  --build-ok: #7de0b7;
+  --build-warn: #e8b860;
+  --build-fail: #f08a80;
+  --build-panel: #0e0f10f2;
+  --build-line: #24272b;
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    #1d2022 0%,
+    #111315 50%,
+    #08090a 90%
+  );
+}
+.build-workbench .viewport {
+  inset: var(--build-top) var(--build-report) 0 var(--build-parts);
+}
+.build-topbar,
+.build-panels,
+.build-stage-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Top bar: back to the explorer, what this page is, and the share link. */
+.build-topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 15;
+  height: var(--build-top);
+  padding: 0 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  background: #0d0e0e;
+  border-bottom: 1px solid var(--build-line);
+}
+.build-back,
+.build-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid #33373c;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: #d4d8dc;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.build-back {
+  justify-self: start;
+}
+.build-share {
+  justify-self: end;
+  color: #d8edf0;
+  background: linear-gradient(180deg, #192f35 0%, #142429 100%);
+  border-color: #3f6f7a;
+}
+.build-back:hover {
+  background: #1d2023;
+  border-color: #4a4f55;
+}
+.build-share:hover {
+  background: linear-gradient(180deg, #1f3941 0%, #182c32 100%);
+  border-color: #65a6b4;
+}
+.build-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.build-title-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  color: #191a1c;
+  background: linear-gradient(
+    135deg,
+    var(--accent-bright),
+    var(--accent-violet)
+  );
+}
+.build-title h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  color: #f1f3f4;
+}
+.build-title p {
+  margin: 1px 0 0;
+  font-size: 11.5px;
+  color: #969ca3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The two side panels. */
+.build-panels {
+  display: contents;
+}
+.build-tabs {
+  display: none;
+}
+.build-parts,
+.build-report {
+  position: absolute;
+  top: var(--build-top);
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 0 0;
+  background: var(--build-panel);
+}
+.build-parts {
+  left: 0;
+  width: var(--build-parts);
+  border-right: 1px solid var(--build-line);
+}
+.build-report {
+  right: 0;
+  width: var(--build-report);
+  border-left: 1px solid var(--build-line);
+  padding-left: 16px;
+}
+.build-parts {
+  padding-left: 16px;
+}
+.build-panel-heading {
+  margin: 0 16px 8px 0;
+  font: 600 10px monospace;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #7f858c;
+}
+.build-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4c5056 transparent;
+  scrollbar-gutter: stable;
+  padding: 0 10px 18px 0;
+}
+
+/* One slot: its number, icon, name and state, then the parts it can take. */
+.build-slot {
+  margin: 0 0 10px;
+  padding: 10px 10px 8px;
+  border: 1px solid #1f2226;
+  border-radius: 9px;
+  background: #131517;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.build-slot.focused {
+  border-color: #4f8792;
+  box-shadow: 0 0 0 3px #79bfcc22;
+}
+.build-slot > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: #9aa1a8;
+}
+.build-slot h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e6e9eb;
+}
+.build-slot-index {
+  font: 600 10px monospace;
+  color: #626870;
+}
+.build-slot-status.status-ok {
+  color: var(--build-ok);
+}
+.build-slot-status.status-warn {
+  color: var(--build-warn);
+}
+.build-slot-status.status-fail {
+  color: var(--build-fail);
+}
+.build-options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.build-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid #23262a;
+  border-radius: 7px;
+  text-align: left;
+  color: #c4c8cd;
+  background: #16181b;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.build-option:hover {
+  background: #1d2024;
+  border-color: #34393f;
+}
+.build-option[aria-pressed='true'] {
+  background: linear-gradient(180deg, #19303a 0%, #152830 100%);
+  border-color: #4f8792;
+  color: #f0f7f8;
+  cursor: default;
+}
+.build-option-mark {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid #565c63;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+.build-option[aria-pressed='true'] .build-option-mark {
+  border-color: var(--accent-bright);
+  box-shadow:
+    inset 0 0 0 3px #152830,
+    inset 0 0 0 7px var(--accent-bright);
+}
+.build-option-text {
+  flex: 1;
+  min-width: 0;
+}
+.build-option strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.build-option small {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: #8d939a;
+}
+.build-option[aria-pressed='true'] small {
+  color: #a8c6cc;
+}
+.build-option em {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--build-fail);
+  background: #2a1817;
+  border: 1px solid #5a302c;
+}
+.build-fixed,
+.build-note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #868c93;
+}
+
+/* The report: verdict, rated power, then every check with its sources. */
+.build-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1px solid;
+}
+.build-summary > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.build-summary strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.build-summary small {
+  font-size: 11px;
+  color: #a2a8ae;
+}
+.build-summary.status-ok {
+  color: var(--build-ok);
+  border-color: #2f5f50;
+  background: #13221d;
+}
+.build-summary.status-warn {
+  color: var(--build-warn);
+  border-color: #62513b;
+  background: #221d15;
+}
+.build-summary.status-fail {
+  color: var(--build-fail);
+  border-color: #6a3a36;
+  background: #251716;
+}
+.build-power {
+  margin: 12px 16px 16px 0;
+}
+.build-power > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #a2a8ae;
+}
+.build-power strong {
+  font-weight: 600;
+  color: #e3e6e8;
+  font-variant-numeric: tabular-nums;
+}
+.build-power meter {
+  display: block;
+  width: 100%;
+  height: 7px;
+  margin-top: 6px;
+}
+.build-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.build-checks li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 11px;
+  border: 1px solid #1f2226;
+  border-radius: 8px;
+  background: #131517;
+}
+.build-checks li.status-warn {
+  border-color: #3c3324;
+}
+.build-checks li.status-fail {
+  border-color: #4a2724;
+}
+.build-checks li > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.build-checks .status-ok > svg {
+  color: var(--build-ok);
+}
+.build-checks .status-warn > svg {
+  color: var(--build-warn);
+}
+.build-checks .status-fail > svg {
+  color: var(--build-fail);
+}
+.build-checks li > div {
+  min-width: 0;
+}
+.build-checks strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e3e6e8;
+}
+.build-checks p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a2a8ae;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.build-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 5px;
+}
+.build-sources a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: var(--accent-muted);
+}
+.build-sources a:hover {
+  color: var(--accent-bright);
+}
+.build-restore {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 4px;
+  padding: 8px 12px;
+  border: 1px solid #3a3e44;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #c7cacf;
+}
+.build-restore:hover {
+  background: #1d2023;
+  color: #fff;
+}
+
+/* Over the stage: what the tower is doing, and the two overlays. */
+.build-stage-bar {
+  position: absolute;
+  bottom: calc(18px + var(--safe-b));
+  left: var(--build-parts);
+  right: var(--build-report);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.build-stage-bar > * {
+  pointer-events: auto;
+}
+.build-fitting,
+.build-stage-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #2c3034;
+  border-radius: 17px;
+  font-size: 12px;
+  color: #c9cdd1;
+  background: #121416e6;
+  backdrop-filter: blur(6px);
+}
+.build-fitting {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #9aa1a8;
+  pointer-events: none;
+}
+.build-fitting svg {
+  flex-shrink: 0;
+  color: var(--build-ok);
+}
+.build-fitting.active {
+  color: #d8edf0;
+  border-color: #3f6f7a;
+}
+.build-fitting.active svg {
+  color: var(--accent-bright);
+  animation: build-spin 0.8s linear infinite;
+}
+.build-stage-bar button:hover {
+  border-color: #4a4f55;
+  color: #fff;
+}
+.build-stage-bar button[aria-pressed='true'] {
+  color: #d8edf0;
+  border-color: #4f8792;
+  background: #18303ae6;
+}
+@keyframes build-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .build-fitting.active svg {
+    animation: none;
+  }
+  .build-slot,
+  .build-option {
+    transition: none;
+  }
+}
+
+/* Narrower desktops: slimmer panels. */
+@media (max-width: 1280px) {
+  .build-workbench {
+    --build-parts: 300px;
+    --build-report: 324px;
+  }
+  .build-fitting {
+    display: none;
+  }
+  .build-fitting.active {
+    display: inline-flex;
+  }
+}
+
+/* Tablets and phones: the tower on top, the panels taking turns below. */
+@media (max-width: 900px) {
+  .build-workbench {
+    --build-top: 60px;
+    --build-stage: 40dvh;
+  }
+  .build-topbar {
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .build-title-icon {
+    display: none;
+  }
+  .build-title {
+    justify-content: center;
+    text-align: center;
+  }
+  .build-back span,
+  .build-share span {
+    display: none;
+  }
+  .build-back,
+  .build-share {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .build-workbench .viewport {
+    inset: var(--build-top) 0 auto 0;
+    height: var(--build-stage);
+  }
+  .build-stage-bar {
+    top: calc(var(--build-top) + var(--build-stage) - 46px);
+    bottom: auto;
+    left: 0;
+    right: 0;
+  }
+  .build-fitting {
+    display: none;
+  }
+  .build-fitting.active {
+    display: inline-flex;
+  }
+  .build-panels {
+    position: absolute;
+    top: calc(var(--build-top) + var(--build-stage));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    background: var(--build-panel);
+    border-top: 1px solid var(--build-line);
+    padding-bottom: var(--safe-b);
+  }
+  .build-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--build-line);
+  }
+  .build-tabs button {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #a2a8ae;
+  }
+  .build-tabs button[aria-selected='true'] {
+    color: #f0f7f8;
+    background: #1b2d32;
+  }
+  .build-tab-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 18px;
+    color: #191a1c;
+    background: var(--build-warn);
+  }
+  .build-tabs .status-fail .build-tab-count {
+    background: var(--build-fail);
+  }
+  .build-parts,
+  .build-report {
+    position: static;
+    flex: 1 1 auto;
+    width: auto;
+    border: 0;
+    padding: 12px 0 0 12px;
+    background: none;
+  }
+  .build-panels[data-tab='parts'] .build-report,
+  .build-panels[data-tab='checks'] .build-parts {
+    display: none;
+  }
+  .build-panel-heading {
+    display: none;
+  }
+  .build-report .build-panel-heading {
+    display: block;
+  }
+  .build-summary {
+    margin-right: 12px;
+  }
+  .build-power {
+    margin-right: 12px;
+  }
+}
+
+/* A phone on its side: the tower on the left, the panels on the right. */
+@media (max-width: 900px) and (max-height: 550px) and (orientation: landscape) {
+  .build-workbench {
+    --build-top: 52px;
+  }
+  .build-workbench .viewport {
+    inset: var(--build-top) 50% 0 0;
+    height: auto;
+  }
+  .build-stage-bar {
+    top: auto;
+    bottom: calc(10px + var(--safe-b));
+    right: 50%;
+  }
+  .build-panels {
+    top: var(--build-top);
+    left: 50%;
+    border-top: 0;
+    border-left: 1px solid var(--build-line);
+  }
+}

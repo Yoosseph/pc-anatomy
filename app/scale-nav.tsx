@@ -110,8 +110,7 @@ type Props = {
   onOpenSubmenu: (submenu: LevelId | 'none' | null) => void;
   onNavigate: (level: LevelId) => void;
   onCompare: () => void;
-  /** Whether the build panel is open, and the move that opens or closes it. */
-  building: boolean;
+  /** Open the build workspace. */
   onBuild: () => void;
   onClose: () => void;
 };
@@ -124,7 +123,6 @@ export default function ScaleNav({
   onOpenSubmenu,
   onNavigate,
   onCompare,
-  building,
   onBuild,
   onClose,
 }: Props) {
@@ -170,11 +168,7 @@ export default function ScaleNav({
         </span>
         <ChevronRight size={14} />
       </button>
-      <button
-        className="compare-button build-button"
-        aria-pressed={building}
-        onClick={onBuild}
-      >
+      <button className="compare-button build-button" onClick={onBuild}>
         <Wrench size={16} />
         <span>
           <strong>Build your own PC</strong>

@@ -2,7 +2,11 @@ import type { Category } from './concept.ts';
 import type { LevelId } from './levels.ts';
 import type { SourceId } from './sources.ts';
 import { smoothstep } from './layout.ts';
-import { graphicsFeed, type DesktopBuild } from './desktop-build.ts';
+import {
+  graphicsFeed,
+  storageOptions,
+  type DesktopBuild,
+} from './desktop-build.ts';
 
 /** Three-free metadata shared by the controls and the authored overlay. */
 export type PowerTarget = 'all' | 'cpu' | 'gpu' | 'storage';
@@ -112,7 +116,17 @@ export interface PowerView {
   hidden: readonly string[];
   isolated: boolean;
   diveInto: string | null;
+  /** The parts in the tower; a build without a SATA drive has no SATA lead. */
+  build?: DesktopBuild;
 }
+
+/** Whether the build in the tower has the cable this route draws. */
+const fitted = (route: PowerRoute, build: DesktopBuild | undefined) =>
+  route.id !== 'sata' || !build || storageOptions[build.storage].sata;
+
+/** Said in place of the SATA explanation when no SATA drive is fitted. */
+const noSataDrive =
+  'This build has no SATA drive. The M.2 drive takes its power from the board through the slot it sits in, so no cable runs to it.';
 
 /** Do not leave a live-looking route attached to hidden or isolated hardware. */
 export function visiblePowerRoutes(state: PowerView): PowerRouteId[] {
@@ -126,6 +140,7 @@ export function visiblePowerRoutes(state: PowerView): PowerRouteId[] {
   return powerRoutes
     .filter(
       (route) =>
+        fitted(route, state.build) &&
         matchesPowerTarget(route, state.powerTarget) &&
         route.categories.every((category) =>
           state.visible.includes(category),
@@ -142,13 +157,15 @@ const explanationRoutes: Record<Exclude<PowerTarget, 'all'>, PowerRouteId> = {
 };
 
 /** Derive the legend independently of React and the animation clock. */
-export function powerPanelState(
-  state: PowerView & { explode: number; build?: DesktopBuild },
-) {
+export function powerPanelState(state: PowerView & { explode: number }) {
   // The card's own feed is named for the card the build installed.
   const feed = state.build && graphicsFeed(state.build);
   const routes = powerRoutes
-    .filter((route) => matchesPowerTarget(route, state.powerTarget))
+    .filter(
+      (route) =>
+        fitted(route, state.build) &&
+        matchesPowerTarget(route, state.powerTarget),
+    )
     .map((route) =>
       feed && route.id === 'gpu' ? { ...route, ...feed } : route,
     );
@@ -160,7 +177,9 @@ export function powerPanelState(
   )?.description;
 
   let status: string | null = null;
-  if (state.explode >= 9) status = 'Reassemble the PC to see the power paths.';
+  if (state.powerTarget === 'storage' && !routes.length) status = noSataDrive;
+  else if (state.explode >= 9)
+    status = 'Reassemble the PC to see the power paths.';
   else if (!visible.length) {
     if (state.isolated) status = 'Leave isolation to see the power paths.';
     else if (state.diveInto)

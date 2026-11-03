@@ -354,13 +354,14 @@ export const pcConcepts: Concept[] = [
     category: 'Cooling',
     parent: 'pc',
     // The other answer to the same problem. Only one cooler bolts to one
-    // socket, so the loop is not fitted to this build and has nothing inside
-    // the case to click on. `level === open` makes it the root of its own
-    // scale, reached from the Cooling menu.
+    // socket, so the loop has nothing inside the original machine to click
+    // on; the build workspace can fit it, and the tower's cooler piece then
+    // describes it. `level === open` makes it the root of its own scale,
+    // reached from the Cooling menu.
     level: 'liquid',
     open: 'liquid',
     description:
-      'A sealed loop: a pump and water block on the processor, flexible tubing, and a three fan radiator mounted in the roof of the case.',
+      'A sealed loop: a pump and water block on the processor, flexible tubing, and a three fan radiator mounted wherever the case has room for it: in this tower, behind the front intakes.',
     purpose:
       'Carries heat away from the processor as warm liquid instead of through metal, so the large finned area that sheds it can sit wherever the case has room rather than directly above the socket.',
     quantity: '1 modeled 360 mm unit',

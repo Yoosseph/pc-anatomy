@@ -507,6 +507,8 @@ export function createViewer(
     host.dataset.transitioning = String(!!dive);
     host.dataset.drawCalls = String(renderer.info.render.calls);
     host.dataset.triangles = String(renderer.info.render.triangles);
+    // Which model is on the stage, so a test can tell a rebuild from a redraw.
+    host.dataset.model = modelKey(state);
     host.dataset.programs = String(renderer.info.programs?.length ?? 0);
     host.dataset.explode = String(Math.round(amount * 100));
     return changed || colorsDirty;

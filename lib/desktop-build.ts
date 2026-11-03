@@ -3,32 +3,34 @@ import { levels, type LevelId } from './levels.ts';
 import type { SourceId } from './sources.ts';
 
 /**
- * Build your own desktop: which part goes in each slot, and whether the
- * parts work together.
+ * Build your own desktop: the slots, the parts each one can take, and how a
+ * build maps onto the tower. Whether the parts work together is
+ * `build-checks.ts`.
  *
- * The choices are the desktop scales the project already models, so every
- * option opens into the same detailed part the explorer shows. The board, the
- * case, the cooler and the storage stay fixed: there is one of each.
+ * The choices are parts the project already models, so every option opens
+ * into the same detailed part the explorer shows. The board and the case stay
+ * fixed: there is one of each.
  *
- * No three.js here. The build panel asks these questions before the engine
- * has loaded, and the tests import this file directly.
+ * No three.js here. The build workspace asks these questions before the
+ * engine has loaded, and the tests import this file directly.
  *
- * Every figure below is a vendor's published number, and each option names
- * where it comes from. The checks compare those numbers and say which kind of
- * claim each one is: a part that cannot physically fit is a failure, a supply
- * under the maker's recommendation is a warning, not a prediction that the
- * machine will fail.
+ * Every figure below is a vendor's published number or a measurement of the
+ * modelled case, and each option names where it comes from.
  */
 
 export type ProcessorChoice = 'ryzen' | 'corei9';
+export type CoolerChoice = 'cooler' | 'liquid';
 export type MemoryChoice = 'dimm' | 'ddr4';
 export type GraphicsChoice = 'card' | 'rx9070' | 'arcb580';
+export type StorageChoice = 'nvmesata' | 'nvme';
 export type PowerChoice = 'psu' | 'psubronze';
 
 export interface DesktopBuild {
   processor: ProcessorChoice;
+  cooler: CoolerChoice;
   memory: MemoryChoice;
   graphics: GraphicsChoice;
+  storage: StorageChoice;
   power: PowerChoice;
 }
 export type BuildSlot = keyof DesktopBuild;
@@ -36,8 +38,10 @@ export type BuildSlot = keyof DesktopBuild;
 /** The machine as the explorer has always shown it. */
 export const defaultBuild: DesktopBuild = {
   processor: 'ryzen',
+  cooler: 'cooler',
   memory: 'dimm',
   graphics: 'card',
+  storage: 'nvmesata',
   power: 'psu',
 };
 
@@ -46,6 +50,23 @@ export const board = {
   socket: 'AM5',
   memory: 'DDR5',
   sources: ['mainboardmanual'] as SourceId[],
+};
+
+/**
+ * The room inside the modelled case, millimetres. The case is illustrative,
+ * so these are properties of the model in `machine.ts`, not a product's
+ * specification, and `tests/build.test.ts` measures each one in the built
+ * tower.
+ */
+export const caseRoom = {
+  /** From the slot bracket at the rear panel to the front intake fans. */
+  cardLength: 420,
+  /** Off the face of the board to the side glass. */
+  coolerHeight: 200,
+  /** Between the board's top edge and the roof. */
+  roof: 26,
+  /** 120 mm fan positions behind the front panel. */
+  frontFans: 3,
 };
 
 interface Option {
@@ -59,6 +80,17 @@ export interface ProcessorOption extends Option {
   /** The power figure the maker publishes, and what it measures. */
   watts: number;
   wattsLabel: string;
+}
+/** A radiator's length and thickness, millimetres, and the 120 mm fans it takes. */
+export interface Radiator {
+  length: number;
+  thickness: number;
+  fans: number;
+}
+export interface CoolerOption extends Option {
+  /** An air tower's height off the board, millimetres. */
+  height?: number;
+  radiator?: Radiator;
 }
 export interface MemoryOption extends Option {
   generation: 'DDR5' | 'DDR4';
@@ -75,6 +107,10 @@ export interface GraphicsOption extends Option {
   /** Overall length, millimetres. */
   length: number;
 }
+export interface StorageOption extends Option {
+  /** Whether a 2.5-inch SATA drive is fitted beside the M.2 drive. */
+  sata: boolean;
+}
 export interface PowerOption extends Option {
   watts: number;
   modular: boolean;
@@ -82,6 +118,8 @@ export interface PowerOption extends Option {
   sixteenPin: boolean;
   /** How many 8-pin (6+2) PCIe leads it has. */
   eightPin: number;
+  /** How many SATA power connectors it has. */
+  sata: number;
 }
 
 export const processorOptions: Record<ProcessorChoice, ProcessorOption> = {
@@ -103,6 +141,28 @@ export const processorOptions: Record<ProcessorChoice, ProcessorOption> = {
     watts: 250,
     wattsLabel: 'maximum turbo power',
     sources: ['corei9'],
+  },
+};
+
+/** The 360 mm radiator, as the liquid scale draws it in `liquid.ts`. */
+export const radiator360: Radiator = { length: 394, thickness: 27, fans: 3 };
+
+/**
+ * Both coolers are the project's illustrative models, so their sizes are the
+ * model's: the tower in `machine.ts`, the loop in `liquid.ts`.
+ */
+export const coolerOptions: Record<CoolerChoice, CoolerOption> = {
+  cooler: {
+    name: 'Tower air cooler',
+    summary: '4 heat pipes · 120 mm fin stack',
+    height: 150,
+    sources: ['aircooler'],
+  },
+  liquid: {
+    name: '360 mm liquid cooler',
+    summary: 'Pump block · front radiator',
+    radiator: radiator360,
+    sources: ['aio'],
   },
 };
 
@@ -158,6 +218,22 @@ export const graphicsOptions: Record<GraphicsChoice, GraphicsOption> = {
   },
 };
 
+/** The drives are representative models of the two families, not products. */
+export const storageOptions: Record<StorageChoice, StorageOption> = {
+  nvmesata: {
+    name: 'M.2 NVMe + 2.5-inch SATA SSD',
+    summary: 'Two drives · one SATA cable',
+    sata: true,
+    sources: ['samsungnvme', 'samsungsata'],
+  },
+  nvme: {
+    name: 'M.2 NVMe SSD only',
+    summary: 'One drive · no cables',
+    sata: false,
+    sources: ['samsungnvme'],
+  },
+};
+
 export const powerOptions: Record<PowerChoice, PowerOption> = {
   psu: {
     name: 'ASUS TUF Gaming 850W Gold',
@@ -166,6 +242,7 @@ export const powerOptions: Record<PowerChoice, PowerOption> = {
     modular: true,
     sixteenPin: true,
     eightPin: 3,
+    sata: 5,
     sources: ['tuf850g'],
   },
   psubronze: {
@@ -175,21 +252,27 @@ export const powerOptions: Record<PowerChoice, PowerOption> = {
     modular: false,
     sixteenPin: false,
     eightPin: 4,
+    sata: 4,
     sources: ['tuf750b'],
   },
 };
 
+/** The slots, in the order a builder fits them. */
 export const slots: { id: BuildSlot; label: string }[] = [
   { id: 'processor', label: 'Processor' },
+  { id: 'cooler', label: 'CPU cooler' },
   { id: 'memory', label: 'Memory' },
   { id: 'graphics', label: 'Graphics card' },
+  { id: 'storage', label: 'Storage' },
   { id: 'power', label: 'Power supply' },
 ];
 
 const optionTables: { [S in BuildSlot]: Record<DesktopBuild[S], Option> } = {
   processor: processorOptions,
+  cooler: coolerOptions,
   memory: memoryOptions,
   graphics: graphicsOptions,
+  storage: storageOptions,
   power: powerOptions,
 };
 
@@ -202,231 +285,24 @@ export function slotOptions<S extends BuildSlot>(slot: S) {
   }));
 }
 
-/**
- * The longest card the modelled case takes, millimetres: from the slot
- * bracket at the rear panel to the inner face of the front intake fans in
- * `machine.ts`. The case is illustrative, so this is a property of the model,
- * and `tests/build.test.ts` measures every card against the built tower.
- */
-export const caseCardClearance = 420;
-
-export type CheckStatus = 'ok' | 'warn' | 'fail';
-type CheckId =
-  | 'socket'
-  | 'memory'
-  | 'supply'
-  | 'connector'
-  | 'length'
-  | 'budget';
-export interface BuildCheck {
-  id: CheckId;
-  status: CheckStatus;
-  title: string;
-  detail: string;
-  /** Each source once. */
-  sources: SourceId[];
+/** The part in one slot, by name. */
+export function partName<S extends BuildSlot>(build: DesktopBuild, slot: S) {
+  const table: Record<DesktopBuild[S], Option> = optionTables[slot];
+  return table[build[slot]].name;
 }
 
-/** Whether a part can physically go into the fixed board. */
-const socketFits = (cpu: ProcessorOption) => cpu.socket === board.socket;
-const memoryFits = (ram: MemoryOption) => ram.generation === board.memory;
-
-/** One check's result, filed under its id with the sources it rests on. */
-const checkOf =
-  (id: CheckId, sources: SourceId[]) =>
-  (status: CheckStatus, title: string, detail: string): BuildCheck => ({
-    id,
-    status,
-    title,
-    detail,
-    sources: [...new Set(sources)],
-  });
-
-function socketCheck(cpu: ProcessorOption) {
-  const result = checkOf('socket', [...cpu.sources, ...board.sources]);
-  return socketFits(cpu)
-    ? result(
-        'ok',
-        'Processor fits the socket',
-        `The ${cpu.name} is an ${cpu.socket} processor, and the board has an ${board.socket} socket.`,
-      )
-    : result(
-        'fail',
-        'Processor does not fit the socket',
-        `The ${cpu.name} needs an ${cpu.socket} socket. This board has ${board.socket}, so the processor is not installed.`,
-      );
-}
-
-function memoryCheck(ram: MemoryOption) {
-  if (memoryFits(ram))
-    return checkOf('memory', [...ram.sources, ...board.sources])(
-      'ok',
-      'Memory fits the slots',
-      `${ram.generation} modules in ${board.memory} slots.`,
-    );
-  // The failure rests on the key positions, which the module's own sources
-  // do not describe.
-  return checkOf('memory', [
-    'jedecmo329',
-    'ddr5architecture',
-    ...board.sources,
-  ])(
-    'fail',
-    'Memory does not fit the slots',
-    `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot's, so it cannot be pushed in. The modules are not installed.`,
-  );
-}
-
-function supplyCheck(gpu: GraphicsOption, psu: PowerOption) {
-  const result = checkOf('supply', [...gpu.sources, ...psu.sources]);
-  const detail = `${gpu.psuSource} gives ${gpu.psu} W as the ${gpu.psuKind} supply for the ${gpu.name}. The ${psu.name} is rated ${psu.watts} W.`;
-  if (psu.watts >= gpu.psu)
-    return result('ok', 'Supply meets the card maker’s figure', detail);
-  return gpu.psuKind === 'minimum'
-    ? result('fail', 'Supply is below the card’s minimum', detail)
-    : result('warn', 'Supply is below the card maker’s recommendation', detail);
-}
-
-function connectorCheck(gpu: GraphicsOption, psu: PowerOption) {
-  const result = checkOf('connector', [...gpu.sources, ...psu.sources]);
-  const leads = plural(psu.eightPin, '8-pin PCIe lead');
-  if (gpu.connector === '8-pin')
-    return psu.eightPin >= 1
-      ? result(
-          'ok',
-          'Power cable matches the card',
-          `The card takes one 8-pin PCIe lead, and the ${psu.name} has ${leads}.`,
-        )
-      : result(
-          'fail',
-          'No lead for the card',
-          `The card takes an 8-pin PCIe lead, and the ${psu.name} has none.`,
-        );
-  if (psu.sixteenPin)
-    return result(
-      'ok',
-      'Power cable matches the card',
-      `The card takes a 16-pin 12V-2x6 lead, which the ${psu.name} has.`,
-    );
-  if (!gpu.adapter)
-    return result(
-      'warn',
-      'No 16-pin lead for the card',
-      `The ${psu.name} has only 8-pin PCIe leads, and the card has a 16-pin 12V-2x6 socket. It needs a 12V-2x6 cable or an adapter.`,
-    );
-  return psu.eightPin >= gpu.adapter.leads
-    ? result(
-        'warn',
-        'Card needs its adapter',
-        `The ${psu.name} has no 16-pin 12V-2x6 lead. The card comes with a ${gpu.adapter.name} adapter, and the supply has ${leads} to fill it.`,
-      )
-    : result(
-        'fail',
-        'Not enough leads for the card’s adapter',
-        `The ${psu.name} has no 16-pin 12V-2x6 lead, and the card’s ${gpu.adapter.name} adapter needs ${gpu.adapter.leads} leads where the supply has ${psu.eightPin}.`,
-      );
-}
-
-const plural = (n: number, thing: string) =>
+/** "1 lead", "3 leads". */
+export const plural = (n: number, thing: string) =>
   `${n} ${thing}${n === 1 ? '' : 's'}`;
 
-/** Exported so the tests can try a card longer than any on offer. */
-export function lengthCheck(gpu: Pick<GraphicsOption, 'length' | 'sources'>) {
-  const result = checkOf('length', gpu.sources);
-  return gpu.length <= caseCardClearance
-    ? result(
-        'ok',
-        'Card fits the case',
-        `${gpu.length} mm long, and the case takes cards up to about ${caseCardClearance} mm.`,
-      )
-    : result(
-        'fail',
-        'Card is too long for the case',
-        `${gpu.length} mm long, but the case only takes about ${caseCardClearance} mm.`,
-      );
-}
+/** Whether a part can physically go into the fixed board. */
+export const socketFits = (cpu: ProcessorOption) => cpu.socket === board.socket;
+export const memoryFits = (ram: MemoryOption) =>
+  ram.generation === board.memory;
 
-function budgetCheck(
-  cpu: ProcessorOption,
-  gpu: GraphicsOption,
-  psu: PowerOption,
-) {
-  const result = checkOf('budget', [
-    ...cpu.sources,
-    ...gpu.sources,
-    ...psu.sources,
-  ]);
-  const draw = cpu.watts + gpu.watts;
-  // The figure is for the parts chosen, so it still answers whether this
-  // supply would carry them when the processor cannot go into this board.
-  const unseated = socketFits(cpu)
-    ? ''
-    : ` The ${cpu.name} is counted as chosen, though it does not fit this board.`;
-  const detail = `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.${unseated}`;
-  return draw <= psu.watts
-    ? result('ok', 'Processor and card are within the supply’s rating', detail)
-    : result(
-        'fail',
-        'Processor and card add up to more than the supply',
-        detail,
-      );
-}
-
-/** Rated draw: the processor's and the card's published power figures. */
-export function ratedDraw(build: DesktopBuild) {
-  return (
-    processorOptions[build.processor].watts +
-    graphicsOptions[build.graphics].watts
-  );
-}
-
-/** Every check, in the order a builder would meet them. */
-export function checkBuild(build: DesktopBuild): BuildCheck[] {
-  const cpu = processorOptions[build.processor],
-    ram = memoryOptions[build.memory],
-    gpu = graphicsOptions[build.graphics],
-    psu = powerOptions[build.power];
-  return [
-    socketCheck(cpu),
-    memoryCheck(ram),
-    supplyCheck(gpu, psu),
-    connectorCheck(gpu, psu),
-    lengthCheck(gpu),
-    budgetCheck(cpu, gpu, psu),
-  ];
-}
-
-/** The checks each slot's part takes part in. */
-const slotChecks: Record<BuildSlot, CheckId[]> = {
-  processor: ['socket', 'budget'],
-  memory: ['memory'],
-  graphics: ['supply', 'connector', 'length', 'budget'],
-  power: ['supply', 'connector', 'budget'],
-};
-
-/**
- * Whether putting this part in the slot, with the rest of the build as it is,
- * fails a check the part is involved in. A problem elsewhere in the build
- * does not mark every option in every slot.
- */
-export function conflicts<S extends BuildSlot>(
-  build: DesktopBuild,
-  slot: S,
-  part: DesktopBuild[S],
-) {
-  return checkBuild({ ...build, [slot]: part }).some(
-    (c) => c.status === 'fail' && slotChecks[slot].includes(c.id),
-  );
-}
-
-/** The worst result across every check. */
-export function buildStatus(checks: BuildCheck[]): CheckStatus {
-  return checks.some((c) => c.status === 'fail')
-    ? 'fail'
-    : checks.some((c) => c.status === 'warn')
-      ? 'warn'
-      : 'ok';
-}
+/** Whether any slot holds something other than the original part. */
+export const isCustomBuild = (build: DesktopBuild) =>
+  slots.some(({ id }) => build[id] !== defaultBuild[id]);
 
 /**
  * The parts that are actually in the tower. A part that cannot seat stays in
@@ -445,11 +321,12 @@ export function installedBuild(build: DesktopBuild): DesktopBuild {
 }
 
 /**
- * Which tower model a build needs. Only the card and the supply change the
- * geometry; the processor and memory sit inside the board assembly.
+ * Which tower model a build needs. The processor and memory sit inside the
+ * board assembly, so only the cooler, the card, the drives and the supply
+ * change the geometry.
  */
 export function towerKey(build: DesktopBuild) {
-  return build.graphics + '+' + build.power;
+  return [build.cooler, build.graphics, build.storage, build.power].join('+');
 }
 
 /**
@@ -459,7 +336,8 @@ export function towerKey(build: DesktopBuild) {
  * the hidden list and the selection all hold onto them. What the reader is
  * shown, and where opening the piece leads, follow the part in the slot.
  */
-const towerPieces = new Map<string, 'graphics' | 'power'>([
+const towerPieces = new Map<string, 'cooler' | 'graphics' | 'power'>([
+  ['cpucooler', 'cooler'],
   ['graphicscard', 'graphics'],
   ['psu', 'power'],
 ]);
@@ -476,6 +354,32 @@ export function standIn(id: string, build: DesktopBuild) {
 export function opensTo(id: string, build: DesktopBuild): LevelId | null {
   const slot = towerPieces.get(id);
   return slot ? build[slot] : openLevel(id);
+}
+
+/**
+ * The tower piece that holds each slot's part, so the workspace can point at
+ * what just changed. The processor and memory are inside the board assembly,
+ * and with no SATA drive the M.2 drive is too.
+ */
+export function pieceForSlot(slot: BuildSlot, build: DesktopBuild) {
+  switch (slot) {
+    case 'cooler':
+      return 'cpucooler';
+    case 'graphics':
+      return 'graphicscard';
+    case 'power':
+      return 'psu';
+    case 'storage':
+      return storageOptions[build.storage].sata ? 'ssd' : 'motherboard';
+    default:
+      return 'motherboard';
+  }
+}
+
+/** The slot a tower piece belongs to, if the build chooses it. */
+export function slotForPiece(id: string): BuildSlot | null {
+  if (id === 'ssd') return 'storage';
+  return towerPieces.get(id) ?? null;
 }
 
 /**

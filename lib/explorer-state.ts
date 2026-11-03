@@ -35,11 +35,18 @@ export type ExplorerState = {
   power: boolean;
   powerTarget: PowerTarget;
   /**
-   * The parts chosen for the desktop tower in build mode. Like the power
-   * preference it belongs to the machine, not to one scale, so it survives
-   * navigation and Reset; only the build panel puts the original parts back.
+   * The parts chosen for the desktop tower in the build workspace. Like the
+   * power preference it belongs to the machine, not to one scale, so it
+   * survives navigation and Reset; only the workspace puts the original parts
+   * back.
    */
   build: DesktopBuild;
+  /**
+   * Which page the tower is shown on: the explorer, or the build workspace,
+   * where choosing parts is the whole page. Both draw the same viewer, so
+   * switching keeps the scene and the tower already built.
+   */
+  workspace: 'explorer' | 'build';
   cameraRevision: number;
   focusRevision: number;
   /** The component being opened, while the isolate-and-close-in ramp runs. */
@@ -60,6 +67,7 @@ export const initialState: ExplorerState = {
   power: false,
   powerTarget: 'all',
   build: defaultBuild,
+  workspace: 'explorer',
   cameraRevision: 0,
   focusRevision: 0,
   diveInto: null,

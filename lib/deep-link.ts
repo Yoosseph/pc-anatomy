@@ -3,6 +3,7 @@ import { isPhysical, levels, rootLevel, type LevelId } from './levels.ts';
 import type { Selection } from './explorer-state.ts';
 import {
   defaultBuild,
+  isCustomBuild,
   slotOptions,
   slots,
   type BuildSlot,
@@ -16,9 +17,10 @@ import {
  * the bare site: a link to the RTX 5090's streaming multiprocessor arrived on
  * the assembled tower, and the back button left the site rather than climbing
  * a scale. A place is the things that decide what is on screen and are worth
- * sharing: the scale, the part described, how far apart the hardware is, and
- * which parts the desktop build put in the tower. Camera angle, hidden parts and the airflow preference are
- * deliberately left out; they are how one person is looking, not where.
+ * sharing: the scale, the part described, how far apart the hardware is,
+ * which parts the desktop build put in the tower, and whether the build
+ * workspace is open. Camera angle, hidden parts and the airflow preference
+ * are deliberately left out; they are how one person is looking, not where.
  *
  * Query parameters rather than paths, so every place is served by the same
  * `index.html` with no rewrite rules, and rather than a hash, so search
@@ -29,6 +31,7 @@ import {
  *   /?scale=pc&open=48              the tower half taken apart
  *   /?scale=pc&part=fan&n=3         the third of several identical fans
  *   /?scale=pc&gpu=arcb580&psu=psubronze   a build with other parts
+ *   /?scale=pc&mode=build&cooler=liquid    the build workspace, open on one
  *
  * Anything unknown or contradictory is dropped rather than guessed at: a link
  * that names a part on the wrong scale opens the scale without it, and a link
@@ -44,19 +47,22 @@ export type Place = {
    * means the original machine.
    */
   build?: DesktopBuild;
+  /** Set when the build workspace is open. It only exists on the tower. */
+  workspace?: 'build';
 };
 
-/** The address parameter for each build slot. Only parts that differ from
- * the original machine are written. */
+/**
+ * The address parameter for each build slot. Only parts that differ from the
+ * original machine are written.
+ */
 const buildParams: Record<BuildSlot, string> = {
   processor: 'cpu',
+  cooler: 'cooler',
   memory: 'ram',
   graphics: 'gpu',
+  storage: 'storage',
   power: 'psu',
 };
-
-const customised = (build: DesktopBuild | undefined) =>
-  !!build && slots.some(({ id }) => build[id] !== defaultBuild[id]);
 
 export const homePlace: Place = {
   level: rootLevel,
@@ -76,21 +82,26 @@ function belongsTo(concept: string, level: LevelId) {
 
 export function placeToSearch(place: Place): string {
   const params = new URLSearchParams();
+  const building = place.workspace === 'build' && place.level === 'pc';
+  const custom = !!place.build && isCustomBuild(place.build);
   const atHome =
     place.level === rootLevel &&
     !place.selection &&
     place.explode === 0 &&
-    !customised(place.build);
+    !custom &&
+    !building;
   if (atHome) return '';
   params.set('scale', place.level);
-  if (place.selection && belongsTo(place.selection.concept, place.level)) {
+  if (building) params.set('mode', 'build');
+  // In the workspace a selection only points at a part; it is not a place.
+  else if (place.selection && belongsTo(place.selection.concept, place.level)) {
     params.set('part', place.selection.concept);
     // Instances count from one in a link, the way the hover label numbers them.
     if (place.selection.instance)
       params.set('n', String(place.selection.instance + 1));
   }
   const explode = Math.round(place.explode);
-  if (explode > 0 && isPhysical(place.level))
+  if (explode > 0 && isPhysical(place.level) && !building)
     params.set('open', String(Math.min(100, explode)));
   if (place.build)
     for (const { id } of slots)
@@ -105,6 +116,14 @@ export function searchToPlace(search: string): Place {
   if (!scale || !Object.prototype.hasOwnProperty.call(levels, scale))
     return homePlace;
   const level = scale as LevelId;
+  const build = readBuild(params);
+  const extras = {
+    ...(build && { build }),
+    ...(level === 'pc' &&
+      params.get('mode') === 'build' && { workspace: 'build' as const }),
+  };
+  if (extras.workspace)
+    return { level, selection: null, explode: 0, ...extras };
 
   const part = params.get('part');
   const n = Number(params.get('n') ?? '1');
@@ -122,30 +141,28 @@ export function searchToPlace(search: string): Place {
       ? Math.max(0, Math.min(100, Math.round(open)))
       : 0;
 
-  const build = readBuild(params);
-  return build
-    ? { level, selection, explode, build }
-    : { level, selection, explode };
+  return { level, selection, explode, ...extras };
 }
 
-/** The build a link names, or nothing when it names no known part. A part
- * that does not exist for its slot is dropped, and the slot keeps the
- * original. */
+/**
+ * The build a link names, or nothing when it names no part that differs from
+ * the original. A part that does not exist for its slot is dropped, and the
+ * slot keeps the original.
+ */
 function readBuild(params: URLSearchParams): DesktopBuild | undefined {
-  const build: DesktopBuild = { ...defaultBuild };
-  let named = false;
+  const build: Record<BuildSlot, string> = { ...defaultBuild };
   for (const { id } of slots) {
     const value = params.get(buildParams[id]);
-    if (value && slotOptions(id).some((option) => option.id === value)) {
-      (build as Record<BuildSlot, string>)[id] = value;
-      named = true;
-    }
+    if (value && slotOptions(id).some((option) => option.id === value))
+      build[id] = value;
   }
-  return named && customised(build) ? build : undefined;
+  const named = build as DesktopBuild;
+  return isCustomBuild(named) ? named : undefined;
 }
 
 /** The page title for a place: the part when one is described, else the scale. */
 export function placeTitle(place: Place): string {
+  if (place.workspace === 'build') return 'Build your PC · PC Anatomy';
   if (place.level === rootLevel && !place.selection) return 'PC Anatomy';
   const name = place.selection
     ? byId[place.selection.concept]?.name

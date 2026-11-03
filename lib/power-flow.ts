@@ -6,7 +6,11 @@ import {
   type PowerRouteId,
 } from './power-flow-policy.ts';
 
-export type PowerPaths = Record<PowerRouteId, Vec3[]>;
+/** Every route the build has a cable for. A build without a SATA drive has
+ * no SATA lead, so that route is the one that can be missing. */
+export type PowerPaths = Record<Exclude<PowerRouteId, 'sata'>, Vec3[]> & {
+  sata?: Vec3[];
+};
 export type PowerTick = (
   seconds: number,
   strength: number,
@@ -90,9 +94,10 @@ export function buildPowerFlow(paths: PowerPaths) {
   const arrowGeometry = new T.ConeGeometry(0.075, 0.23, 6);
   arrowGeometry.rotateX(Math.PI / 2);
   const markerGeometry = new T.SphereGeometry(0.085, 12, 8);
-  const tracks = powerRoutes.map((route) =>
-    buildTrack(route, paths[route.id], arrowGeometry, markerGeometry),
-  );
+  const tracks = powerRoutes.flatMap((route) => {
+    const path = paths[route.id];
+    return path ? [buildTrack(route, path, arrowGeometry, markerGeometry)] : [];
+  });
   root.add(...tracks.map((track) => track.group));
 
   const forward = new T.Vector3(0, 0, 1);

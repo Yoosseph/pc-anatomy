@@ -21,6 +21,7 @@ import { searchToPlace, type Place } from '@/lib/deep-link';
 import {
   defaultBuild,
   opensTo,
+  pieceForSlot,
   standIn,
   type BuildSlot,
   type DesktopBuild,
@@ -91,6 +92,7 @@ export function useExplorer() {
       setState((s) => ({
         ...s,
         level,
+        workspace: 'explorer',
         diveInto: null,
         explode: 0,
         selection,
@@ -317,12 +319,80 @@ export function useExplorer() {
     setState((s) => ({ ...s, powerTarget }));
 
   /**
-   * Put a part in one slot of the desktop build. Touches nothing else: the
-   * camera stays where it is, so the new card or supply appears in place.
+   * Open the build workspace on the tower: the whole machine, assembled, with
+   * nothing hidden or isolated, so every part a slot puts in is in view. The
+   * viewer is the same one, so the tower already built is the one shown.
    */
-  const setBuildPart = <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) =>
-    setState((s) => ({ ...s, build: { ...s.build, [slot]: part } }));
-  const restoreBuild = () => setState((s) => ({ ...s, build: defaultBuild }));
+  const openBuild = useCallback(() => {
+    stopDisassembly();
+    setHiddenMenuOpen(false);
+    setLayers(false);
+    setState((s) => ({
+      ...s,
+      level: 'pc',
+      workspace: 'build',
+      explode: 0,
+      diveInto: null,
+      selection: null,
+      isolated: false,
+      visible: [...categories],
+      hidden: [],
+      view: 'perspective',
+      focusRevision: 0,
+      cameraRevision: s.cameraRevision + 1,
+    }));
+  }, [stopDisassembly]);
+
+  /** Back to the explorer, on the tower as the build left it. */
+  const closeBuild = useCallback(() => {
+    setOpenMenu(menuRoot('pc'));
+    setOpenSubmenu(null);
+    setState((s) => ({
+      ...s,
+      workspace: 'explorer',
+      selection: null,
+      focusRevision: 0,
+      cameraRevision: s.cameraRevision + 1,
+    }));
+  }, []);
+
+  /** Point at a tower piece without describing it or moving the camera. */
+  const point = useCallback(
+    (selection: Selection | null) =>
+      setState((s) => ({ ...s, selection, isolated: false, focusRevision: 0 })),
+    [],
+  );
+
+  /** Stop pointing at a piece, if it is still the one pointed at. */
+  const unpoint = useCallback(
+    (concept: string) =>
+      setState((s) =>
+        s.selection?.concept === concept ? { ...s, selection: null } : s,
+      ),
+    [],
+  );
+
+  /**
+   * Put a part in one slot of the desktop build, and point at the piece it
+   * went into. The camera stays where it is, so the new part appears in place.
+   */
+  const setBuildPart = useCallback(
+    <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) =>
+      setState((s) => {
+        const build = { ...s.build, [slot]: part };
+        return {
+          ...s,
+          build,
+          selection: { concept: pieceForSlot(slot, build) },
+          focusRevision: 0,
+        };
+      }),
+    [],
+  );
+  const restoreBuild = useCallback(
+    () => setState((s) => ({ ...s, build: defaultBuild, selection: null })),
+    [],
+  );
 
   const toggleIsolate = () =>
     setState((s) => ({
@@ -383,6 +453,10 @@ export function useExplorer() {
     toggleAirflow,
     togglePower,
     setPowerTarget,
+    openBuild,
+    closeBuild,
+    point,
+    unpoint,
     setBuildPart,
     restoreBuild,
     toggleIsolate,
@@ -405,6 +479,7 @@ function placeState(s: ExplorerState, place: Place): ExplorerState {
     explode: place.explode,
     // The address is the build: a link without parts is the original machine.
     build: place.build ?? defaultBuild,
+    workspace: place.workspace ?? 'explorer',
     diveInto: null,
     isolated: false,
     visible: [...categories],

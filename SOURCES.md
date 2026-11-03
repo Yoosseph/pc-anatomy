@@ -236,11 +236,11 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
-## Build mode figures · November 3, 2026
+## Build workspace figures · November 3, 2026
 
-The build panel adds the processor's and the card's power against the supply,
-so both processors are counted by the same kind of figure: the most the socket
-is allowed to draw.
+The build workspace adds the processor's and the card's power against the
+supply, so both processors are counted by the same kind of figure: the most the
+socket is allowed to draw.
 
 - [Intel's Core Ultra 9 285K specifications](https://www.intel.com/content/www/us/en/products/sku/241060/intel-core-ultra-9-processor-285k-36m-cache-up-to-5-70-ghz/specifications.html)
   publish a 250 W maximum turbo power.
@@ -249,9 +249,20 @@ is allowed to draw.
   socket power limit (PPT) is from
   [The FPS Review](https://www.thefpsreview.com/2024/08/14/amd-ryzen-9-9950x-cpu-review-16-core-zen-5-at-649/8),
   an **independent review**, and is named as such.
-- The supplies' 8-pin PCIe lead counts are from the ASUS specification pages
-  already cited: three on the TUF Gaming 850W Gold, beside its 16-pin lead,
-  and four 6+2-pin leads on the TUF Gaming 750W Bronze.
+- The supplies' lead counts are from the ASUS specification pages already
+  cited: three 8-pin PCIe leads beside the 16-pin lead and five SATA
+  connectors on the TUF Gaming 850W Gold, and four 6+2-pin PCIe leads and four
+  SATA connectors on the TUF Gaming 750W Bronze.
+- The coolers are the project's illustrative models, cited as before: the
+  tower air cooler to Noctua's construction sheet and the liquid loop to
+  ARCTIC's Liquid Freezer III design. Their sizes in the checks are the
+  model's (a 150 mm tower, a 394 × 120 × 27 mm radiator), not a product's.
+- The room in the case (420 mm for a card, 200 mm for a cooler, 26 mm over the
+  board, three 120 mm front fans) is measured from the modelled case, which is
+  illustrative. `tests/build.test.ts` measures each figure in the built tower.
+- The drives are the representative M.2 NVMe and 2.5-inch SATA models, cited
+  to Samsung's 990 PRO and 870 EVO data sheets and the board manual for the
+  M.2 slot and SATA ports.
 - The DDR4 option is two of the 16 GB modules in Kingston's KF432C16BB/16 data
   sheet.
 

@@ -116,23 +116,31 @@ shows direction rather than measured speed or watts.
 
 ## Build your own PC
 
-Press **Build your own PC** under Compare to choose the processor, memory,
-graphics card and power supply that go into the desktop. The tower on the stage
-changes to match: the RTX 5090, Radeon RX 9070 XT or Arc B580 is seated in the
-slot at its own length with its power cable on its own socket, and the 850W
-modular or 750W fixed-cable supply sits under the shroud. The installed parts
-can still be inspected and taken apart like any other.
+Press **Build your own PC** under Compare to open the build workspace: the
+parts on one side, the tower in the middle, and on the other side whether the
+parts work together. Choose the processor, CPU cooler, memory, graphics card,
+storage and power supply, and the tower changes to match:
 
-The panel checks the build and cites every figure it uses: whether the
-processor fits the AM5 socket, whether the memory fits the DDR5 slots, whether
-the supply meets the card maker's minimum or recommendation, whether the supply
-has the lead the card's power socket takes, and whether the card fits the case.
-It also adds up the processor's and card's rated power against the supply. A
-part that cannot physically fit is reported and left out of the tower. The
-board, cooler, SSD and case are the same in every build. The parts you choose
-are written into the address, so a build can be shared as a link.
+- the RTX 5090, Radeon RX 9070 XT or Arc B580 is seated in the slot at its own
+  length, with its power cable on its own socket;
+- the tower air cooler, or a 360 mm liquid cooler with its pump on the socket
+  and its radiator behind the front fans;
+- the M.2 drive alone, or with a 2.5-inch SATA SSD and its cable in the cage;
+- the 850W modular or 750W fixed-cable supply under the shroud.
 
-![Build mode: the parts panel in the rail beside the tower with a Radeon RX 9070 XT installed](docs/screenshots/build-mode.png)
+Every figure the checks use is cited: whether the processor fits the AM5
+socket, whether the cooler fits the case, whether the memory fits the DDR5
+slots, whether the card fits in front of the fans or the radiator, whether the
+supply meets the card maker's minimum or recommendation and has the leads the
+card and the drives take, and the processor's and card's rated power against
+the supply. A part that cannot physically fit is reported and left out of the
+tower. The board and case are the same in every build.
+
+The build is written into the address, so **Copy link** shares it. On a phone
+the tower sits on top and the parts and the checks are two tabs underneath.
+The installed parts can still be inspected and taken apart from the explorer.
+
+![The build workspace: the parts on the left, the tower with a liquid cooler in the middle, and the checks on the right](docs/screenshots/build-mode.png)
 
 ## Quick start
 

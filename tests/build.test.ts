@@ -6,25 +6,38 @@ import { disposeModelResources } from '../lib/model-stage.ts';
 import { byId } from '../lib/manifest.ts';
 import { sources } from '../lib/sources.ts';
 import { initialState } from '../lib/explorer-state.ts';
-import { powerPanelState } from '../lib/power-flow-policy.ts';
+import {
+  powerPanelState,
+  visiblePowerRoutes,
+} from '../lib/power-flow-policy.ts';
 import { levels } from '../lib/levels.ts';
 import {
   buildStatus,
-  caseCardClearance,
+  cardClearance,
   checkBuild,
   conflicts,
+  coolerCheck,
+  lengthCheck,
+  ratedDraw,
+  slotStatus,
+} from '../lib/build-checks.ts';
+import {
+  caseRoom,
+  coolerOptions,
   defaultBuild,
   graphicsFeed,
   graphicsOptions,
   installedBuild,
-  lengthCheck,
+  isCustomBuild,
   opensTo,
+  slotForPiece,
   powerOptions,
-  ratedDraw,
   slotOptions,
+  pieceForSlot,
   slots,
   standIn,
   towerKey,
+  type CoolerChoice,
   type DesktopBuild,
   type GraphicsChoice,
   type PowerChoice,
@@ -54,6 +67,7 @@ globalThis.document = {
 
 const graphics = Object.keys(graphicsOptions) as GraphicsChoice[];
 const power = Object.keys(powerOptions) as PowerChoice[];
+const coolers = Object.keys(coolerOptions) as CoolerChoice[];
 // Built up front, while the canvas stub is in place.
 const towers = new Map(
   [...allBuilds()].map((build) => {
@@ -64,9 +78,12 @@ const towers = new Map(
 );
 const tower = (build: DesktopBuild) => towers.get(towerKey(build))!;
 const cards = new Map(graphics.map((id) => [id, buildModel(id)] as const));
+const board = buildModel('motherboard');
+board.root.updateMatrixWorld(true);
 after(() => {
   towers.forEach(disposeModelResources);
   cards.forEach(disposeModelResources);
+  disposeModelResources(board);
   globalThis.document = previousDocument;
 });
 
@@ -93,8 +110,9 @@ await test('every slot offers the scales the project models, and every option is
     const options = slotOptions(id);
     assert.ok(options.length >= 2, id);
     for (const option of options) {
-      // Each option is a scale the explorer can open.
-      assert.ok(option.id in levels, option.id);
+      // Each option is a scale the explorer can open, except the drives,
+      // which choose what is fitted rather than one part to open.
+      if (id !== 'storage') assert.ok(option.id in levels, option.id);
       assert.ok(option.sources.length > 0, option.id);
       for (const source of option.sources) assert.ok(source in sources, source);
     }
@@ -166,16 +184,63 @@ await test('the card’s power socket is matched against the supply’s leads', 
   }
 });
 
-await test('a card longer than the case takes fails the length check', () => {
+await test('a card longer than the case takes fails the length check, and a front radiator takes room', () => {
   const sources = graphicsOptions.card.sources;
+  const air = coolerOptions.cooler,
+    liquid = coolerOptions.liquid;
+  assert.equal(cardClearance(air), caseRoom.cardLength);
   assert.equal(
-    lengthCheck({ length: caseCardClearance, sources }).status,
-    'ok',
+    cardClearance(liquid),
+    caseRoom.cardLength - liquid.radiator!.thickness,
   );
-  assert.equal(
-    lengthCheck({ length: caseCardClearance + 1, sources }).status,
-    'fail',
+  for (const cooler of [air, liquid]) {
+    const room = cardClearance(cooler);
+    assert.equal(lengthCheck({ length: room, sources }, cooler).status, 'ok');
+    assert.equal(
+      lengthCheck({ length: room + 1, sources }, cooler).status,
+      'fail',
+    );
+  }
+  // A card between the two fits only with the air tower.
+  const long = { length: 400, sources };
+  assert.equal(lengthCheck(long, air).status, 'ok');
+  assert.equal(lengthCheck(long, liquid).status, 'fail');
+  assert.match(lengthCheck(long, liquid).detail, /radiator/);
+});
+
+await test('a cooler has to fit the case: a tower under the glass, a radiator on the front fans', () => {
+  for (const c of coolers)
+    assert.equal(check({ ...defaultBuild, cooler: c }, 'cooler').status, 'ok');
+  const tall = { ...coolerOptions.cooler, height: caseRoom.coolerHeight + 1 };
+  assert.equal(coolerCheck(tall).status, 'fail');
+  const long = {
+    ...coolerOptions.liquid,
+    radiator: { length: 480, thickness: 30, fans: caseRoom.frontFans + 1 },
+  };
+  assert.equal(coolerCheck(long).status, 'fail');
+  assert.match(
+    check({ ...defaultBuild, cooler: 'liquid' }, 'cooler').detail,
+    /roof/,
   );
+});
+
+await test('each drive has its connection, and the SATA drive its lead', () => {
+  assert.equal(check(defaultBuild, 'storage').status, 'ok');
+  assert.match(
+    check(defaultBuild, 'storage').detail,
+    /5 SATA power connectors/,
+  );
+  const m2 = { ...defaultBuild, storage: 'nvme' } as const;
+  assert.equal(check(m2, 'storage').status, 'ok');
+  assert.match(check(m2, 'storage').detail, /no drive cables/);
+  const original = powerOptions.psu.sata;
+  try {
+    powerOptions.psu.sata = 0;
+    assert.equal(check(defaultBuild, 'storage').status, 'fail');
+    assert.equal(check(m2, 'storage').status, 'ok');
+  } finally {
+    powerOptions.psu.sata = original;
+  }
 });
 
 await test('only a part involved in a failure is marked as the problem', () => {
@@ -195,6 +260,34 @@ await test('only a part involved in a failure is marked as the problem', () => {
   assert.equal(conflicts(build, 'memory', 'dimm'), false);
   assert.equal(conflicts(build, 'processor', 'corei9'), true);
   assert.equal(conflicts(build, 'memory', 'ddr4'), true);
+  // A slot's marker is the worst of its own checks.
+  const checks = checkBuild(build);
+  assert.equal(slotStatus(checks, 'graphics'), 'fail');
+  assert.equal(slotStatus(checks, 'cooler'), 'ok');
+  assert.equal(slotStatus(checks, 'storage'), 'ok');
+});
+
+await test('the tower is rebuilt only for the parts it shows', () => {
+  const keys = new Set<string>();
+  for (const c of coolers)
+    for (const g of graphics)
+      for (const p of power)
+        for (const { id: d } of slotOptions('storage'))
+          keys.add(
+            towerKey({
+              ...defaultBuild,
+              cooler: c,
+              graphics: g,
+              power: p,
+              storage: d,
+            }),
+          );
+  assert.equal(keys.size, coolers.length * graphics.length * power.length * 2);
+  assert.equal(isCustomBuild(defaultBuild), false);
+  for (const { id } of slots) {
+    const other = slotOptions(id).find((o) => o.id !== defaultBuild[id])!;
+    assert.equal(isCustomBuild({ ...defaultBuild, [id]: other.id }), true, id);
+  }
 });
 
 await test('the power legend names the installed card’s own feed', () => {
@@ -253,6 +346,22 @@ await test('installed pieces keep their ids and describe what is actually in the
   assert.equal(opensTo('graphicscard', radeon), 'rx9070');
   assert.equal(opensTo('psu', radeon), 'psubronze');
   assert.equal(opensTo('motherboard', radeon), 'motherboard');
+  const liquid = { ...defaultBuild, cooler: 'liquid' } as const;
+  assert.equal(standIn('cpucooler', defaultBuild), 'cpucooler');
+  assert.equal(standIn('cpucooler', liquid), 'aio');
+  assert.equal(opensTo('cpucooler', defaultBuild), 'cooler');
+  assert.equal(opensTo('cpucooler', liquid), 'liquid');
+  // Each slot points at the piece its part went into, and back.
+  for (const { id } of slots) {
+    const target = pieceForSlot(id, defaultBuild);
+    assert.ok(piece(tower(defaultBuild), target), id);
+    const back = slotForPiece(target);
+    if (back) assert.equal(back, id);
+  }
+  assert.equal(
+    pieceForSlot('storage', { ...defaultBuild, storage: 'nvme' }),
+    'motherboard',
+  );
   for (const g of graphics) {
     const model = tower({ ...defaultBuild, graphics: g });
     assert.ok(piece(model, 'graphicscard'), g);
@@ -294,33 +403,111 @@ await test('every card seats on the same slot, at its true length', () => {
   }
 });
 
-await test('every card fits the case: clear of the fans, the deck, the cooler, the roof and the glass', () => {
-  for (const g of graphics) {
-    const model = tower({ ...defaultBuild, graphics: g });
-    const card = box(piece(model, 'graphicscard'));
-    const cooler = box(piece(model, 'cpucooler'));
-    const fans = model.pieces
-      .filter((p) => p.concept === 'casefan')
-      .map(box)
-      .filter((b) => b.min.x > 4);
-    assert.equal(fans.length, 3);
-    for (const fan of fans)
+await test('every card fits the case with either cooler: clear of the fans, the radiator, the deck, the cooler, the roof and the glass', () => {
+  const bracket = -6.44;
+  for (const c of coolers)
+    for (const g of graphics) {
+      const name = g + ' with ' + c;
+      const model = tower({ ...defaultBuild, graphics: g, cooler: c });
+      const card = box(piece(model, 'graphicscard'));
+      const front = Math.min(...intakes(model).map((f) => f.min.x));
+      // The front of the room is the fans, or the radiator inside them.
+      const stop = c === 'liquid' ? radiator(model).min.x : front;
+      assert.ok(card.max.x < stop, name + ' must stop short of the front');
+      assert.ok(card.min.x > -6.65, name + ' rear');
+      assert.ok(card.min.y > -3.35, name + ' must clear the PSU deck');
+      assert.ok(card.max.z < 3, name + ' must clear the side glass');
+      if (c === 'cooler')
+        assert.ok(
+          box(piece(model, 'cpucooler')).min.y > card.max.y,
+          name + ' must clear the CPU cooler',
+        );
+      // The clearance the checks quote is the one the model has.
+      const room = (stop - bracket) * 35;
       assert.ok(
-        card.max.x < fan.min.x,
-        g + ' must stop short of the intake fans',
+        Math.abs(room - cardClearance(coolerOptions[c])) < 10,
+        `${name}: case takes ${room.toFixed(0)} mm`,
       );
-    assert.ok(card.min.x > -6.65, g + ' rear');
-    assert.ok(card.min.y > -3.35, g + ' must clear the PSU deck');
-    assert.ok(card.max.z < 3, g + ' must clear the side glass');
-    assert.ok(cooler.min.y > card.max.y, g + ' must clear the CPU cooler');
-    // The clearance the checks quote is the one the model has.
-    const bracket = -6.44;
-    const room = (Math.min(...fans.map((f) => f.min.x)) - bracket) * 35;
+    }
+});
+
+await test('the air tower fits under the glass, as the cooler check says', () => {
+  const model = tower(defaultBuild);
+  const board = box(piece(model, 'motherboard'));
+  const tower_ = box(piece(model, 'cpucooler'));
+  // Off the face of the board, which is the back of its own bounds.
+  const face = -2.54;
+  assert.ok(board.min.z < face);
+  const height = (tower_.max.z - face) * 35;
+  assert.ok(
+    Math.abs(height - coolerOptions.cooler.height!) < 6,
+    `tower stands ${height.toFixed(0)} mm`,
+  );
+  const glass = (3.15 - face) * 35;
+  assert.ok(
+    Math.abs(glass - caseRoom.coolerHeight) < 6,
+    `glass is ${glass.toFixed(0)} mm off the board`,
+  );
+  // And the roof over the board is as the radiator check says.
+  const roof = (6.5 - board.max.y) * 35;
+  assert.ok(Math.abs(roof - caseRoom.roof) < 3, `roof ${roof.toFixed(0)} mm`);
+});
+
+await test('the liquid loop fits: radiator inside the intakes and clear of the deck, tubes clear of the memory, under the roof', () => {
+  const model = tower({ ...defaultBuild, cooler: 'liquid' });
+  const loop = piece(model, 'cpucooler');
+  const core = radiator(model);
+  const front = Math.min(...intakes(model).map((f) => f.min.x));
+  assert.ok(core.max.x < front, 'radiator stands inside the fans');
+  assert.ok(
+    box(piece(model, 'psushroud')).max.x < core.min.x,
+    'deck is cut back',
+  );
+  assert.ok(box(piece(model, 'drivecage')).max.y < core.min.y, 'over the cage');
+  // As long as the radiator the cooler option describes.
+  assert.ok(
+    Math.abs(
+      (core.max.y - core.min.y) * 35 - coolerOptions.liquid.radiator!.length,
+    ) < 4,
+  );
+  const whole = box(loop);
+  assert.ok(whole.max.y < 6.5, 'under the roof');
+  assert.ok(whole.max.z < 3, 'inside the glass');
+  // Nothing of the loop inside the memory modules beside the socket.
+  const ram = memory(model).expandByScalar(0.02);
+  for (const v of vertices(loop))
     assert.ok(
-      Math.abs(room - caseCardClearance) < 10,
-      `case takes ${room.toFixed(0)} mm`,
+      !ram.containsPoint(v),
+      `loop runs through the memory at ${v.toArray().join(', ')}`,
     );
-  }
+});
+
+await test('without a SATA drive the cage is empty, and no SATA lead or route is drawn', () => {
+  const both = tower(defaultBuild),
+    m2 = tower({ ...defaultBuild, storage: 'nvme' });
+  assert.ok(piece(both, 'ssd'));
+  assert.equal(piece(m2, 'ssd'), undefined);
+  assert.ok(piece(m2, 'drivecage'));
+  const routes = (model: { root: T.Object3D }) =>
+    model.root.children
+      .find((o) => o.userData.powerTick)!
+      .children.map((g) => g.name);
+  assert.ok(routes(both).includes('sata'));
+  assert.ok(!routes(m2).includes('sata'));
+  const view = (build: DesktopBuild) => ({
+    ...initialState,
+    power: true,
+    powerTarget: 'storage' as const,
+    build,
+  });
+  assert.deepEqual(visiblePowerRoutes(view(defaultBuild)), ['sata']);
+  assert.deepEqual(
+    visiblePowerRoutes(view({ ...defaultBuild, storage: 'nvme' })),
+    [],
+  );
+  const legend = powerPanelState(view({ ...defaultBuild, storage: 'nvme' }));
+  assert.equal(legend.routes.length, 0);
+  assert.match(legend.status!, /no SATA drive/);
 });
 
 await test('the card’s cable ends on its socket, and the supply’s face matches its cabling', () => {
@@ -349,7 +536,75 @@ await test('the card’s cable ends on its socket, and the supply’s face match
   );
 });
 
+/**
+ * The towers the geometry tests build: every card with every supply, every
+ * card again with the liquid loop, whose radiator takes the card's room, and
+ * the build without a SATA drive.
+ */
 function* allBuilds(): Generator<DesktopBuild> {
-  for (const g of graphics)
+  for (const g of graphics) {
     for (const p of power) yield { ...defaultBuild, graphics: g, power: p };
+    yield { ...defaultBuild, graphics: g, cooler: 'liquid' };
+  }
+  yield { ...defaultBuild, storage: 'nvme' };
+  yield {
+    ...defaultBuild,
+    cooler: 'liquid',
+    storage: 'nvme',
+    power: 'psubronze',
+  };
+}
+
+/** Every vertex of a piece, in case coordinates. */
+function vertices(p: Piece) {
+  const out: T.Vector3[] = [];
+  p.object.updateMatrixWorld(true);
+  p.object.traverse((o) => {
+    if (!(o instanceof T.Mesh)) return;
+    const position = o.geometry.getAttribute('position');
+    for (let i = 0; i < position.count; i++)
+      out.push(
+        new T.Vector3()
+          .fromBufferAttribute(position, i)
+          .applyMatrix4(o.matrixWorld),
+      );
+  });
+  return out;
+}
+
+/** The three front intake fans. */
+function intakes(model: { pieces: Piece[] }) {
+  const fans = model.pieces
+    .filter((p) => p.concept === 'casefan')
+    .map(box)
+    .filter((b) => b.min.x > 4);
+  assert.equal(fans.length, 3);
+  return fans;
+}
+
+/**
+ * The radiator of a fitted liquid loop. Low in the case nothing else of the
+ * loop is forward of the socket, which finds its inner face; everything at or
+ * in front of that face is the radiator.
+ */
+function radiator(model: { pieces: Piece[] }) {
+  const all = vertices(piece(model, 'cpucooler'));
+  const face = Math.min(
+    ...all.filter((v) => v.x > 0 && v.y < 2.5).map((v) => v.x),
+  );
+  return new T.Box3().setFromPoints(all.filter((v) => v.x >= face - 0.001));
+}
+
+/** The memory modules, carried from the board's own model into the tower. */
+function memory(model: { pieces: Piece[] }) {
+  const installed = piece(model, 'motherboard').object.children[0];
+  installed.updateMatrixWorld(true);
+  const ram = new T.Box3();
+  for (const p of board.pieces.filter((p) => p.concept === 'ram'))
+    ram.union(
+      p.batch
+        ? new T.Box3().setFromCenterAndSize(p.base.clone(), new T.Vector3())
+        : new T.Box3().setFromObject(p.object),
+    );
+  return ram.applyMatrix4(installed.matrixWorld);
 }

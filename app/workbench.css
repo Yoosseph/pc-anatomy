@@ -2948,8 +2948,10 @@ a {
   }
 }
 
-/* Comparison entry point. The workbench itself is styled in comparison.css. */
+/* Comparison entry point. The workbench itself is styled in comparison.css.
+   Each entry carries its own soft tint, --tint, mixed into a dark ground. */
 .compare-button {
+  --tint: var(--accent-violet);
   display: flex;
   align-items: center;
   width: 100%;
@@ -2958,9 +2960,13 @@ a {
   gap: 10px;
   margin: 0;
   padding: 6px 10px;
-  color: #d8edf0;
-  background: linear-gradient(180deg, #192f35 0%, #142429 100%);
-  border: 1px solid #3f6f7a;
+  color: color-mix(in srgb, var(--tint) 14%, #e4e7ea);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint) 13%, #17191c) 0%,
+    color-mix(in srgb, var(--tint) 8%, #131517) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--tint) 42%, #2b2f35);
   border-radius: 7px;
   text-align: left;
   transition:
@@ -2968,15 +2974,19 @@ a {
     border-color 0.15s ease;
 }
 .compare-button:hover {
-  background: linear-gradient(180deg, #1f3941 0%, #182c32 100%);
-  border-color: #65a6b4;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint) 19%, #191b1e) 0%,
+    color-mix(in srgb, var(--tint) 12%, #141618) 100%
+  );
+  border-color: color-mix(in srgb, var(--tint) 68%, #2b2f35);
 }
 .compare-button > svg:first-child {
-  color: var(--accent-bright);
+  color: var(--tint);
 }
 .compare-button > svg:last-child {
   margin-left: auto;
-  color: #7faab2;
+  color: color-mix(in srgb, var(--tint) 55%, #6c7078);
   transition: transform 0.15s ease;
 }
 .compare-button:hover > svg:last-child {
@@ -3076,6 +3086,7 @@ a {
 /* Build your own PC: the entry under Compare. The workspace it opens has
    its own sheet, build.css. */
 .build-button {
+  --tint: #e0a865;
   margin-top: 6px;
 }
 .build-button + .scale-navigation {

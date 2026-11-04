@@ -149,10 +149,13 @@ export const levels: Record<LevelId, LevelDef> = {
     comparisonCategory: 'boards',
     millimetersPerUnit: 22,
     parent: 'pc',
-    name: 'Motherboard',
+    // Named like the two beside it in the menu, by chipset and socket, so the
+    // three read as three different boards rather than "the" board and two
+    // others.
+    name: 'X670E · AM5',
     title: 'The motherboard.',
-    caption: 'ATX MAINBOARD',
-    summary: 'Sockets, slots, chipset and rear I/O',
+    caption: 'ASUS TUF GAMING X670E-PLUS WIFI',
+    summary: 'ASUS · AM5 · ATX · installed',
     kind: 'physical',
     branchLabel: 'Motherboard',
     concept: 'motherboard',

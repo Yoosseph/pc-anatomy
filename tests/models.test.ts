@@ -292,16 +292,22 @@ await test('installed motherboard and GPU retain their full inspection geometry 
     return count;
   };
   const pc = models.get('pc')!;
-  for (const [concept, level] of [
-    ['motherboard', 'motherboard'],
-    ['graphicscard', 'card'],
-  ] as const) {
-    const installed = pc.pieces.find((p) => p.concept === concept)!;
-    assert.equal(
-      triangles(installed.object),
-      triangles(models.get(level)!.root),
-      concept,
-    );
+  const find = (concept: string) =>
+    pc.pieces.find((p) => p.concept === concept)!;
+  // The processor is lifted off the board into a piece of its own, so the
+  // board and the processor together carry the whole board scale.
+  assert.equal(
+    triangles(find('motherboard').object) + triangles(find('processor').object),
+    triangles(models.get('motherboard')!.root),
+    'motherboard and processor',
+  );
+  assert.equal(
+    triangles(find('graphicscard').object),
+    triangles(models.get('card')!.root),
+    'graphicscard',
+  );
+  for (const concept of ['motherboard', 'processor', 'graphicscard']) {
+    const installed = find(concept);
     installed.object.traverse((object) => {
       if (!(object instanceof T.Mesh)) return;
       // Detailed children must open the component at PC scale, including

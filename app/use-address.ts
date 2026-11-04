@@ -15,29 +15,41 @@ const SETTLE_MS = 250;
  * Keeps the address bar on the place being shown, and the place on the
  * address bar when the back button moves it.
  *
- * Changing scale is a step you can take back, so it pushes a history entry.
- * Selecting a part or moving the slider refines where you already are, so it
- * replaces the current entry instead; otherwise backing out of a scale would
- * first replay every part you had clicked on it. Slider moves are also
+ * Changing scale is a step you can take back, so it pushes a history entry,
+ * and so does opening or leaving the build workspace. Selecting a part,
+ * moving the slider or swapping a part in the build refines where you already
+ * are, so it replaces the current entry instead; otherwise backing out of a
+ * scale would first replay every part you had clicked on it. Those are also
  * settled before they are written, because playback changes the position
  * every frame and browsers throttle pages that rewrite history that often.
  *
  * A dive in flight is not a place yet: the address follows once it lands.
  */
 export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
-  const writtenLevel = useRef(state.level);
-  const { level, selection, explode, diveInto } = state;
+  const writtenLevel = useRef(state.level),
+    writtenWorkspace = useRef(state.workspace);
+  const { level, selection, explode, diveInto, build, workspace } = state;
 
   useEffect(() => {
     if (diveInto) return;
-    const place: Place = { level, selection, explode };
+    const place: Place = {
+      level,
+      selection,
+      explode,
+      build,
+      ...(workspace === 'build' && { workspace }),
+    };
     const search = placeToSearch(place);
     document.title = placeTitle(place);
     const url = location.pathname + search + location.hash;
     setCanonical(location.origin + location.pathname + search);
     if (search === location.search) return;
-    if (level !== writtenLevel.current) {
+    if (
+      level !== writtenLevel.current ||
+      workspace !== writtenWorkspace.current
+    ) {
       writtenLevel.current = level;
+      writtenWorkspace.current = workspace;
       history.pushState(null, '', url);
       return;
     }
@@ -46,12 +58,13 @@ export function useAddress(state: ExplorerState, goTo: (place: Place) => void) {
       SETTLE_MS,
     );
     return () => clearTimeout(settle);
-  }, [level, selection, explode, diveInto]);
+  }, [level, selection, explode, diveInto, build, workspace]);
 
   useEffect(() => {
     const back = () => {
       const place = searchToPlace(location.search);
       writtenLevel.current = place.level;
+      writtenWorkspace.current = place.workspace ?? 'explorer';
       goTo(place);
     };
     window.addEventListener('popstate', back);

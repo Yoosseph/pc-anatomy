@@ -122,7 +122,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 593 catalogue entries are authored in source, and each one
+any kind. The 836 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -180,7 +180,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              593 entries, each with a globally unique id
+      │              836 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -206,14 +206,23 @@ state.
 
 ## The scale tree
 
-68 scales, 593 concepts. `physical` scales are lit like hardware and keep real
+78 scales, 836 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
 | Scale | Parent | Menu | Kind | Concepts |
 | --- | --- | --- | --- | ---: |
-| `pc` | — | root | physical | 18 |
+| `pc` | — | root | physical | 19 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
+| `z890` | `pc` | Motherboard | physical | 25 |
+| `b650m` | `pc` | Motherboard | physical | 25 |
+| `tomahawk` | `pc` | Motherboard | physical | 24 |
+| `aorus` | `pc` | Motherboard | physical | 24 |
+| `b850m` | `pc` | Motherboard | physical | 25 |
+| `ryzen` | `motherboard` | Processor · Ryzen 9 9950X | logical | 6 |
+| `ryzenio` | `ryzen` | Processor · Ryzen 9 9950X | logical | 5 |
+| `corei9` | `motherboard` | Processor · Core Ultra 9 285K | logical | 9 |
+| `coreio` | `corei9` | Processor · Core Ultra 9 285K | logical | 4 |
 | `dimm` | `motherboard` | Memory · DDR5 | physical | 10 |
 | `dram` | `dimm` | Memory · DDR5 | physical | 8 |
 | `banks` | `dram` | Memory · DDR5 | logical | 9 |
@@ -224,12 +233,11 @@ lit flat.
 | `ddr4banks` | `ddr4dram` | Memory · DDR4 | logical | 9 |
 | `ddr4array` | `ddr4banks` | Memory · DDR4 | logical | 9 |
 | `ddr4cell` | `ddr4array` | Memory · DDR4 | logical | 10 |
-| `ryzen` | `motherboard` | Motherboard | logical | 6 |
-| `ryzenio` | `ryzen` | Motherboard | logical | 5 |
-| `corei9` | `motherboard` | Motherboard | logical | 9 |
-| `coreio` | `corei9` | Motherboard | logical | 4 |
-| `psu` | `pc` | Power supply | physical | 17 |
+| `psu650` | `pc` | Power supply | physical | 17 |
 | `psubronze` | `pc` | Power supply | physical | 17 |
+| `psu` | `pc` | Power supply | physical | 17 |
+| `psu1000` | `pc` | Power supply | physical | 17 |
+| `psu1200` | `pc` | Power supply | physical | 17 |
 | `fan` | `pc` | Cooling | physical | 8 |
 | `cooler` | `pc` | Cooling | physical | 8 |
 | `liquid` | `pc` | Cooling | physical | 9 |
@@ -250,23 +258,35 @@ lit flat.
 | `xeslice` | `bmg` | GPU · Arc B580 | logical | 3 |
 | `xecore` | `xeslice` | GPU · Arc B580 | logical | 4 |
 | `xve` | `xecore` | GPU · Arc B580 | logical | 6 |
+| `rtx5060ti` | `pc` | GPU · RTX 5060 Ti | physical | 34 |
+| `rtx5060` | `pc` | GPU · RTX 5060 | physical | 34 |
 
 Menus are grouped by `branchLabel`, not by branch root, which is why the case
 fan, the tower cooler and the AIO share one Cooling heading instead of nesting.
 The GPU menu has sub-menus: each card declares `submenu`, and every scale beneath
-it is listed under that card. The Memory menu does the same for its two
+it is listed under that card. There are five, largest first; the two small
+cards end at the card, with no chip scales under them. The Memory menu does the same for its two
 generations, the installed DDR5 module and a DDR4 one from the same product
-line. The Power supply menu lists its two models directly.
+line. The Power supply menu lists its five models directly, smallest first
+(650 W to 1200 W, all from the TUF Gaming family), and the Motherboard
+menu lists six boards from four makers (three ASUS TUF boards, and an MSI,
+a GIGABYTE and an ASRock one) and nothing else. The processors are a Processor
+menu of their own, with a dropdown each like the cards, but their parent is
+still the board: the package sits in its socket, so the CPU on the board opens
+it and the breadcrumb runs back through the board, the way the M.2 drive is in
+the Storage menu but opens from the board.
 
-Six scales are marked `alternative: true`: the second processor, the liquid
-cooler, the two graphics cards, the fixed-cable PSU the tower does not carry and
-the DDR4 module the board's DDR5 slots cannot take. Only one cooler bolts to one
-socket, only one processor sits in it, one card is installed, the tower carries
-one supply and a slot is keyed for one generation —
+Sixteen scales are marked `alternative: true`: the second processor, the five
+other boards, the liquid cooler, the four other graphics cards, the four
+supplies the tower does not carry and the DDR4 module the board's DDR5 slots
+cannot take. Only one board fits the tray, only one cooler bolts to one socket, only
+one processor sits in it, one card is installed, the tower carries one supply
+and a slot is keyed for one generation —
 so these are real scales with real content that simply have nothing to click on
 at the scale above. They are reached from their subsystem menu instead. The flag
 is what keeps the "every scale is reachable" test honest without forcing the
-machine to carry two coolers and three cards at once.
+machine to carry six boards, two coolers and five cards at once. The build
+workspace is where they go into the tower.
 
 Each `LevelDef` also declares `phases` — the named stops along the 0–100
 disassembly slider — and optionally `spread`, which multiplies how far pieces
@@ -277,8 +297,8 @@ subsystems stop touching.
 
 | Path | Responsibility |
 | --- | --- |
-| `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
-| `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
+| `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. The boards and supplies a build can fit instead of the tower's are declared through `otherBoard` and `otherSupply`, which hold what they share. |
+| `lib/concept.ts` | The `Concept` shape, the eight categories and the model's tints for them, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
 | `lib/sources.ts` | Every citable reference, keyed by id. 84 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
@@ -287,14 +307,14 @@ subsystems stop touching.
 | `lib/hardware.ts` | `ModelTools`, the interface every builder is handed, and the RTX 5090 card assembly. |
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
-| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds both TUF exteriors from one illustrative conversion chain. |
+| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds all five TUF Gaming supplies from one illustrative conversion chain, each from its `SupplyModel` in `concepts/psu.ts` (rating, efficiency class, and a socket panel or fixed leads); `supplyConcepts` writes each model's catalogue from the 850W Gold's. `mainboard.ts` builds all six boards from one layout, ATX or micro-ATX (`microAtx` says where the smaller board's lower slots, drive socket and headers go): the TUF X670E, the TUF Z890 with Intel's LGA 1851 socket and package, the TUF B650M, and MSI's, GIGABYTE's and ASRock's boards. Each wears its maker's design (`designs`): the armour's finish and trim, the power-delivery fins (TUF's blades, slats or a grooved block), the printed marks, the chipset heatsink's shape (one of `chipsetSinks`), and its own list of full-length and short slots. It fits the processor and modules the build chooses, or leaves the socket's cover on and the slots empty. |
 | `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies and, for each generation, one bank and one mat of cells; the DDR4 bank and cell concepts are the DDR5 ones under `ddr4` ids with the numbers that differ swapped in. |
-| `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts` | The three graphics cards. `card-kit.ts` holds the millimetre-scale parts all three share. |
+| `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts`, `compact-card.ts` | The five graphics cards. `card-kit.ts` holds the millimetre-scale parts they share. `compact-card.ts` builds the two small NVIDIA cards from one description each: the ASUS Dual RTX 5060 Ti over heat pipes, the MSI RTX 5060 INSPIRE ITX over a copper-cored radial heatsink, and `compactMount` says where each meets the slot. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
 | `lib/diagram-kit.ts` | The shared visual language of those diagrams — `put`, `backdrop`, `block` — with a palette per chip. Navi 48 and BMG-G21 draw from it; the GB202 scales predate it and build their own scenery. |
-| `lib/airflow.ts` | Where the air goes: the chevron, the sampling and marching of a path, `cardAirflow` for the three cards, and `airflowStrength`, the curve that takes it off screen as the machine opens. Re-exports the policy below so builders keep one import. |
+| `lib/airflow.ts` | Where the air goes: the chevron, the sampling and marching of a path, `cardAirflow` for the cards, and `airflowStrength`, the curve that takes it off screen as the machine opens. Re-exports the policy below so builders keep one import. |
 | `lib/airflow-policy.ts` | `airflowLevels`, `hasAirflow`, `AirflowMode` and `airflowShown`, which decides whether a scale draws air at all. No three.js, so the interface can import it. |
-| `lib/deep-link.ts` | A place (scale, described part, disassembly) to and from the address bar's query string, and the page title for it. Unknown or contradictory links fall back rather than guess. |
+| `lib/deep-link.ts` | A place (scale, described part, disassembly, build, and whether the build workspace is open) to and from the address bar's query string, and the page title for it. Unknown or contradictory links fall back rather than guess. |
 | `lib/pointer-intent.ts` | `tapIntent`: a mouse click opens, a tap describes first. |
 | `lib/inventory-labels.ts` | Which laid-out parts get a name on screen: biggest first, one per part, no overlaps, nothing off the stage. |
 | `lib/parts.ts` | Shared realistic parts: fans, grilles, fin stacks, capacitors, chokes, slots, ports, screws, `glowMaterial`, `buildLightStrip`. |
@@ -308,23 +328,30 @@ subsystems stop touching.
 | `lib/comparison-state.ts` | Pure comparison transitions (entry pair, pick, swap, framing) and pane coordinate math. |
 | `lib/comparison-framing.ts` | Per-pane camera distances for fit-each and true-size framing, and the mapping from the shared orbit camera to each pane camera. |
 | `lib/comparison-scene.ts` | One-renderer comparison engine composed over the shared stage runtime. It renders isolated scissored panes on wide screens and one active pane below 700 CSS pixels, each with its own camera and lighting. |
+| `lib/desktop-build.ts` | The build workspace's parts, without three.js: the seven slots, the parts each can take with their published figures and sources, the measured room in the case (`caseRoom`), what a build actually seats (`fittedParts`), which tower model it needs (`towerKey`), and `standIn` / `opensTo`, which say what an installed tower piece describes and opens. |
+| `lib/build-checks.ts` | Whether a build works, without three.js: one function per check, `checkBuild`, the verdict, the per-slot markers, the rated draw, and `optionFit`, what one option would do to its own checks and why. |
+| `lib/part-facts.ts` | What the parts picker shows on an option beyond its name: the facts the checks compare, toned by whether they agree with the rest of the build, and the card's length and the supply's rating as meters. |
+| `lib/palette.ts` | The interface's part colours: which `--hue-*` custom property (declared in `workbench.css`) a scale, a visibility system or a comparison category takes, and which maker's colour a product carries (`brandOf`). No three.js. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/raycast-acceleration.ts` | Idle-time bounds trees for heavy geometry, behind three.js's own sphere and box rejection. Picks are unchanged; only unreachable triangles are skipped. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
-| `app/page.tsx` | Chooses the explorer or comparison workbench and otherwise keeps application-level composition state. |
+| `app/page.tsx` | Chooses the explorer, the build workspace or the comparison workbench, and otherwise keeps application-level composition state. The explorer and the build workspace share one viewer. |
 | `app/comparison-workbench.tsx`, `comparison-picker.tsx`, `comparison-viewer.tsx`, `comparison-specs.tsx`, `comparison.css` | Comparison composition and controls, the categorised part picker, the React-to-Three bridge, the responsive specification sheet, and their styles. |
 | `app/use-explorer.ts` | All explorer state and every named move: navigate, goTo, dive, arrive, choose, isolate, hide, and the rest. The first state is read from the address. |
 | `app/use-address.ts` | Keeps the address bar, title and canonical link on the place shown: a scale change pushes history, a selection or slider move replaces it, and the back button moves the explorer. |
 | `app/use-first-visit-hint.ts` | The one-time line under the heading that says what clicking or tapping does. |
 | `app/use-disassembly-playback.ts` | Shared request-animation-frame playback for explorer and comparison disassembly controls. |
+| `app/build-workspace.tsx`, `build.css` | The build workspace: the parts list on one side, the verdict, the rated power and the cited checks on the other, the tower between them, either side folding to a rail, and on a phone the parts and checks as tabs under the tower. Loaded on its own, after the explorer has drawn. |
+| `app/use-build-workspace.ts`, `use-tower-build.ts` | What the workspace adds to the explorer: the tower a frame behind the chosen build, so a choice paints before the rebuild runs, and the link between a slot and the tower piece it fills. |
 | `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx` | One panel each. |
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 134 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 166 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
+| `scripts/build-smoke.mjs` | The build workspace in headless Edge: opens it on the explorer's scene, swaps every slot, filters a slot by maker, times each choice from click to next frame, folds both panels away and back, follows a shared link (checking the link Share shows is the address), leaves and comes back, opens the installed card, survives Reset, and checks phone widths with the sheet up and down. Screenshots go to `outputs/build`. |
 | `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
 
 ## The interfaces you will touch
@@ -339,8 +366,9 @@ subsystems stop touching.
 | `pcb(size, variant?)` | A circuit board: routed faces, bare laminate on the cut edges. |
 | `material(color, metal?, rough?)` | The cached standard material. |
 | `label(parent, text, pos, width, color?)` | 3-D text, sized to a width rather than a font size. |
-| `assembly(level)` | Reuses a detailed scale as one installed, selectable assembly — how the motherboard and the card appear inside the tower, and the DDR5 module in the motherboard's slots. |
+| `assembly(level, build?)` | Reuses a detailed scale as one installed, selectable assembly — how the board and the card appear inside the tower, and the DDR5 module in the board's slots. The tower passes its build on, so the board it installs carries the build's processor and modules. |
 | `airflow(streams)` | Chevrons marching along the paths this build moves air along. Scenery, not parts: see the convention below. |
+| `build` | The parts chosen for the desktop tower in the build workspace. `machine.ts` reads it, and so does `mainboard.ts` when the tower installs the chosen board; `buildModel(level, build)` defaults it to the original machine. |
 
 `delta` is the direction a piece travels as the machine comes apart. `reveal` is
 the disassembly fraction below which a piece is hidden, and it defaults to 0.
@@ -351,7 +379,8 @@ its visibility. The scene animates pieces; it never re-reads the catalogue.
 
 **`ExplorerState`** (`lib/explorer-state.ts`) is the whole of what the viewer is
 looking at: level, explode 0–100, visible categories, hidden ids, selection,
-isolated, camera view, the airflow mode, and three revision counters. `cameraRevision` and
+isolated, camera view, the airflow mode, the power preferences, the desktop
+build, which workspace shows the tower, and three revision counters. `cameraRevision` and
 `focusRevision` exist so that asking for the same camera twice still moves it;
 `diveRevision` starts a dive. The scene watches the revisions, not the values.
 
@@ -392,8 +421,8 @@ expands the connector legend so the model remains visible while tracing power.
 **Geometry is millimetres.** Every builder opens with a local `mm()` converting
 to scene units and states its scale in the file header: the tower is 1 unit ≈
 35 mm, the motherboard 22, the AIO 14, the power supply 12, the tower cooler 11,
-the case fan 9, the SSD 8. The three graphics cards share `MM` from
-`card-kit.ts`, which is sized so all three come out at their true relative
+the case fan 9, the SSD 8. The five graphics cards share `MM` from
+`card-kit.ts`, which is sized so all five come out at their true relative
 lengths. Keep this. A builder without an `mm()` is a builder whose numbers mean
 nothing.
 
@@ -453,8 +482,10 @@ zero, heaped at the origin.
 
 `app/page.tsx` is composition and nothing else: it renders the panels in order
 and wires them to `useExplorer`. It holds only the state no panel owns — whether
-the app is in explorer or comparison mode, whether the search palette and
-about dialog are open, and the part count the viewer reports.
+the comparison workbench is open, whether the search palette and about dialog
+are open, and the part count the viewer reports. Whether the build workspace is
+open is explorer state (`workspace`), because it is part of the address and
+the back button leaves it.
 
 `app/use-explorer.ts` owns everything else about the current view and exposes it
 as named moves rather than state patches. A panel calls `navigate`, `dive`,
@@ -477,10 +508,13 @@ These interaction decisions are settled, and re-opening them has been tried:
   whose "Take apart" button opens it; tapping the selected part again also
   opens it where the card leaves it in reach. `tapIntent` is the rule.
 - **The address is the place, not the view.** `?scale=`, `&part=` (with
-  `&n=` for the n-th identical part) and `&open=` for the disassembly. Camera,
+  `&n=` for the n-th identical part), `&open=` for the disassembly,
+  `&cpu=`, `&cooler=`, `&board=`, `&ram=`, `&gpu=`, `&storage=`, `&psu=` for
+  a changed build, and `&mode=build` for the build workspace. Camera,
   hidden parts and the airflow preference stay out: they are how one person is
-  looking, not where. Scale changes are history steps; selections and slider
-  moves replace the current entry, the slider only once it has settled.
+  looking, not where. Scale changes and opening or leaving the workspace are
+  history steps; selections, part swaps and slider moves replace the current
+  entry, the slider only once it has settled.
 - **The detail panel is suppressed mid-dive.** `selected` is null while
   `diveInto` is set, or the outer component's panel flashes for a few hundred
   milliseconds before the deeper scale replaces it.
@@ -498,6 +532,20 @@ These interaction decisions are settled, and re-opening them has been tried:
   until Reset, so returning to the tower having asked for air does not switch
   it off again. The switch is absent where there are no fans, and airflow
   follows the Cooling category — hide the fans and the arrows go with them.
+- **One colour per kind of part, on every page.** Boards are green,
+  processors blue, graphics violet, memory lime, storage amber, cooling cyan,
+  power orange, displays pink and the chassis steel; a whole machine takes the
+  site's accent. The scale menus (each menu's icon tile, each scale's dot),
+  the visible systems, the detail panel, search, the breadcrumbs, the
+  comparison picker and the build workspace's slots all use the same one, so a
+  part is recognisable by colour before its name is read. A card's dropdown is
+  marked in its chip maker's colour instead (NVIDIA, AMD, Intel), as the
+  build workspace marks its options. `lib/palette.ts` says which colour a
+  scale, system or category takes and sets `--hue` on the element; the
+  stylesheets colour from `var(--hue)`, mixing it with `color-mix()` for
+  tints and borders. The interface's colours are not the model's: the 3D
+  pieces keep the quieter tints in `concept.ts`, which are tuned to sit under
+  the scene's lighting, and changing those changes every render.
 
 ## Part comparison mode
 
@@ -509,9 +557,13 @@ a level inherits the nearest `comparisonCategory` on its path, so deeper scales
 stay with their subsystem. A physical level that declares `millimetersPerUnit`
 can be shown at true size beside another calibrated one; everything else fits
 its own pane. Specifications are each concept's own, aligned by label only for
-like pairs.
+like pairs. An item's path, shown in the picker and searched, is where the
+menus file it rather than its dive path (`comparisonItemPath`), so a
+processor is under Processor and the M.2 drive under Storage, not under the
+board they are opened from.
 
-Comparison cards show only the selected part's name. The framing buttons are
+Comparison cards show the selected part's name and, in its colour, its
+category. The framing buttons are
 centered beneath the pair, independently of their explanatory note. The
 PC Anatomy brand links to the start page from comparison mode. Explorer root
 views omit the one-item breadcrumb; nested views retain hierarchy navigation.
@@ -529,6 +581,190 @@ layout change, while camera easing continues independently; hover tracks the
 displayed pane's view and projection. Only visible rotors keep the loop awake.
 The comparison smoke test checks idle sleep, pointer wake, orbit, pan, zoom and
 hidden-pane animation alongside the picker and framing flows.
+
+## The build workspace
+
+The **Build your own PC** button under Compare opens the build workspace: a
+page of its own, like the comparison workbench, with the parts on the left,
+the tower in the middle and the report on the right. On a phone the tower sits
+on top and the parts and the report are two tabs underneath; on a phone on its
+side they split the screen. The workspace is `ExplorerState.workspace`, so it
+is in the address (`&mode=build`) and the back button leaves it.
+
+**One viewer.** The page draws the same `Viewer` for the explorer and the
+workspace, in the same place among its siblings, so React keeps the scene when
+the workspace opens or closes and only the layout around it changes. Opening
+it costs no WebGL context and no rebuild: the tower the explorer had built is
+the one shown. `openBuild` puts the machine back together, with nothing
+hidden or isolated, so every part a slot fills is in view.
+
+**Seven slots**, in the order a builder chooses them: processor, CPU cooler,
+motherboard, memory, storage, graphics card and power supply. The options are
+parts the project models as scales of their own, so the installed board,
+cooler, card and supply open into them, and each is in the comparison
+workbench. The case is fixed; there is one.
+
+- **Boards:** the TUF GAMING X670E-PLUS WIFI the machine is built on, the
+  Z890-PLUS WIFI for the Core Ultra and the micro-ATX B650M-PLUS WIFI, and
+  three from other makers: MSI's MAG X870 TOMAHAWK WIFI, GIGABYTE's Z890
+  AORUS ELITE WIFI7 (LGA 1851) and ASRock's micro-ATX B850M Pro RS WiFi. The
+  Motherboard slot's options are tagged and filtered by their maker; a
+  processor's or a card's by whose silicon it is.
+- **Cards:** the RTX 5090, RX 9070 XT and Arc B580, and two small cards for the
+  other end of the range: the 229 mm ASUS Dual RTX 5060 Ti and the 145 mm MSI
+  RTX 5060 INSPIRE ITX.
+- **Memory:** two DDR5 modules, four (every slot filled), or two DDR4.
+
+**The parts list.** Each slot is a row naming its part, in the slot's own
+colour, with the worst result among the checks it takes part in. Opening one
+shows its options as cards; a slot with parts from several makers can be
+narrowed to one. Each option shows the few facts the checks compare, green
+where they agree with the rest of the build and red where they do not
+(`partFacts`): the socket against the board, the memory generation against
+the slots, the card's power socket against the supply's leads. The card shows
+its length against the room in front of it and the supply its rating against
+the rated draw, as meters. An option that would fail or warn says why
+(`optionFit`). Only the open slot renders its options, so the list stays
+short however many parts a slot takes.
+
+**The report is a summary first.** The verdict counts each result, and each
+count jumps to its first check. Then come the problems, then the things worth
+checking, each as one line with the slots it compares; the passing checks fold
+into a single line. A line opens to say what the check found, with a button to
+each slot that would change the answer, which opens that slot in the parts
+list (on a phone, on the Parts tab), and the sources the check rests on.
+
+**Either panel folds to a rail.** The parts rail is the slot icons with their
+status; the report's is the verdict. The viewer takes the room in one step
+rather than through a transition: the renderer resizes its drawing buffer when
+its box changes, and resizing it every frame of an animation is what would
+stutter. On a phone the panels are tabs under the tower, and the sheet drops
+away to give the tower the screen.
+
+`lib/desktop-build.ts` holds the parts and `lib/build-checks.ts` the checks,
+neither with three.js. Every figure is a vendor's published number with its
+source id, or a measurement of the modelled case: socket, memory generation,
+rated power, the card maker's supply figure and whether it is a minimum
+(Sapphire) or a recommendation (ASUS, Intel), the card's power socket and
+length, each supply's wattage and its 16-pin, 8-pin and SATA leads, the air
+tower's height and the radiator's size. The checks keep two kinds of claim
+apart. A part that cannot physically seat or fit (an LGA 1851 processor in the
+AM5 socket, a DDR4 module in a DDR5 slot, a card longer than the room in front
+of it) or a supply below a stated minimum is a failure; a supply below a
+recommendation is a warning. The rated draw is the processor's and the card's
+peak figures added up, labelled as exactly that. It is not a whole-system
+estimate, and nothing here invents one.
+
+**The case is measured, not specified.** `caseRoom` is the room in the
+modelled case: 420 mm from the slot bracket to the front intakes, 200 mm off
+the board to the glass, 26 mm over the board to the roof, and three 120 mm fan
+positions at the front. A front radiator stands inside the intakes, so with
+the liquid loop the card's room is 420 mm less the radiator's 27 mm
+(`cardClearance`). `tests/build.test.ts` measures every one of those
+numbers in the built tower.
+
+**Share your build** copies the address, which carries the build, and shows
+the link it copied under the button with a line on what it opens, so a reader
+who has never shared a page this way sees what is on their clipboard. Where
+the browser refuses the clipboard, the link is shown selected, to copy by
+hand. It goes after a few seconds, on a click elsewhere or on Escape, and
+stays while the pointer is over it.
+
+`ExplorerState.build` holds the choice. It survives navigation and Reset; only
+the workspace puts the original parts back. It is in the address as `&cpu=`,
+`&cooler=`, `&board=`, `&ram=`, `&storage=`, `&gpu=` and `&psu=`,
+written only for slots that differ from the original machine, so a link
+without them is the original build. Every slot changes the tower
+(`towerKey`). A processor or module that cannot seat is reported and left out
+(`fittedParts`): the socket keeps the cover a board ships with, and the slots
+stay empty.
+
+**A choice never waits for the tower.** Rebuilding the tower takes a few
+hundred milliseconds on the main thread. `useTowerBuild` hands the viewer the
+new build a frame after the choice, so the pressed option, the checks and the
+verdict paint first, and the stage shows "Fitting the parts…" until the viewer
+has taken it. Several choices inside that frame are one rebuild, for the last.
+The smoke test times every choice from the click to the next frame. The scene
+parks recently left towers under `pc:` and the tower key (two on a desktop,
+one on a phone), so going back to an earlier build is immediate. The
+workspace itself is a chunk of its own, fetched when the page is idle after
+the explorer has drawn, so the first download does not carry it and opening
+it does not wait on the network.
+
+**The slot and the piece point at each other.** A part chosen in the list is
+outlined where it went for a moment (`pieceForSlot`); a piece clicked in the
+tower stays pointed at and scrolls its slot into view (`slotForPiece`). In the
+workspace a click never opens a part; the hover label says so.
+
+`buildModel(level, build)` hands the build to every builder as
+`ModelTools.build`, and only the tower reads it. It is a field rather than a
+third builder argument because some builders already take one of their own:
+the supply builder's is its cable variant.
+
+- **Boards.** `machine.ts` installs the chosen board through
+  `tools.assembly(board, build)`. The three share ATX's top edge, socket,
+  memory and primary slot, so the cooler, the card and the cables land where
+  they always did; the micro-ATX board stops 61 mm higher and the tray's
+  bottom row of standoffs moves up with it.
+- **Processor.** The board builds the processor the build seats (the AM5
+  Ryzen or the rectangular LGA 1851 Core Ultra) or the socket's cover, and
+  marks the package. `buildMotherboardAssembly` lifts the marked package off
+  the installed board with its place in the board's frame, and the tower adds
+  it as a piece of its own, `processor`, at the board's position: in the
+  socket, in the Compute system rather than the Board one, so it can be
+  pointed at, hidden and opened by itself, and it rises out of the socket
+  between the board and the cooler as the machine comes apart. It describes
+  and opens the processor the build seats (`standIn`, `opensTo`), and the
+  Processor slot points at it (`pieceForSlot`); with the socket empty there is
+  no piece, and the slot points at the board.
+- **Memory.** Part of the board assembly: two modules in the second slot of
+  each channel, four, or none.
+- **Cards.** `machine.ts` installs the chosen card through `tools.assembly`.
+  All five card builders share the 5090's millimetre scale, so one factor
+  installs any of them at true length. Each bracket stands against the rear
+  panel. Across the slot, each card is moved so its edge connector lands where
+  the 5090's does; along the slot the builders' connectors differ by up to
+  5 mm. `cardMounts` records each card's connector, socket and fan height, so
+  the GPU loom ends on the socket the card actually has: in from the window
+  edge on the 5090, the Arc and the two small cards, down onto the back of the
+  board on the Radeon.
+- **Coolers.** `airTower` and `liquidLoop` each return the cooler and the
+  air's way through it, and the top intake's airflow follows whichever is
+  fitted. The loop is sized as the liquid scale draws it (`radiator360`): the
+  pump block on the socket with its housing above the regulator heatsinks, two
+  tubes angled off the board clear of the memory and run along the roof, and
+  the radiator inside the front intakes, which push air through it. The roof
+  has no room for it. The PSU deck is cut back at the front to clear it, as
+  cases that take a front radiator cut theirs.
+- **Drives.** The M.2 drive is part of the board assembly. The SATA drive, its
+  lead and its power route are only there when the build has one; without it
+  the cage is empty, and the power legend says the M.2 drive takes its power
+  through its slot.
+- **Supplies.** The fixed-cable supply gets a harness opening instead of the
+  modular panel, and its own label.
+
+The tower keeps the piece ids `motherboard`, `cpucooler`, `graphicscard` and `psu`
+whatever is installed, because power routes, the hidden list and selections
+hold onto them. `standIn` says which concept the piece describes (the
+installed part's own root concept), and `opensTo` says where opening it
+leads. The detail panel and the dive go through those two. `powerPanelState`
+names the installed card's own feed (`graphicsFeed`), so the Arc's route
+reads 8-pin PCIe, and its explanation follows.
+
+`tests/build.test.ts` covers the rules and builds the tower with every card
+and supply, every card again with the liquid loop, without the SATA drive,
+with each board, with four modules under either cooler and with parts that
+cannot seat. It checks that the Intel board carries the rectangular package and
+an AM5 board with a Core Ultra keeps its socket empty, that the micro-ATX board
+is 61 mm shorter with the same top edge, that neither cooler runs into a
+module with every slot filled,
+that each edge connector sits on the slot, that each card is its
+true length and clears the front (the fans, or the radiator inside them), the
+deck, the cooler, the roof and the glass, that the room the checks quote is the
+room the model has, that the loop stays clear of the memory and under the
+roof, that the deck clears the radiator, and that the GPU loom ends on the
+card. It does not check that a card's connector placement matches the retail
+product; those builders' own accuracy notes still apply.
 
 ## Adding a component
 
@@ -579,7 +815,7 @@ one uniform millimetre conversion on every axis declares it as
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 593 concepts currently cite at least one
+and vendor documentation first. All 836 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -600,29 +836,35 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-134 tests, all through Node's built-in runner.
+166 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
 with Node.js 22.
 
-- `tests/manifest.test.ts` (16) — unique ids, reciprocal parents, no cycles,
+- `tests/manifest.test.ts` (17) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,
   reachability of every scale, the three-stage dissection language, inventory
-  packing without overlap at several aspect ratios, machine depth.
+  packing without overlap at several aspect ratios, machine depth, the
+  Motherboard and Processor menus, and the five supplies: in order, each
+  opening its own scale with the figures the build checks against and a socket
+  panel or a harness to match.
 - `tests/models.test.ts` (24) — geometry presence and identity for every scale,
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule
-  that no rendered object is anonymous. Also checks pose-cache invalidation,
+  that no rendered object is anonymous, and that the installed board and
+  processor together carry the whole board scale. Also checks pose-cache invalidation,
   unchanged instance-buffer versions, dive restoration, and precise picking
   equivalence with and without geometry bounding boxes.
 - `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
   coalescing, disposal, and hidden/collapsed rotor behavior.
-- `tests/gpus.test.ts` (10) — the three-card menu structure, published hierarchy
-  counts multiplying out to published totals, diagram blocks not overlapping,
-  each card's published construction and envelope, board passives not
-  intersecting, and search reaching the new chips at their own scale.
+- `tests/gpus.test.ts` (11) — the five-card menu structure and the six boards
+  in the Motherboard menu, published hierarchy counts multiplying out to
+  published totals, diagram blocks not overlapping, each card's published
+  construction and envelope (the small cards' fan counts, four memory
+  packages, heat pipes against the copper core, the ×8 edge), board passives
+  not intersecting, and search reaching the new chips at their own scale.
 - `tests/airflow.test.ts` (8) — that the scales drawing airflow are exactly the
   ones `airflowLevels` names (the stage tools offer the control from that
   list), that the installed card brings its own streams into the tower, that
@@ -635,13 +877,16 @@ with Node.js 22.
   its filter anywhere in the first half of the disassembly, that every rear
   connector can be seen from behind the machine through the I/O shield, and
   that the front I/O sits on the outside of the roof.
-- `tests/comparison.test.ts` (10) — every level discovered once across all
+- `tests/comparison.test.ts` (11) — every level discovered once across all
   systems, category inheritance through deeper scales, combined category,
   system and search filters, entry pairs from every scale, every distinct
   cross pair selectable, true size limited to calibrated models, own-only
   specifications, label-aligned rows with gaps kept, picker labels and
   paths, which pairs share a table, and pane-local pointer coordinates at
-  desktop and mobile widths.
+  desktop and mobile widths. Also that every scale, visibility system and
+  category takes a part colour `workbench.css` declares, that a scale keeps
+  the colour of the part it is inside, and that each card's menu carries its
+  chip maker's colour.
 - `tests/comparison-framing.test.ts` (6) — fit-each and true-size distances,
   unknown or invalid units never implying a shared scale, off-centre models
   contained at phone and wide aspects, one orbit mapping consistently into
@@ -661,8 +906,26 @@ with Node.js 22.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/discovery.test.ts` (10) — every scale and every part surviving a
-  round trip through a link, instances and disassembly kept, nonsense links
+- `tests/build.test.ts` (27) — the build workspace's checks: what fails,
+  what warns, the socket each board takes, the micro-ATX outline, the memory
+  speed rated for two modules and four, the picker's toned facts and meters,
+  the adapter's lead count, a card too long for the case and the
+  room a front radiator takes, a cooler too tall or a radiator too long, each
+  drive's connection, which option and slot are marked as the problem, rated
+  draw, that every slot changes the tower, the tower's processor as a piece of
+  its own (in the socket, under the cooler, describing and opening the one
+  seated, and absent with the socket empty), and the power legend naming the
+  installed card's feed. Also every board, card, cooler, module count, drive set and supply built
+  into the tower: an empty socket or slots where a part cannot seat, seated
+  on the slot at true length, clear of the case and the cooler, both coolers
+  clear of four modules, the loop clear of the memory, the measured room matching the
+  checks, and fed by a loom that ends on the card. Also where the supply range
+  lands against each card maker's figure, and each maker's board in its own
+  design: its slots, its socket, its heatsinks' finish and its maker's tag.
+
+- `tests/discovery.test.ts` (12) — every scale and every part surviving a
+  round trip through a link, instances, disassembly, the build and the build
+  workspace kept, nonsense links
   falling back to the nearest sensible place, titles, the committed sitemap
   matching the catalogue, tap versus click, part names never overlapping or
   leaving the stage, and the interface's own modules staying free of three.js.

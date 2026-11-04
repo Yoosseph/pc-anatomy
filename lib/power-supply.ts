@@ -2,6 +2,11 @@ import * as T from 'three';
 import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import {
+  supplyModels,
+  supplyPartId,
+  type SupplyModel,
+} from './concepts/psu.ts';
+import {
   buildCapacitor,
   buildChip,
   buildChoke,
@@ -38,7 +43,7 @@ const D = mm(150); // across the board; both TUF models are 150 × 150 × 86 mm
 const WALL = mm(1.2);
 
 /** Printed metal side treatment, generated in the browser like the other maps. */
-function sideBadge(variant: 'modular' | 'fixed', side: number) {
+function sideBadge(model: SupplyModel, side: number) {
   const canvas = document.createElement('canvas');
   // Draw above the displayed resolution: the side is usually seen obliquely,
   // where a small canvas otherwise turns the lettering soft and jagged.
@@ -46,7 +51,7 @@ function sideBadge(variant: 'modular' | 'fixed', side: number) {
   canvas.height = 1024;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(2, 2);
-  const accent = variant === 'modular' ? '#b8a477' : '#b68763';
+  const accent = model.efficiency === 'Gold' ? '#b8a477' : '#b68763';
   ctx.fillStyle = '#171c20';
   ctx.fillRect(0, 0, 1024, 512);
   ctx.fillStyle = '#2b3338';
@@ -56,21 +61,13 @@ function sideBadge(variant: 'modular' | 'fixed', side: number) {
   ctx.fillStyle = '#f5f5f0';
   ctx.fillText('TUF GAMING', 91, 135);
   ctx.font = 'bold 154px sans-serif';
-  ctx.fillText(variant === 'modular' ? '850W' : '750W', 85, 312);
+  ctx.fillText(`${model.watts}W`, 85, 312);
   ctx.fillStyle = accent;
   ctx.font = 'bold 45px sans-serif';
-  ctx.fillText(
-    variant === 'modular' ? '80 PLUS GOLD' : '80 PLUS BRONZE',
-    93,
-    390,
-  );
+  ctx.fillText(`80 PLUS ${model.efficiency.toUpperCase()}`, 93, 390);
   ctx.fillStyle = '#ccd2d3';
   ctx.font = 'bold 31px sans-serif';
-  ctx.fillText(
-    variant === 'modular' ? 'FULLY MODULAR' : 'FIXED CABLE',
-    93,
-    448,
-  );
+  ctx.fillText(model.modular ? 'FULLY MODULAR' : 'FIXED CABLE', 93, 448);
   ctx.fillStyle = '#30383d';
   for (let i = 0; i < 5; i++) {
     ctx.beginPath();
@@ -240,7 +237,7 @@ function fixedHarness(
 export function buildPowerSupply(
   tools: ModelTools,
   _root: T.Group,
-  variant: 'modular' | 'fixed' = 'modular',
+  model: SupplyModel = supplyModels.psu,
 ) {
   const {
     add: baseAdd,
@@ -251,12 +248,7 @@ export function buildPowerSupply(
     material,
     label,
   } = tools;
-  const id = (name: string) =>
-    variant === 'modular'
-      ? name
-      : name === 'psumodular'
-        ? 'bronzepsuharness'
-        : `bronze${name}`;
+  const id = (name: string) => supplyPartId(model, name);
   const add: ModelTools['add'] = (name, object, pos, delta, reveal) =>
     baseAdd(id(name), object, pos, delta, reveal);
   const instances: ModelTools['instances'] = (
@@ -276,7 +268,7 @@ export function buildPowerSupply(
 
   // ── Housing ─────────────────────────────────────────────────────────────
   const housing = new T.Group();
-  const steel = variant === 'modular' ? '#22282d' : '#242729';
+  const steel = model.modular ? '#22282d' : '#242729';
   // Folded powder-coated steel. Four lid strips leave a real 135 mm fan
   // aperture, instead of the uninterrupted grey slab in the earlier model.
   place(housing, box([W, WALL, D], '#171b1f', 0.88), [0, 0, 0]);
@@ -291,7 +283,7 @@ export function buildPowerSupply(
       mm(83),
       z * (D / 2 - mm(3)),
     ]);
-    place(housing, sideBadge(variant, z), [0, mm(43), z * (D / 2 + mm(0.75))]);
+    place(housing, sideBadge(model, z), [0, mm(43), z * (D / 2 + mm(0.75))]);
   }
   for (const x of [-1, 1])
     place(housing, box([mm(8), WALL, D], steel, 0.88), [
@@ -627,11 +619,10 @@ export function buildPowerSupply(
   add('psusupervisor', supervisor, [mm(30), boardY, mm(34)], [0.8, 1.4, 1.0]);
 
   // The cable face is the clearest functional difference between the models.
-  const cableFace =
-    variant === 'modular'
-      ? modularSockets(material, box)
-      : fixedHarness(material, box);
-  if (variant === 'modular') cableFace.rotation.y = Math.PI / 2;
+  const cableFace = model.modular
+    ? modularSockets(material, box)
+    : fixedHarness(material, box);
+  if (model.modular) cableFace.rotation.y = Math.PI / 2;
   add('psumodular', cableFace, [W / 2 + mm(1), mm(43), 0], [3.6, 0.6, 0]);
 
   // A scatter of small parts so the board is not bare between the stages.

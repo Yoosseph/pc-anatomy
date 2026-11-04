@@ -42,6 +42,8 @@ const gpuLevels: LevelId[] = [
   'xeslice',
   'xecore',
   'xve',
+  'rtx5060ti',
+  'rtx5060',
 ];
 const models = new Map(gpuLevels.map((l) => [l, buildModel(l)]));
 const family = (level: LevelId, id: string) =>
@@ -49,12 +51,15 @@ const family = (level: LevelId, id: string) =>
 const top = (p: Piece) => p.base.y + p.center.y + p.extent.y / 2;
 const bottom = (p: Piece) => p.base.y + p.center.y - p.extent.y / 2;
 
-await test('the GPU menu holds three cards, each in its own dropdown', () => {
+await test('the GPU menu holds five cards, largest first, each in its own dropdown', () => {
   const gpu = branches().find((b) => b.label === 'GPU')!;
   assert.deepEqual(
     gpu.submenus.map((s) => s.label),
-    ['RTX 5090', 'RX 9070 XT', 'Arc B580'],
+    ['RTX 5090', 'RX 9070 XT', 'Arc B580', 'RTX 5060 Ti', 'RTX 5060'],
   );
+  // The two small cards end at the card: no chip scales under them.
+  assert.deepEqual(gpu.submenus[3].levels, ['rtx5060ti']);
+  assert.deepEqual(gpu.submenus[4].levels, ['rtx5060']);
   assert.deepEqual(gpu.submenus[0].levels, ['card', 'die', 'gpc', 'tpc', 'sm']);
   assert.deepEqual(gpu.submenus[1].levels, [
     'rx9070',
@@ -71,12 +76,12 @@ await test('the GPU menu holds three cards, each in its own dropdown', () => {
     'xve',
   ]);
   // Every GPU scale is in exactly one dropdown. Memory has its own two
-  // generations; no other menu grows one.
+  // generations and Processor its two processors; no other menu grows one.
   const listed = gpu.submenus.flatMap((s) => s.levels);
   assert.deepEqual([...listed].sort(), [...gpu.levels].sort());
   assert.equal(new Set(listed).size, listed.length);
   for (const b of branches().filter(
-    (b) => b.label !== 'GPU' && b.label !== 'Memory',
+    (b) => !['GPU', 'Memory', 'Processor'].includes(b.label),
   ))
     assert.equal(b.submenus.length, 0, b.label);
 });
@@ -99,10 +104,23 @@ await test('the new cards are extra cards, not replacements for the installed 50
     'xecore',
     'xve',
   ]);
-  for (const id of ['rx9070', 'arcb580'] as const) {
+  for (const id of ['rx9070', 'arcb580', 'rtx5060ti', 'rtx5060'] as const) {
     assert.equal(levels[id].alternative, true);
     assert.equal(levels[id].branchLabel, 'GPU');
   }
+  // The board menu lists the two other boards beside the installed one, and
+  // only boards: the processors have their own menu.
+  const boards = branches().find((b) => b.label === 'Motherboard')!;
+  assert.deepEqual(boards.levels, [
+    'motherboard',
+    'z890',
+    'b650m',
+    'tomahawk',
+    'aorus',
+    'b850m',
+  ]);
+  for (const id of ['z890', 'b650m'] as const)
+    assert.equal(levels[id].alternative, true);
   // Each card opens its own chip from both the package and the bare die.
   assert.equal(byId.rxpackage.open, 'navi48');
   assert.equal(byId.rxsilicon.open, 'navi48');
@@ -223,10 +241,50 @@ await test('Arc B580 Limited Edition carries its published construction', () => 
     assert.ok(bottom(fan) > finTop, 'fans must clear the fins');
 });
 
-await test('both cards keep to their published envelopes and true relative size', () => {
+await test('the two small cards carry their published construction', () => {
+  const dual = (id: string) => family('rtx5060ti', 'dual' + id);
+  const itx = (id: string) => family('rtx5060', 'itx' + id);
+  assert.equal(dual('fan').length, 2);
+  assert.equal(itx('fan').length, 1);
+  for (const f of [dual, itx]) {
+    assert.equal(f('fanmotor').length, f('fan').length);
+    assert.equal(f('gddr7').length, 4, 'one package per 32-bit channel');
+    assert.equal(f('displayport').length, 3);
+    assert.equal(f('hdmi').length, 1);
+    assert.equal(f('power').length, 1, 'a single 8-pin socket');
+    assert.equal(f('backplate').length, 1);
+    const finTop = top(f('heatsink')[0]);
+    for (const fan of f('fan'))
+      assert.ok(bottom(fan) > finTop, 'fans must clear the fins');
+    f('fan').forEach((fan, i) =>
+      assert.ok(Math.abs(fan.base.x - f('fanmotor')[i].base.x) < 1e-6),
+    );
+  }
+  // The Dual cools through heat pipes; the INSPIRE through a copper core,
+  // with fuses on its board.
+  assert.ok(dual('heatpipe').length > 0);
+  assert.equal(dual('core').length, 0);
+  assert.equal(itx('heatpipe').length, 0);
+  assert.equal(itx('core').length, 1);
+  assert.equal(itx('fuse').length, 2);
+  // The Dual's short board leaves its second fan blowing straight through.
+  const pcb = dual('pcb')[0];
+  const boardEnd = pcb.base.x + pcb.center.x + pcb.extent.x / 2;
+  const outer = dual('fan')[1];
+  assert.ok(outer.base.x > boardEnd, 'flow-through fan past the board');
+  // An ×8 card in a ×16 edge: the contacts stop part way along.
+  for (const f of [dual, itx]) {
+    const edge = f('pcie')[0];
+    assert.ok(Math.abs(edge.extent.x / MM - 89) < 3, 'full-length edge');
+  }
+});
+
+await test('every card keeps to its published envelope and true relative size', () => {
   for (const [level, length, height] of [
     ['rx9070', 330.8, 128.5],
     ['arcb580', 272, 115],
+    ['rtx5060ti', 229, 120],
+    ['rtx5060', 145, 120],
   ] as const) {
     const { root } = models.get(level)!;
     root.updateMatrixWorld(true);
@@ -242,11 +300,15 @@ await test('board passives never sit inside another part', () => {
   for (const [level, prefix] of [
     ['rx9070', 'rx'],
     ['arcb580', 'arc'],
+    ['rtx5060ti', 'dual'],
+    ['rtx5060', 'itx'],
   ] as const) {
     const pieces = models.get(level)!.pieces;
     const solids = pieces.filter((p) =>
       [
         'gddr6',
+        'gddr7',
+        'fuse',
         'package',
         'vrm',
         'powerstage',

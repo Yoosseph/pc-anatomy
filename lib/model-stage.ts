@@ -268,16 +268,20 @@ export function disposeModelResources(model: BuiltModel) {
  * every time, in both directions. A parked model keeps its GPU buffers, which
  * is what the limit bounds: about 40 to 80 MB each for the full systems.
  * Whoever takes a model back owns re-applying visibility, layout and pose.
+ *
+ * Models are parked under a key, which is the scale's id except where one
+ * scale can be built more than one way: the desktop tower is keyed by the
+ * parts installed in it (`modelKey` in `scene.ts`).
  */
 export function createModelShelf(limit: number) {
-  const parked = new Map<LevelId, BuiltModel>();
+  const parked = new Map<string, BuiltModel>();
   return {
     /**
      * Park the model being left and hand back the one being returned to, if
      * it is here. Taking comes first: with every system parked, parking first
      * would evict the very model about to be reused.
      */
-    exchange(arriving: LevelId, leaving: LevelId, model: BuiltModel) {
+    exchange(arriving: string, leaving: string, model: BuiltModel) {
       const back = parked.get(arriving);
       parked.delete(arriving);
       parked.delete(leaving);

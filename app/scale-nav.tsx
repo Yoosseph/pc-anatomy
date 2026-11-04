@@ -16,6 +16,7 @@ import {
   Microscope,
   Monitor,
   PcCase,
+  Wrench,
   X,
   Zap,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ import {
   submenuRoot,
   type LevelId,
 } from '@/lib/levels';
+import { brandOf, brandStyle, hueOfLevel, hueStyle } from '@/lib/palette';
 
 /** One icon per scale, so the branch you are on is recognisable at a glance. */
 const levelIcon: Record<LevelId, typeof Box> = {
@@ -63,6 +65,11 @@ const levelIcon: Record<LevelId, typeof Box> = {
   macdisplay: Monitor,
   pc: PcCase,
   motherboard: CircuitBoard,
+  z890: CircuitBoard,
+  b650m: CircuitBoard,
+  tomahawk: CircuitBoard,
+  aorus: CircuitBoard,
+  b850m: CircuitBoard,
   dimm: MemoryStick,
   dram: Box,
   banks: Layers3,
@@ -79,6 +86,9 @@ const levelIcon: Record<LevelId, typeof Box> = {
   coreio: CircuitBoard,
   psu: Zap,
   psubronze: Zap,
+  psu650: Zap,
+  psu1000: Zap,
+  psu1200: Zap,
   fan: Fan,
   cooler: Fan,
   liquid: Droplets,
@@ -98,8 +108,30 @@ const levelIcon: Record<LevelId, typeof Box> = {
   bmg: Cpu,
   xeslice: Layers3,
   xecore: Layers3,
+  rtx5060ti: Box,
+  rtx5060: Box,
   xve: Microscope,
 };
+
+/** What a menu's dropdowns are, where each is a product of its own. */
+const dropdowns: Record<string, string> = {
+  GPU: 'cards',
+  Memory: 'generations',
+  Processor: 'processors',
+};
+/** Menus whose every scale is a whole product, so they are counted as such. */
+const products: Record<string, string> = {
+  Motherboard: 'boards',
+  'Power supply': 'models',
+};
+
+/** The line under a menu: "5 cards · 17 scales", "3 boards", "1 scale inside". */
+function menuNote(label: string, scales: number, submenus: number) {
+  if (submenus > 0)
+    return `${submenus} ${dropdowns[label] ?? 'models'} · ${scales} scales`;
+  if (products[label]) return `${scales} ${products[label]}`;
+  return `${scales} ${scales === 1 ? 'scale' : 'scales'} inside`;
+}
 
 type Props = {
   level: LevelId;
@@ -109,6 +141,8 @@ type Props = {
   onOpenSubmenu: (submenu: LevelId | 'none' | null) => void;
   onNavigate: (level: LevelId) => void;
   onCompare: () => void;
+  /** Open the build workspace. */
+  onBuild: () => void;
   onClose: () => void;
 };
 
@@ -120,6 +154,7 @@ export default function ScaleNav({
   onOpenSubmenu,
   onNavigate,
   onCompare,
+  onBuild,
   onClose,
 }: Props) {
   const rootLevel = systemRoot(level);
@@ -164,17 +199,27 @@ export default function ScaleNav({
         </span>
         <ChevronRight size={14} />
       </button>
+      <button className="compare-button build-button" onClick={onBuild}>
+        <Wrench size={16} />
+        <span>
+          <strong>Build your own PC</strong>
+        </span>
+        <ChevronRight size={14} />
+      </button>
       <nav className="scale-navigation" aria-label="Exploration scale">
         <button
           className={level === rootLevel ? 'active' : ''}
           aria-current={level === rootLevel ? 'true' : undefined}
+          style={hueStyle('system')}
           onClick={() => {
             onOpenMenu(null);
             onNavigate(rootLevel);
           }}
         >
           <span>01</span>
-          <RootIcon size={17} />
+          <b className="nav-tile" aria-hidden="true">
+            <RootIcon size={15} />
+          </b>
           <div>
             {levels[rootLevel].name}
             <small>{levels[rootLevel].summary}</small>
@@ -192,6 +237,7 @@ export default function ScaleNav({
                 key={id}
                 className={id === level ? 'active' : ''}
                 aria-current={id === level ? 'true' : undefined}
+                style={hueStyle(hueOfLevel(id))}
                 onClick={() => onNavigate(id)}
               >
                 <i />
@@ -211,6 +257,7 @@ export default function ScaleNav({
                   'branch' + (open ? ' open' : '') + (here ? ' here' : '')
                 }
                 key={root}
+                style={hueStyle(hueOfLevel(root))}
               >
                 <button
                   className="branch-head"
@@ -218,15 +265,13 @@ export default function ScaleNav({
                   onClick={() => onOpenMenu(open ? rootLevel : root)}
                 >
                   <span>{String(index + 2).padStart(2, '0')}</span>
-                  <Icon size={18} />
+                  <b className="nav-tile" aria-hidden="true">
+                    <Icon size={15} />
+                  </b>
                   <div>
                     {label}
                     <small>
-                      {submenus.length > 0
-                        ? `${submenus.length} ${label === 'GPU' ? 'cards' : label === 'Memory' ? 'generations' : 'models'} · ${scales.length} scales`
-                        : label === 'Power supply'
-                          ? `${scales.length} models`
-                          : `${scales.length} ${scales.length === 1 ? 'scale' : 'scales'} inside`}
+                      {menuNote(label, scales.length, submenus.length)}
                     </small>
                   </div>
                   <ChevronDown size={15} />
@@ -239,9 +284,16 @@ export default function ScaleNav({
                     {submenus.map((sub) => {
                       const subOpen = shownSubmenu === sub.root;
                       const subHere = submenuRoot(level) === sub.root;
+                      // A card's dropdown wears its chip maker's colour.
+                      const brand = brandOf(sub.root);
                       return (
                         <div
                           key={sub.root}
+                          style={
+                            brand
+                              ? brandStyle(brand)
+                              : hueStyle(hueOfLevel(sub.root))
+                          }
                           className={
                             'submenu' +
                             (subOpen ? ' open' : '') +

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { byId, categories, openLevel, type Category } from '@/lib/manifest';
+import { byId, categories, type Category } from '@/lib/manifest';
 import { airflowShown } from '@/lib/airflow-policy';
 import {
   initialState,
@@ -18,6 +18,14 @@ import {
   type LevelId,
 } from '@/lib/levels';
 import { searchToPlace, type Place } from '@/lib/deep-link';
+import {
+  defaultBuild,
+  opensTo,
+  pieceForSlot,
+  standIn,
+  type BuildSlot,
+  type DesktopBuild,
+} from '@/lib/desktop-build';
 import { useDisassemblyPlayback } from './use-disassembly-playback';
 import { useAddress } from './use-address';
 
@@ -54,8 +62,14 @@ export function useExplorer() {
   // the part being opened. Showing its panel would flash the outer component's
   // description, and its "Take apart" button, for a few hundred milliseconds
   // before the deeper scale replaces it. The panel appears on arrival instead.
+  // A tower piece describes the part the build put in its slot.
   const selected =
-    state.selection && !state.diveInto ? byId[state.selection.concept] : null;
+    state.selection && !state.diveInto
+      ? byId[standIn(state.selection.concept, state.build)]
+      : null;
+  const opens = state.selection
+    ? opensTo(state.selection.concept, state.build)
+    : null;
   const logical = !isPhysical(state.level);
   const updateExplode = useCallback(
     (explode: number) =>
@@ -78,6 +92,7 @@ export function useExplorer() {
       setState((s) => ({
         ...s,
         level,
+        workspace: 'explorer',
         diveInto: null,
         explode: 0,
         selection,
@@ -116,6 +131,7 @@ export function useExplorer() {
     setState((s) => ({
       ...initialState,
       level: systemRoot(s.level),
+      build: s.build,
       cameraRevision: s.cameraRevision + 1,
     }));
     setLayers(false);
@@ -129,7 +145,7 @@ export function useExplorer() {
   // a dive in flight, so cancelling one is just clearing it.
   const dive = useCallback(
     (conceptId: string) => {
-      const target = openLevel(conceptId);
+      const target = opensTo(conceptId, state.build);
       if (!target) return false;
       // GPU diagrams open directly. The outgoing isolation animation selected
       // every repeated block and tinted the old scale green before replacing it.
@@ -157,17 +173,19 @@ export function useExplorer() {
       );
       return true;
     },
-    [navigate, stopDisassembly],
+    [navigate, state.build, stopDisassembly],
   );
 
   const arrive = useCallback(() => {
-    const arrivedLevel = state.diveInto ? openLevel(state.diveInto) : null;
+    const arrivedLevel = state.diveInto
+      ? opensTo(state.diveInto, state.build)
+      : null;
     if (!arrivedLevel) return;
     setHiddenMenuOpen(false);
     setOpenMenu(menuRoot(arrivedLevel));
     setOpenSubmenu(null);
     setState((s) => {
-      const target = s.diveInto ? openLevel(s.diveInto) : null;
+      const target = s.diveInto ? opensTo(s.diveInto, s.build) : null;
       if (!target || target !== arrivedLevel) return s;
       return {
         ...s,
@@ -184,7 +202,7 @@ export function useExplorer() {
         selection: { concept: levels[target].concept },
       };
     });
-  }, [state.diveInto]);
+  }, [state.build, state.diveInto]);
 
   const choose = useCallback(
     (selection: Selection | null, intent: 'open' | 'inspect' = 'inspect') => {
@@ -300,6 +318,82 @@ export function useExplorer() {
   const setPowerTarget = (powerTarget: ExplorerState['powerTarget']) =>
     setState((s) => ({ ...s, powerTarget }));
 
+  /**
+   * Open the build workspace on the tower: the whole machine, assembled, with
+   * nothing hidden or isolated, so every part a slot puts in is in view. The
+   * viewer is the same one, so the tower already built is the one shown.
+   */
+  const openBuild = useCallback(() => {
+    stopDisassembly();
+    setHiddenMenuOpen(false);
+    setLayers(false);
+    setState((s) => ({
+      ...s,
+      level: 'pc',
+      workspace: 'build',
+      explode: 0,
+      diveInto: null,
+      selection: null,
+      isolated: false,
+      visible: [...categories],
+      hidden: [],
+      view: 'perspective',
+      focusRevision: 0,
+      cameraRevision: s.cameraRevision + 1,
+    }));
+  }, [stopDisassembly]);
+
+  /** Back to the explorer, on the tower as the build left it. */
+  const closeBuild = useCallback(() => {
+    setOpenMenu(menuRoot('pc'));
+    setOpenSubmenu(null);
+    setState((s) => ({
+      ...s,
+      workspace: 'explorer',
+      selection: null,
+      focusRevision: 0,
+      cameraRevision: s.cameraRevision + 1,
+    }));
+  }, []);
+
+  /** Point at a tower piece without describing it or moving the camera. */
+  const point = useCallback(
+    (selection: Selection | null) =>
+      setState((s) => ({ ...s, selection, isolated: false, focusRevision: 0 })),
+    [],
+  );
+
+  /** Stop pointing at a piece, if it is still the one pointed at. */
+  const unpoint = useCallback(
+    (concept: string) =>
+      setState((s) =>
+        s.selection?.concept === concept ? { ...s, selection: null } : s,
+      ),
+    [],
+  );
+
+  /**
+   * Put a part in one slot of the desktop build, and point at the piece it
+   * went into. The camera stays where it is, so the new part appears in place.
+   */
+  const setBuildPart = useCallback(
+    <S extends BuildSlot>(slot: S, part: DesktopBuild[S]) =>
+      setState((s) => {
+        const build = { ...s.build, [slot]: part };
+        return {
+          ...s,
+          build,
+          selection: { concept: pieceForSlot(slot, build) },
+          focusRevision: 0,
+        };
+      }),
+    [],
+  );
+  const restoreBuild = useCallback(
+    () => setState((s) => ({ ...s, build: defaultBuild, selection: null })),
+    [],
+  );
+
   const toggleIsolate = () =>
     setState((s) => ({
       ...s,
@@ -329,6 +423,7 @@ export function useExplorer() {
   return {
     state,
     selected,
+    opens,
     logical,
     playing,
     layers,
@@ -358,6 +453,12 @@ export function useExplorer() {
     toggleAirflow,
     togglePower,
     setPowerTarget,
+    openBuild,
+    closeBuild,
+    point,
+    unpoint,
+    setBuildPart,
+    restoreBuild,
     toggleIsolate,
     refocus,
     hide,
@@ -376,6 +477,9 @@ function placeState(s: ExplorerState, place: Place): ExplorerState {
     level: place.level,
     selection: place.selection,
     explode: place.explode,
+    // The address is the build: a link without parts is the original machine.
+    build: place.build ?? defaultBuild,
+    workspace: place.workspace ?? 'explorer',
     diveInto: null,
     isolated: false,
     visible: [...categories],

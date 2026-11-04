@@ -11,6 +11,8 @@ type Props = {
   onCount: (v: number) => void;
   /** The scene has cleared the stage around the part being opened. */
   onDived: () => void;
+  /** What a click on a hovered part does, when it is not the explorer's. */
+  hoverHint?: string;
 };
 export default function Viewer({
   state,
@@ -18,6 +20,7 @@ export default function Viewer({
   onSelect,
   onCount,
   onDived,
+  hoverHint,
 }: Props) {
   const [hover, setHover] = useState<{
     name: string;
@@ -108,9 +111,10 @@ export default function Viewer({
         >
           {hover.name}
           <span>
-            {hover.opens
-              ? 'Left-click to open · right-click to inspect'
-              : 'Click to inspect'}
+            {hoverHint ??
+              (hover.opens
+                ? 'Left-click to open · right-click to inspect'
+                : 'Click to inspect')}
           </span>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -22,8 +23,14 @@ import {
   swapComparisonSides,
   validateComparisonCatalogue,
 } from '../lib/comparison-state.ts';
-import { levelIds, levels, systemRoot } from '../lib/levels.ts';
-import { byId } from '../lib/manifest.ts';
+import { branches, levelIds, levels, systemRoot } from '../lib/levels.ts';
+import { byId, categories } from '../lib/manifest.ts';
+import {
+  brandOf,
+  hueOfCategory,
+  hueOfLevel,
+  hueOfSystem,
+} from '../lib/palette.ts';
 
 await test('comparison discovers every explorable scale once, across all systems', () => {
   assert.deepEqual(
@@ -228,8 +235,31 @@ await test('labels, paths and table eligibility describe items the way the picke
   assert.equal(comparisonItemPath(comparisonItem('pc')), 'Desktop PC');
   assert.equal(
     comparisonItemPath(comparisonItem('ryzenio')),
-    'Desktop PC / Motherboard / Ryzen 9 9950X',
+    'Desktop PC / Processor / Ryzen 9 9950X',
   );
+  // Filed the way the menus file them, not the way the dive reaches them: a
+  // processor and the M.2 drive open from the board, but are not the board's.
+  assert.equal(
+    comparisonItemPath(comparisonItem('corei9')),
+    'Desktop PC / Processor',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('nvme')),
+    'Desktop PC / Storage',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('z890')),
+    'Desktop PC / Motherboard',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('sm')),
+    'Desktop PC / GPU / RTX 5090 / GB202 / GPC / TPC',
+  );
+  // Searching for the board finds the boards, and no longer the processors
+  // that sit in them.
+  const board = filterComparisonItems({ query: 'motherboard' });
+  assert.ok(board.some((item) => item.level === 'z890'));
+  assert.ok(!board.some((item) => item.category === 'processors'));
   assert.ok(sharesSpecTable('ssd', 'legionstorage'));
   assert.equal(sharesSpecTable('maccpu', 'nvme'), false);
   // Same category, but a hardware model and a diagram never share rows.
@@ -256,4 +286,35 @@ await test('pane coordinates map split and mobile viewports independently', () =
   ] as const;
   for (const [x, y, split, side, expected] of cases)
     assert.deepEqual(comparisonPanePoint(x, y, rect, split, side), expected);
+});
+
+await test('every scale, system and category takes a part colour the stylesheet declares', () => {
+  const css = readFileSync(
+    new URL('../app/workbench.css', import.meta.url),
+    'utf8',
+  );
+  const hues = new Set([...css.matchAll(/--hue-([a-z]+):/g)].map((m) => m[1]));
+  const brands = new Set(
+    [...css.matchAll(/--brand-([a-z]+):/g)].map((m) => m[1]),
+  );
+  for (const level of levelIds)
+    assert.ok(hues.has(hueOfLevel(level)), `${level}: ${hueOfLevel(level)}`);
+  for (const category of categories)
+    assert.ok(hues.has(hueOfSystem(category)), category);
+  for (const item of comparisonItems)
+    assert.ok(hues.has(hueOfCategory(item.category)), item.category);
+  // A scale keeps the colour of the part it is inside.
+  assert.equal(hueOfLevel('pc'), 'system');
+  assert.equal(hueOfLevel('ryzen'), 'processor');
+  assert.equal(hueOfLevel('b650m'), 'board');
+  assert.equal(hueOfLevel('sm'), 'graphics');
+  assert.equal(hueOfLevel('cell'), 'memory');
+  assert.equal(hueOfLevel('legiondisplay'), 'display');
+  // Each card's dropdown is marked by its chip maker.
+  const cards = branches('pc').find(({ label }) => label === 'GPU')!.submenus;
+  assert.deepEqual(
+    cards.map(({ root }) => brandOf(root)),
+    ['nvidia', 'amd', 'intel', 'nvidia', 'nvidia'],
+  );
+  for (const { root } of cards) assert.ok(brands.has(brandOf(root)!), root);
 });

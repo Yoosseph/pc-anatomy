@@ -10,6 +10,7 @@ import {
   searchToPlace,
   type Place,
 } from '../lib/deep-link.ts';
+import { defaultBuild } from '../lib/desktop-build.ts';
 import { tapIntent } from '../lib/pointer-intent.ts';
 import { labelWidth, placeLabels } from '../lib/inventory-labels.ts';
 import { sitemapUrls } from '../scripts/sitemap-urls.ts';
@@ -79,6 +80,70 @@ await test('links that do not make sense open the nearest thing that does', () =
   assert.deepEqual(searchToPlace(`?scale=pc&part=${part.id}&n=0`).selection, {
     concept: part.id,
   });
+});
+
+await test('a link carries the parts chosen in build mode', () => {
+  const build = {
+    ...defaultBuild,
+    graphics: 'arcb580',
+    power: 'psubronze',
+  } as const;
+  const place: Place = { level: 'pc', selection: null, explode: 0, build };
+  const search = placeToSearch(place);
+  // Only the parts that differ from the original machine are written.
+  assert.equal(search, '?scale=pc&gpu=arcb580&psu=psubronze');
+  assert.deepEqual(searchToPlace(search), place);
+  // A changed build on the home scale still needs an address.
+  assert.notEqual(placeToSearch({ ...homePlace, build }), '');
+  // The original parts, written out or not, are the original machine.
+  assert.equal(placeToSearch({ ...homePlace, build: defaultBuild }), '');
+  assert.equal(searchToPlace('?scale=pc&gpu=card').build, undefined);
+  // An unknown part is dropped and its slot keeps the original.
+  assert.deepEqual(searchToPlace('?scale=pc&gpu=voodoo&cpu=corei9').build, {
+    ...defaultBuild,
+    processor: 'corei9',
+  });
+  assert.equal(searchToPlace('?scale=pc&psu=toString').build, undefined);
+});
+
+await test('a link can open the build workspace, with the cooler and the drives', () => {
+  const build = {
+    ...defaultBuild,
+    cooler: 'liquid',
+    storage: 'nvme',
+  } as const;
+  const place: Place = {
+    level: 'pc',
+    selection: null,
+    explode: 0,
+    build,
+    workspace: 'build',
+  };
+  const search = placeToSearch(place);
+  assert.equal(search, '?scale=pc&mode=build&cooler=liquid&storage=nvme');
+  assert.deepEqual(searchToPlace(search), place);
+  // The workspace with the original machine still has an address.
+  assert.equal(
+    placeToSearch({ ...homePlace, workspace: 'build' }),
+    '?scale=pc&mode=build',
+  );
+  // In the workspace a pointed-at part and the slider are not the place.
+  assert.equal(
+    placeToSearch({
+      ...place,
+      selection: { concept: 'graphicscard' },
+      explode: 40,
+    }),
+    search,
+  );
+  // The workspace only exists on the tower.
+  const elsewhere = levelIds.find((id) => id !== 'pc')!;
+  assert.equal(
+    searchToPlace(`?scale=${elsewhere}&mode=build`).workspace,
+    undefined,
+  );
+  assert.equal(searchToPlace('?scale=pc&mode=nonsense').workspace, undefined);
+  assert.equal(placeTitle(place), 'Build your PC · PC Anatomy');
 });
 
 await test('a place is titled after what it shows', () => {

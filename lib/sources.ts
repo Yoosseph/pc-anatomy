@@ -118,6 +118,50 @@ export const sources = {
     name: 'ASUS · TUF Gaming 750W Bronze fan and construction',
     url: 'https://www.asus.com/us/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-750b/',
   },
+  msix870: {
+    name: 'MSI · MAG X870 TOMAHAWK WIFI datasheet',
+    url: 'https://storage-asset.msi.com/datasheet/mb/global/MAG-X870-TOMAHAWK-WIFI.pdf',
+  },
+  kitguru870: {
+    name: 'KitGuru · MSI MAG X870 Tomahawk WiFi review (independent review)',
+    url: 'https://www.kitguru.net/components/motherboard/leo-waldock/msi-mag-x870-tomahawk-review/',
+  },
+  gbz890elite: {
+    name: "GIGABYTE · Z890 AORUS ELITE WIFI7 user's manual",
+    url: 'https://download.gigabyte.com/FileList/Manual/mb_manual_z890-a-elite-wf7-series_1005_e.pdf',
+  },
+  asrockb850m: {
+    name: 'ASRock · B850M Pro RS WiFi user manual',
+    url: 'https://download.asrock.com/Manual/B850M%20Pro%20RS%20WiFi.pdf',
+  },
+  tuf650b: {
+    name: 'ASUS · TUF Gaming 650W Bronze specifications',
+    url: 'https://www.asus.com/uk/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/techspec/',
+  },
+  tuf650fan: {
+    name: 'ASUS · TUF Gaming 650W Bronze fan and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/',
+  },
+  tuf650cabling: {
+    name: 'Umart · TUF Gaming 650W Bronze non-modular listing (retailer)',
+    url: 'https://www.umart.com.au/product/asus-650w-tuf-gaming-80-bronze-non-modular-atx-power-supply-tuf-gaming-650b-83656',
+  },
+  tuf1000g: {
+    name: 'ASUS · TUF Gaming 1000W Gold specifications',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/techspec/',
+  },
+  tuf1000fan: {
+    name: 'ASUS · TUF Gaming 1000W Gold fan, cables and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/',
+  },
+  tuf1200g: {
+    name: 'ASUS · TUF Gaming 1200W Gold specifications',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/techspec/',
+  },
+  tuf1200fan: {
+    name: 'ASUS · TUF Gaming 1200W Gold fan, cables and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/',
+  },
   ddr5: {
     name: 'Micron · DDR5 client module architecture white paper',
     url: 'https://www.micron.com/content/dam/micron/global/public/products/white-paper/ddr5-key-module-features-wp-client.pdf',
@@ -149,6 +193,11 @@ export const sources = {
   ryzen: {
     name: 'AMD · Ryzen 9 9950X specifications',
     url: 'https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html',
+  },
+  // Independent review: AMD publishes the TDP but not the socket power limit.
+  fpsreview9950x: {
+    name: 'The FPS Review (independent review) · Ryzen 9 9950X power and PPT',
+    url: 'https://www.thefpsreview.com/2024/08/14/amd-ryzen-9-9950x-cpu-review-16-core-zen-5-at-649/8',
   },
   zen5: {
     name: 'AMD · Zen 5 microarchitecture optimization guide',
@@ -358,6 +407,34 @@ export const sources = {
   arcreview: {
     name: 'KitGuru (independent review) · Arc B580 Limited Edition cooler and board',
     url: 'https://www.kitguru.net/components/graphic-cards/dominic-moass/intel-arc-b580-limited-edition-review/all/1/',
+  },
+  tufz890: {
+    name: 'ASUS · TUF GAMING Z890-PLUS WIFI specifications',
+    url: 'https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-z890-plus-wifi/techspec/',
+  },
+  tufb650m: {
+    name: 'ASUS · TUF GAMING B650M-PLUS WIFI specifications',
+    url: 'https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b650m-plus-wifi/techspec/',
+  },
+  dual5060ti: {
+    name: 'ASUS · Dual GeForce RTX 5060 Ti 16GB GDDR7 OC Edition specifications',
+    url: 'https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/techspec/',
+  },
+  dual5060tidesign: {
+    name: 'ASUS · Dual GeForce RTX 5060 Ti 16GB cooling and construction',
+    url: 'https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/',
+  },
+  rtx5060family: {
+    name: 'NVIDIA · GeForce RTX 5060 family specifications',
+    url: 'https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5060-family/',
+  },
+  inspire5060: {
+    name: 'MSI · GeForce RTX 5060 8G INSPIRE ITX data sheet',
+    url: 'https://storage-asset.msi.com/datasheet/vga/global/GeForce-RTX-5060-8G-INSPIRE-ITX.pdf',
+  },
+  inspirecooler: {
+    name: 'HotHardware (independent report) · RTX 5060 INSPIRE ITX cooler and power',
+    url: 'https://hothardware.com/news/msi-unveils-an-itx-geforce-rtx-5060',
   },
 } as const;
 

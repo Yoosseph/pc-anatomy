@@ -1,4 +1,5 @@
 import type { LevelId } from './levels.ts';
+import type { DesktopBuild } from './desktop-build.ts';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Piece } from './models.ts';
@@ -10,8 +11,17 @@ import { buildCardCooler, CARD, cardStack } from './graphics-card.ts';
 import { buildCapacitor, buildChip, buildHeader, buildScrew } from './parts.ts';
 
 export type ModelTools = {
-  /** Reuse a detailed scale as a single installed, selectable assembly. */
-  assembly: (level: LevelId) => T.Group;
+  /**
+   * The parts installed in the desktop tower. Only the tower reads it; every
+   * other scale is built one way.
+   */
+  build: DesktopBuild;
+  /**
+   * Reuse a detailed scale as a single installed, selectable assembly. The
+   * tower passes its build on to the board, so the board carries the
+   * processor and modules the build chose.
+   */
+  assembly: (level: LevelId, build?: DesktopBuild) => T.Group;
   /**
    * Where this build moves air, drawn as chevrons marching along the path.
    * Scenery rather than a part: never selected, never named, never pointed

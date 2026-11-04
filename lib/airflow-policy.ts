@@ -21,11 +21,16 @@ export const airflowLevels: readonly LevelId[] = [
   'fan',
   'cooler',
   'liquid',
-  'psu',
+  'psu650',
   'psubronze',
+  'psu',
+  'psu1000',
+  'psu1200',
   'card',
   'rx9070',
   'arcb580',
+  'rtx5060ti',
+  'rtx5060',
 ];
 
 export function hasAirflow(level: LevelId) {

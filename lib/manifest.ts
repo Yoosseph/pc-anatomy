@@ -9,9 +9,23 @@ import { gpuConcepts } from './concepts/gpu.ts';
 import { radeonConcepts } from './concepts/radeon.ts';
 import { arcConcepts } from './concepts/arc.ts';
 import { motherboardConcepts } from './concepts/motherboard.ts';
+import {
+  aorusConcepts,
+  b650mConcepts,
+  b850mConcepts,
+  tomahawkConcepts,
+  z890Concepts,
+} from './concepts/boards.ts';
+import { dualCardConcepts, itxCardConcepts } from './concepts/compact-cards.ts';
 import { ramConcepts } from './concepts/ram.ts';
 import { pcConcepts } from './concepts/pc.ts';
-import { psuConcepts, bronzePsuConcepts } from './concepts/psu.ts';
+import {
+  psuConcepts,
+  bronzePsuConcepts,
+  tuf650Concepts,
+  tuf1000Concepts,
+  tuf1200Concepts,
+} from './concepts/psu.ts';
 import { categories, colors, type Category, type Concept } from './concept.ts';
 import {
   isPhysical,
@@ -45,9 +59,17 @@ export const manifest: Concept[] = [
   ...notebookConcepts,
   ...pcConcepts,
   ...motherboardConcepts,
+  ...z890Concepts,
+  ...b650mConcepts,
+  ...tomahawkConcepts,
+  ...aorusConcepts,
+  ...b850mConcepts,
   ...ramConcepts,
   ...psuConcepts,
   ...bronzePsuConcepts,
+  ...tuf650Concepts,
+  ...tuf1000Concepts,
+  ...tuf1200Concepts,
   ...fanConcepts,
   ...coolerConcepts,
   ...liquidConcepts,
@@ -57,6 +79,8 @@ export const manifest: Concept[] = [
   ...gpuConcepts,
   ...radeonConcepts,
   ...arcConcepts,
+  ...dualCardConcepts,
+  ...itxCardConcepts,
 ];
 
 export const byId = Object.fromEntries(

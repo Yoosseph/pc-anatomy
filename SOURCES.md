@@ -236,6 +236,188 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
+## Boards from three more makers · November 4, 2026
+
+So the Motherboard slot offers more than one maker. Each is a scale of its own,
+with an exploded view and a place in the comparison workbench.
+
+### MSI MAG X870 TOMAHAWK WIFI
+
+- [MSI's datasheet](https://storage-asset.msi.com/datasheet/mb/global/MAG-X870-TOMAHAWK-WIFI.pdf):
+  AM5, AMD X870, four DIMMs of dual-channel DDR5, one PCIe 5.0 ×16, one
+  PCIe 4.0 ×16 and one PCIe 3.0 ×16 slot, two M.2 Gen5 ×4, one Gen4 ×4 and
+  one Gen4 ×2 slot, four SATA ports, 5G LAN and Wi-Fi 7. Its product
+  photograph shows the black armour with yellow trim the model is drawn in.
+- [KitGuru's review](https://www.kitguru.net/components/motherboard/leo-waldock/msi-mag-x870-tomahawk-review/),
+  an **independent review**, for what the datasheet leaves out: the ATX
+  305 × 244 mm outline, 256 GB of memory, the lanes behind the second and
+  third slots (×4 and ×1 from the chipset), and 14+2+1 80 A smart power
+  stages. MSI's own specification page refuses automated requests, so the
+  review is cited for these instead.
+
+### GIGABYTE Z890 AORUS ELITE WIFI7
+
+- [GIGABYTE's user's manual](https://download.gigabyte.com/FileList/Manual/mb_manual_z890-a-elite-wf7-series_1005_e.pdf):
+  ATX, 30.5 × 24.4 cm, LGA 1851 for Core Ultra processors, Intel Z890, four
+  DDR5 sockets up to 256 GB, one PCIe 5.0 ×16 slot from the processor and two
+  ×16 slots at PCIe 4.0 ×4 from the chipset, four M.2 connectors (one PCIe
+  5.0 ×4), four SATA ports and two 8-pin 12 V connectors.
+
+### ASRock B850M Pro RS WiFi
+
+- [ASRock's user manual](https://download.asrock.com/Manual/B850M%20Pro%20RS%20WiFi.pdf):
+  micro-ATX, AM5 for Ryzen 9000, 8000 and 7000, AMD B850, four DDR5 slots
+  up to 256 GB, a PCIe 5.0 ×16 slot and a PCIe 4.0 ×4 slot from the
+  processor, three M.2 sockets (one PCIe 5.0 ×4) and four SATA ports. Its
+  layout drawing puts the large square chipset heatsink to the right of the
+  CMOS battery, as the model does. The manual gives the form factor but not
+  the size; the model is drawn at micro-ATX's 244 × 244 mm.
+
+**Limits.** All three are built on the ASUS boards' ATX or micro-ATX layout,
+with each maker's slot list. Component positions, routing and the rear I/O are
+representative. Only the MSI finish follows a photograph; the GIGABYTE and
+ASRock finishes are in their makers' style, and say so. Two of each board's
+M.2 sockets are modelled.
+
+## Three more supplies · November 4, 2026
+
+The TUF Gaming family at the low and high end, so the build workspace offers
+650 W to 1200 W. Each is a scale of its own, drawn from the 850W Gold's
+conversion chain, with an exploded view and a place in the comparison
+workbench.
+
+- [ASUS TUF Gaming 650W Bronze specifications](https://www.asus.com/uk/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/techspec/):
+  650 W, 80 PLUS Bronze, 150 × 150 × 86 mm, one 24-pin, two CPU 4+4-pin, two
+  PCIe 6+2-pin, four SATA and four peripheral connectors. Its
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/)
+  gives the 135 mm Axial-tech fan on dual ball bearings. ASUS does not state
+  whether the leads are fixed; a
+  [retail listing](https://www.umart.com.au/product/asus-650w-tuf-gaming-80-bronze-non-modular-atx-power-supply-tuf-gaming-650b-83656),
+  **a retailer, not the maker**, names it non-modular, and it is drawn with
+  fixed leads like the 750W Bronze.
+- [ASUS TUF Gaming 1000W Gold specifications](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/techspec/):
+  1000 W, 80 PLUS Gold, ATX 3.1, 150 × 150 × 86 mm, one 24-pin, two CPU
+  4+4-pin, one PCIe 16-pin, four PCIe 8-pin, five SATA and four peripheral
+  connectors. The
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/)
+  gives fully modular cables, the 135 mm fan on dual ball bearings and the
+  bundled 16-pin cable.
+- [ASUS TUF Gaming 1200W Gold specifications](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/techspec/):
+  1200 W, 80 PLUS Gold, ATX 3.1, 150 × 150 × 86 mm, one 24-pin, two CPU
+  4+4-pin, two PCIe 16-pin, three PCIe 8-pin, five SATA and four peripheral
+  connectors; its
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/)
+  gives fully modular cables and the same fan.
+
+**Limits.** The internal layout is the 850W Gold's illustrative conversion
+chain for all five; ASUS publishes no board layout for any of them. The model
+draws one modular socket panel for every Gold unit, so the 1200W's second
+16-pin socket is in its outputs list but not drawn separately.
+
+## Two small cards and two more boards · November 4, 2026
+
+Added so the build workspace has cards at the small end of the range and a
+board for each processor. Each is a scale of its own, with an exploded view and
+a place in the comparison workbench.
+
+### ASUS Dual GeForce RTX 5060 Ti 16GB GDDR7 OC Edition
+
+- [ASUS specifications](https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/techspec/):
+  229 × 120 × 50 mm, 2.5 slots, 16 GB GDDR7 on a 128-bit bus at 28 Gbps,
+  PCI Express 5.0, three DisplayPort 2.1b and one HDMI 2.1b output, one 8-pin
+  connector and a 550 W recommended supply.
+- [ASUS product page](https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/):
+  two Axial-tech fans with a small hub, longer blades and a barrier ring, dual
+  ball bearings, a stop mode below 50 °C, a heat pipe layout under the shroud,
+  and a vented backplate that stiffens the board.
+- [NVIDIA's RTX 5060 family specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5060-family/):
+  4,608 CUDA cores, 180 W total graphics power, a 128-bit interface, one
+  8-pin PCIe connector.
+
+### MSI GeForce RTX 5060 8G INSPIRE ITX
+
+- [MSI data sheet](https://storage-asset.msi.com/datasheet/vga/global/GeForce-RTX-5060-8G-INSPIRE-ITX.pdf):
+  145 × 120 × 45 mm, 8 GB GDDR7 on a 128-bit bus at 28 Gbps, PCI Express
+  Gen 5 ×16 using ×8, three DisplayPort 2.1b and one HDMI 2.1b output, 145 W
+  power consumption and a 550 W recommended supply; a STORMFORCE fan with seven
+  blades, a reinforcing backplate with a flow-through design, DrMOS power
+  stages and fuses on the board.
+- [HotHardware's report](https://hothardware.com/news/msi-unveils-an-itx-geforce-rtx-5060),
+  an **independent report** of MSI's announcement, for the cooler: a
+  copper-core "sunflower" heatsink of extruded aluminium fins, the fan's
+  claw-textured blades, a vented backplate, one 8-pin connector and 581 g.
+- NVIDIA's family page gives the RTX 5060's 3,840 CUDA cores.
+
+**Limits.** Neither maker publishes its board layout, phase count, heat pipe
+count or fin pitch, so those are drawn to be consistent and labelled as not
+published. Both cards are drawn with four GDDR7 packages, one per 32-bit
+channel; the RTX 5060 Ti's 16 GB is twice what four 2 GB packages hold, and how
+ASUS splits it between the faces of its board is not modelled. Neither card has
+chip scales under it.
+
+### ASUS TUF GAMING Z890-PLUS WIFI and B650M-PLUS WIFI
+
+- [ASUS Z890-PLUS WIFI specifications](https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-z890-plus-wifi/techspec/):
+  ATX, 30.5 × 24.4 cm, LGA 1851 for Core Ultra (Series 2), Intel Z890, four
+  DDR5 slots up to 256 GB, one PCIe 5.0 ×16 slot from the processor and one
+  PCIe 4.0 ×16 at ×4 from the chipset, a PCIe 4.0 ×4 and two ×1 slots, four
+  M.2 slots and four SATA ports.
+- [ASUS B650M-PLUS WIFI specifications](https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b650m-plus-wifi/techspec/):
+  micro-ATX, 24.4 × 24.4 cm, AM5, AMD B650, four DDR5 slots up to 256 GB, one
+  PCIe 4.0 ×16 slot from the processor, one PCIe 4.0 ×16 at ×4 and one ×1 from
+  the chipset, two M.2 slots (the first PCIe 5.0 ×4 with a Ryzen 9000) and four
+  SATA ports.
+
+**Limits.** Both are built on the X670E board's layout, which follows its own
+manual. The socket, the chipset, the outline and the slot counts are each
+board's; component positions, routing and the rear I/O are representative.
+The Z890 board's PCIe 4.0 ×4 slot and its third and fourth M.2 slots are not
+modelled, and say so. The LGA 1851 socket and loading mechanism are
+illustrative, around the 37.5 × 45 mm package.
+
+## Build workspace figures · November 3, 2026
+
+The build workspace adds the processor's and the card's power against the
+supply, so both processors are counted by the same kind of figure: the most the
+socket is allowed to draw.
+
+- [Intel's Core Ultra 9 285K specifications](https://www.intel.com/content/www/us/en/products/sku/241060/intel-core-ultra-9-processor-285k-36m-cache-up-to-5-70-ghz/specifications.html)
+  publish a 250 W maximum turbo power.
+- [AMD's Ryzen 9 9950X specifications](https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html)
+  publish only the 170 W default TDP, which is a cooling figure. The 200 W
+  socket power limit (PPT) is from
+  [The FPS Review](https://www.thefpsreview.com/2024/08/14/amd-ryzen-9-9950x-cpu-review-16-core-zen-5-at-649/8),
+  an **independent review**, and is named as such.
+- The supplies' lead counts are from the ASUS specification pages already
+  cited: three 8-pin PCIe leads beside the 16-pin lead and five SATA
+  connectors on the TUF Gaming 850W Gold, and four 6+2-pin PCIe leads and four
+  SATA connectors on the TUF Gaming 750W Bronze.
+- The coolers are the project's illustrative models, cited as before: the
+  tower air cooler to Noctua's construction sheet and the liquid loop to
+  ARCTIC's Liquid Freezer III design. Their sizes in the checks are the
+  model's (a 150 mm tower, a 394 × 120 × 27 mm radiator), not a product's.
+- The room in the case (420 mm for a card, 200 mm for a cooler, 26 mm over the
+  board, three 120 mm front fans) is measured from the modelled case, which is
+  illustrative. `tests/build.test.ts` measures each figure in the built tower.
+- The drives are the representative M.2 NVMe and 2.5-inch SATA models, cited
+  to Samsung's 990 PRO and 870 EVO data sheets and the board manual for the
+  M.2 slot and SATA ports.
+- The DDR4 option is two of the 16 GB modules in Kingston's KF432C16BB/16 data
+  sheet. The four-module option is four of the 16 GB single-rank DDR5 modules
+  already cited.
+- Memory speed by module count: AMD's 9950X page rates DDR5-5600 with two
+  single-rank or dual-rank modules and DDR5-3600 with four. Intel's 285K page
+  gives "up to DDR5 6400 MT/s" and no separate figure for four modules, so the
+  check says that rather than inventing one. Kingston's data sheet gives the
+  kit's DDR5-6000 XMP and EXPO profile.
+- The small cards' supply figures are their makers' recommendations: 550 W
+  from ASUS for the Dual RTX 5060 Ti and 550 W from MSI for the INSPIRE ITX.
+  The draw uses NVIDIA's 180 W total graphics power for the RTX 5060 Ti and
+  MSI's 145 W for its RTX 5060.
+- The case's standoffs take ATX and micro-ATX boards. The micro-ATX board
+  uses the top two rows of the ATX holes and its own bottom row; the model
+  moves the tray's lowest standoffs up to meet it.
+
 ## Architecture and specifications
 
 - [NVIDIA RTX Blackwell architecture whitepaper, v1.1](https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf), printed pp. 8–12 and 46–48. RTX 5090: 11 GPCs, 85 TPCs, 170 SMs, 21,760 CUDA cores, 680 Tensor cores, 170 RT cores, 96 MB L2. Full GB202: 12 GPCs, 96 TPCs, 192 SMs; these are not the shipping 5090 counts. A full GPC contains 8 TPCs and a TPC contains 2 SMs. Per SM: 128 CUDA cores, 4 Tensor cores, 1 RT core, 4 texture units, 256 KB registers, 128 KB L1/shared memory. The representative GPC is not a claim about which TPCs are disabled in a particular 5090.

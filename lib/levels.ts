@@ -13,6 +13,15 @@ export type LevelId =
   | NotebookLevel
   | 'pc'
   | 'motherboard'
+  | 'z890'
+  | 'b650m'
+  | 'tomahawk'
+  | 'aorus'
+  | 'b850m'
+  | 'ryzen'
+  | 'ryzenio'
+  | 'corei9'
+  | 'coreio'
   | 'dimm'
   | 'dram'
   | 'banks'
@@ -23,12 +32,11 @@ export type LevelId =
   | 'ddr4banks'
   | 'ddr4array'
   | 'ddr4cell'
-  | 'ryzen'
-  | 'ryzenio'
-  | 'corei9'
-  | 'coreio'
-  | 'psu'
+  | 'psu650'
   | 'psubronze'
+  | 'psu'
+  | 'psu1000'
+  | 'psu1200'
   | 'fan'
   | 'cooler'
   | 'liquid'
@@ -48,7 +56,9 @@ export type LevelId =
   | 'bmg'
   | 'xeslice'
   | 'xecore'
-  | 'xve';
+  | 'xve'
+  | 'rtx5060ti'
+  | 'rtx5060';
 
 export interface LevelDef {
   id: LevelId;
@@ -125,6 +135,48 @@ const dissectionPhases = [
   ['Inventory', 100],
 ] as const;
 
+type LevelText = Pick<LevelDef, 'name' | 'title' | 'caption' | 'summary'>;
+
+/**
+ * A board the build workspace can fit instead of the one the tower carries:
+ * a whole scale of its own, opened from the Motherboard menu, its catalogue
+ * rooted at `<id>board`.
+ */
+const otherBoard = (id: LevelId, text: LevelText): LevelDef => ({
+  id,
+  comparisonCategory: 'boards',
+  millimetersPerUnit: 22,
+  parent: 'pc',
+  alternative: true,
+  ...text,
+  kind: 'physical',
+  branchLabel: 'Motherboard',
+  concept: `${id}board`,
+  spread: 1.7,
+  phases: dissectionPhases,
+  detailed: true,
+});
+
+/** The same for a supply, opened from the Power supply menu. */
+const otherSupply = (
+  id: LevelId,
+  concept: string,
+  text: LevelText,
+): LevelDef => ({
+  id,
+  comparisonCategory: 'power',
+  millimetersPerUnit: 12,
+  parent: 'pc',
+  alternative: true,
+  ...text,
+  kind: 'physical',
+  branchLabel: 'Power supply',
+  concept,
+  spread: 1.9,
+  phases: dissectionPhases,
+  detailed: true,
+});
+
 export const levels: Record<LevelId, LevelDef> = {
   pc: {
     id: 'pc',
@@ -145,14 +197,114 @@ export const levels: Record<LevelId, LevelDef> = {
     comparisonCategory: 'boards',
     millimetersPerUnit: 22,
     parent: 'pc',
-    name: 'Motherboard',
+    // Named like the two beside it in the menu, by chipset and socket, so the
+    // three read as three different boards rather than "the" board and two
+    // others.
+    name: 'X670E · AM5',
     title: 'The motherboard.',
-    caption: 'ATX MAINBOARD',
-    summary: 'Sockets, slots, chipset and rear I/O',
+    caption: 'ASUS TUF GAMING X670E-PLUS WIFI',
+    summary: 'ASUS · AM5 · ATX · installed',
     kind: 'physical',
     branchLabel: 'Motherboard',
     concept: 'motherboard',
     spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  // One board is screwed to one tray. The Intel board is a complete second
+  // board you can take apart from the Motherboard menu, and the build
+  // workspace can fit it, but the machine as modelled carries the X670E.
+  z890: otherBoard('z890', {
+    name: 'Z890 · LGA 1851',
+    title: 'An Intel board.',
+    caption: 'ASUS TUF GAMING Z890-PLUS WIFI',
+    summary: 'ASUS · LGA 1851 · ATX',
+  }),
+  b650m: otherBoard('b650m', {
+    name: 'B650M · micro-ATX',
+    title: 'A micro-ATX board.',
+    caption: 'ASUS TUF GAMING B650M-PLUS WIFI',
+    summary: 'ASUS · AM5 · micro-ATX',
+  }),
+  // Boards from other makers, on the same two layouts as the ASUS ones.
+  tomahawk: otherBoard('tomahawk', {
+    name: 'MSI X870 Tomahawk · AM5',
+    title: 'An MSI board.',
+    caption: 'MSI MAG X870 TOMAHAWK WIFI',
+    summary: 'MSI · AM5 · ATX',
+  }),
+  aorus: otherBoard('aorus', {
+    name: 'AORUS Z890 Elite · LGA 1851',
+    title: 'A GIGABYTE board.',
+    caption: 'GIGABYTE Z890 AORUS ELITE WIFI7',
+    summary: 'GIGABYTE · LGA 1851 · ATX',
+  }),
+  b850m: otherBoard('b850m', {
+    name: 'ASRock B850M Pro RS · micro-ATX',
+    title: 'An ASRock board.',
+    caption: 'ASROCK B850M PRO RS WIFI',
+    summary: 'ASRock · AM5 · micro-ATX',
+  }),
+  // The processors are a menu of their own, beside the boards rather than
+  // inside them, but their parent is still the board: the package sits in its
+  // socket, so opening the CPU on the board dives into it, and the breadcrumb
+  // goes back through the board.
+  ryzen: {
+    id: 'ryzen',
+    comparisonCategory: 'processors',
+    parent: 'motherboard',
+    branchLabel: 'Processor',
+    submenu: 'Ryzen 9 9950X',
+    submenuNote: 'AMD · Zen 5 · installed',
+    name: 'Ryzen 9 9950X',
+    title: 'Sixteen cores, on three dies.',
+    caption: 'AMD RYZEN 9 9950X · ZEN 5',
+    summary: 'Two core complex dies and an I/O die',
+    kind: 'logical',
+    concept: 'ryzenpackage',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  ryzenio: {
+    id: 'ryzenio',
+    parent: 'ryzen',
+    name: 'Ryzen I/O die',
+    title: 'Inside the Ryzen I/O die.',
+    caption: 'ZEN 5 I/O DIE · TSMC 6 NM',
+    summary: 'Memory, PCIe, display and chiplet fabric',
+    kind: 'logical',
+    concept: 'zeniod',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  corei9: {
+    id: 'corei9',
+    comparisonCategory: 'processors',
+    parent: 'motherboard',
+    // The board is modelled with the AMD part seated, so the Intel package is
+    // the alternative: same socket position, different processor entirely.
+    alternative: true,
+    branchLabel: 'Processor',
+    submenu: 'Core Ultra 9 285K',
+    submenuNote: 'Intel · Arrow Lake',
+    name: 'Core Ultra 9 285K',
+    title: 'Twenty four cores, on stacked tiles.',
+    caption: 'INTEL CORE ULTRA 9 285K · ARROW LAKE',
+    summary: 'Compute, SoC, graphics and I/O tiles on a base',
+    kind: 'logical',
+    concept: 'corepackage',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  coreio: {
+    id: 'coreio',
+    parent: 'corei9',
+    name: 'Core Ultra I/O tile',
+    title: 'Inside the I/O extender tile.',
+    caption: 'ARROW LAKE I/O EXTENDER · TSMC N6',
+    summary: 'PCIe, Thunderbolt and die-to-die links',
+    kind: 'logical',
+    concept: 'arrowio',
     phases: dissectionPhases,
     detailed: true,
   },
@@ -291,59 +443,21 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  ryzen: {
-    id: 'ryzen',
-    comparisonCategory: 'processors',
-    parent: 'motherboard',
-    name: 'Ryzen 9 9950X',
-    title: 'Sixteen cores, on three dies.',
-    caption: 'AMD RYZEN 9 9950X · ZEN 5',
-    summary: 'Two core complex dies and an I/O die',
-    kind: 'logical',
-    concept: 'ryzenpackage',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  ryzenio: {
-    id: 'ryzenio',
-    parent: 'ryzen',
-    name: 'Ryzen I/O die',
-    title: 'Inside the Ryzen I/O die.',
-    caption: 'ZEN 5 I/O DIE · TSMC 6 NM',
-    summary: 'Memory, PCIe, display and chiplet fabric',
-    kind: 'logical',
-    concept: 'zeniod',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  corei9: {
-    id: 'corei9',
-    comparisonCategory: 'processors',
-    parent: 'motherboard',
-    // The board is modelled with the AMD part seated, so the Intel package is
-    // the alternative: same socket position, different processor entirely.
-    alternative: true,
-    name: 'Core Ultra 9 285K',
-    title: 'Twenty four cores, on stacked tiles.',
-    caption: 'INTEL CORE ULTRA 9 285K · ARROW LAKE',
-    summary: 'Compute, SoC, graphics and I/O tiles on a base',
-    kind: 'logical',
-    concept: 'corepackage',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  coreio: {
-    id: 'coreio',
-    parent: 'corei9',
-    name: 'Core Ultra I/O tile',
-    title: 'Inside the I/O extender tile.',
-    caption: 'ARROW LAKE I/O EXTENDER · TSMC N6',
-    summary: 'PCIe, Thunderbolt and die-to-die links',
-    kind: 'logical',
-    concept: 'arrowio',
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  // The supplies, smallest first. One is in the tower; the others are whole
+  // supplies of their own from the same TUF Gaming family, reached from the
+  // Power supply menu, that the build workspace can fit in its place.
+  psu650: otherSupply('psu650', 'tuf650psucase', {
+    name: 'Non-modular · TUF Gaming 650W Bronze',
+    title: 'A smaller fixed-cable supply.',
+    caption: 'ASUS TUF GAMING 650W BRONZE',
+    summary: 'ASUS · 650 W · 80 PLUS Bronze',
+  }),
+  psubronze: otherSupply('psubronze', 'bronzepsucase', {
+    name: 'Non-modular · TUF Gaming 750W Bronze',
+    title: 'Inside a fixed-cable power supply.',
+    caption: 'ASUS TUF GAMING 750W BRONZE',
+    summary: 'ASUS · 750 W · 80 PLUS Bronze',
+  }),
   psu: {
     id: 'psu',
     comparisonCategory: 'power',
@@ -360,23 +474,18 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  psubronze: {
-    id: 'psubronze',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
-    alternative: true,
-    name: 'Non-modular · TUF Gaming 750W Bronze',
-    title: 'Inside a fixed-cable power supply.',
-    caption: 'ASUS TUF GAMING 750W BRONZE',
-    summary: 'ASUS · 750 W · 80 PLUS Bronze',
-    kind: 'physical',
-    branchLabel: 'Power supply',
-    concept: 'bronzepsucase',
-    spread: 1.9,
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  psu1000: otherSupply('psu1000', 'tuf1000psucase', {
+    name: 'Modular · TUF Gaming 1000W Gold',
+    title: 'A thousand watts, fully modular.',
+    caption: 'ASUS TUF GAMING 1000W GOLD',
+    summary: 'ASUS · 1000 W · 80 PLUS Gold',
+  }),
+  psu1200: otherSupply('psu1200', 'tuf1200psucase', {
+    name: 'Modular · TUF Gaming 1200W Gold',
+    title: 'Twelve hundred watts, two 16-pin leads.',
+    caption: 'ASUS TUF GAMING 1200W GOLD',
+    summary: 'ASUS · 1200 W · 80 PLUS Gold',
+  }),
   fan: {
     id: 'fan',
     comparisonCategory: 'cooling',
@@ -659,6 +768,44 @@ export const levels: Record<LevelId, LevelDef> = {
     summary: 'Inside an Xe2 vector engine',
     kind: 'logical',
     concept: 'xve',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  rtx5060ti: {
+    id: 'rtx5060ti',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
+    parent: 'pc',
+    // Like the Radeon and the Arc, a complete card listed under GPU that the
+    // build workspace can fit, not a part the machine carries as modelled.
+    alternative: true,
+    name: 'RTX 5060 Ti',
+    title: 'A compact two-fan card.',
+    caption: 'ASUS DUAL · RTX 5060 TI 16GB',
+    summary: 'The whole graphics card',
+    kind: 'physical',
+    branchLabel: 'GPU',
+    submenu: 'RTX 5060 Ti',
+    submenuNote: 'ASUS Dual · 229 mm',
+    concept: 'dualcard',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  rtx5060: {
+    id: 'rtx5060',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
+    parent: 'pc',
+    alternative: true,
+    name: 'RTX 5060',
+    title: 'A one-fan ITX card.',
+    caption: 'MSI INSPIRE ITX · RTX 5060 8G',
+    summary: 'The whole graphics card',
+    kind: 'physical',
+    branchLabel: 'GPU',
+    submenu: 'RTX 5060',
+    submenuNote: 'MSI INSPIRE ITX · 145 mm',
+    concept: 'itxcard',
     phases: dissectionPhases,
     detailed: true,
   },

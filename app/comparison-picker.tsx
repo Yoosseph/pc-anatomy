@@ -20,6 +20,7 @@ import {
   type ComparisonSide,
 } from '@/lib/comparison-state';
 import { levels, systemRoots } from '@/lib/levels';
+import { hueOfCategory, hueStyle } from '@/lib/palette';
 
 type Props = {
   side: ComparisonSide;
@@ -168,6 +169,7 @@ export default function ComparisonPicker({
           <nav className="comparison-category-nav" aria-label="Part categories">
             <button
               aria-pressed={!category}
+              style={hueStyle('system')}
               onClick={() => setCategory(undefined)}
             >
               All parts <span aria-hidden="true">{matches.length}</span>
@@ -176,8 +178,10 @@ export default function ComparisonPicker({
               <button
                 key={entry.id}
                 aria-pressed={category === entry.id}
+                style={hueStyle(hueOfCategory(entry.id))}
                 onClick={() => setCategory(entry.id)}
               >
+                <i aria-hidden="true" />
                 {entry.label}
                 <span aria-hidden="true">{countIn(entry.id)}</span>
               </button>
@@ -195,7 +199,11 @@ export default function ComparisonPicker({
               </div>
             )}
             {groups.map((group) => (
-              <section key={group.id} aria-label={group.label}>
+              <section
+                key={group.id}
+                aria-label={group.label}
+                style={hueStyle(hueOfCategory(group.id))}
+              >
                 <h3>{group.label}</h3>
                 <ul>
                   {group.items.map((item) => (

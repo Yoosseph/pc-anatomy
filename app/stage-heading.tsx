@@ -2,6 +2,7 @@
 import { ArrowLeft, ChevronRight, MousePointerClick, X } from 'lucide-react';
 import type { Concept } from '@/lib/manifest';
 import { levelPath, levels, type LevelId } from '@/lib/levels';
+import { hueOfLevel, hueOfSystem, hueStyle } from '@/lib/palette';
 
 type Props = {
   level: LevelId;
@@ -55,7 +56,7 @@ export default function StageHeading({
                 <ArrowLeft size={14} />
               </button>
               {path.map((id, i) => (
-                <span key={id}>
+                <span key={id} style={hueStyle(hueOfLevel(id))}>
                   {i > 0 && <ChevronRight size={12} />}
                   <button
                     aria-current={id === level ? 'page' : undefined}
@@ -66,7 +67,7 @@ export default function StageHeading({
                 </span>
               ))}
               {selected && selected.shortName !== scale.name && (
-                <span>
+                <span style={hueStyle(hueOfSystem(selected.category))}>
                   <ChevronRight size={12} />
                   <span className="crumb-selected">{selected.shortName}</span>
                 </span>

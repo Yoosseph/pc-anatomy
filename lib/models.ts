@@ -7,6 +7,7 @@ import { buildGpuArchitecture } from './gpu-architecture.ts';
 import { buildRadeonCard } from './radeon-card.ts';
 import { buildRadeonArchitecture } from './radeon-architecture.ts';
 import { buildArcCard } from './arc-card.ts';
+import { buildCompactCard, dual5060ti, inspire5060 } from './compact-card.ts';
 import { buildArcArchitecture } from './arc-architecture.ts';
 import { buildMachine } from './machine.ts';
 import { buildMotherboard } from './mainboard.ts';
@@ -14,6 +15,7 @@ import { buildDdr4, buildDimm } from './memory-module.ts';
 import { buildDdr4Dram, buildDram } from './dram-package.ts';
 import { buildRamArchitecture } from './ram-architecture.ts';
 import { buildPowerSupply } from './power-supply.ts';
+import { supplyModels } from './concepts/psu.ts';
 import { buildFanUnit } from './fan-unit.ts';
 import { buildCooler } from './cooler.ts';
 import { buildLiquid } from './liquid.ts';
@@ -29,6 +31,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { byId, colors } from './manifest.ts';
 import type { LevelId } from './levels.ts';
 import type { Vec3 } from './layout.ts';
+import { defaultBuild, type DesktopBuild } from './desktop-build.ts';
 export interface Piece {
   key: string;
   concept: string;
@@ -108,6 +111,11 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ...notebookBuilders,
   pc: buildMachine,
   motherboard: buildMotherboard,
+  z890: (tools, root) => buildMotherboard(tools, root, 'z890'),
+  b650m: (tools, root) => buildMotherboard(tools, root, 'b650m'),
+  tomahawk: (tools, root) => buildMotherboard(tools, root, 'tomahawk'),
+  aorus: (tools, root) => buildMotherboard(tools, root, 'aorus'),
+  b850m: (tools, root) => buildMotherboard(tools, root, 'b850m'),
   dimm: buildDimm,
   dram: buildDram,
   banks: (tools, root) => buildRamArchitecture('banks', tools, root),
@@ -122,8 +130,12 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,
   coreio: buildCoreIo,
+  psu650: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu650),
+  psubronze: (tools, root) =>
+    buildPowerSupply(tools, root, supplyModels.psubronze),
   psu: buildPowerSupply,
-  psubronze: (tools, root) => buildPowerSupply(tools, root, 'fixed'),
+  psu1000: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu1000),
+  psu1200: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu1200),
   fan: buildFanUnit,
   cooler: buildCooler,
   liquid: buildLiquid,
@@ -144,9 +156,18 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   xeslice: (tools, root) => buildArcArchitecture('xeslice', tools, root),
   xecore: (tools, root) => buildArcArchitecture('xecore', tools, root),
   xve: (tools, root) => buildArcArchitecture('xve', tools, root),
+  rtx5060ti: (tools) => buildCompactCard(tools, dual5060ti),
+  rtx5060: (tools) => buildCompactCard(tools, inspire5060),
 };
 
-export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
+/**
+ * Build one scale. `build` chooses the parts installed in the desktop tower
+ * and is ignored by every other scale.
+ */
+export function buildModel(
+  level: LevelId,
+  build: DesktopBuild = defaultBuild,
+): { root: T.Group; pieces: Piece[] } {
   const root = new T.Group(),
     pieces: Piece[] = [];
   const materials = new Map<string, T.MeshStandardMaterial>();
@@ -324,6 +345,13 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
         'arcgddr6',
         'arcvrm',
         'arcpowerstage',
+        // The two small NVIDIA cards
+        'dualgddr7',
+        'dualvrm',
+        'dualpowerstage',
+        'itxgddr7',
+        'itxvrm',
+        'itxpowerstage',
         // Memory
         'drambank',
         'ddr4bank',
@@ -419,8 +447,8 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     root.add(group);
     return group;
   };
-  const assembly: ModelTools['assembly'] = (level) => {
-    const model = buildModel(level);
+  const assembly: ModelTools['assembly'] = (level, fitted) => {
+    const model = buildModel(level, fitted);
     // Freeze all instances at their assembled positions before handing the
     // model to the parent scale. Only the parent owns picking and animation.
     for (const piece of model.pieces) {
@@ -440,7 +468,7 @@ export function buildModel(level: LevelId): { root: T.Group; pieces: Piece[] } {
     return model.root;
   };
   builders[level](
-    { add, instances, box, pcb, material, label, assembly, airflow },
+    { build, add, instances, box, pcb, material, label, assembly, airflow },
     root,
   );
   // Consolidate authored submeshes within each selectable assembly. Lead pins,

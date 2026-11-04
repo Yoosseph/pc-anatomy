@@ -1,0 +1,1353 @@
+/* Build your own PC ------------------------------------------------------- */
+/* The workspace shares the page's viewer with the explorer. Everything here
+   lays out around it: the parts on the left, the report on the right, and the
+   tower between them. Either panel folds to a rail, and the viewer takes the
+   room in one step rather than through a transition: the renderer resizes
+   its drawing buffer whenever its box changes, and doing that every frame of
+   an animation is what would make folding a panel stutter. On a phone the
+   tower sits on top and the parts and the report take turns underneath. */
+.build-workbench {
+  --build-top: 72px;
+  --build-parts: 368px;
+  --build-report: 376px;
+  --build-rail: 58px;
+  --build-ok: #7de0b7;
+  --build-warn: #e8b860;
+  --build-fail: #f08a80;
+  --build-panel: #0e0f10f2;
+  --build-card: #141619;
+  --build-line: #24272b;
+  /* One colour per slot: its icon, its options, its tags on the checks. They
+     are the site's part colours (workbench.css), so a slot matches its menu
+     in the explorer. */
+  --slot-processor: var(--hue-processor);
+  --slot-cooler: var(--hue-cooling);
+  --slot-board: var(--hue-board);
+  --slot-memory: var(--hue-memory);
+  --slot-storage: var(--hue-storage);
+  --slot-graphics: var(--hue-graphics);
+  --slot-power: var(--hue-power);
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    #1d2022 0%,
+    #111315 50%,
+    #08090a 90%
+  );
+}
+.build-workbench:has(.build-parts.collapsed) {
+  --build-parts: var(--build-rail);
+}
+.build-workbench:has(.build-report.collapsed) {
+  --build-report: var(--build-rail);
+}
+.build-workbench .viewport {
+  inset: var(--build-top) var(--build-report) 0 var(--build-parts);
+}
+.build-topbar,
+.build-panels,
+.build-stage-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Top bar: back to the explorer, what this page is, and the share button. */
+.build-topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 15;
+  height: var(--build-top);
+  padding: 0 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  background: #0d0e0e;
+  border-bottom: 1px solid var(--build-line);
+}
+.build-back,
+.build-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #33373c;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: #d4d8dc;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.build-back {
+  justify-self: start;
+}
+.build-share-box {
+  position: relative;
+  justify-self: end;
+}
+.build-share {
+  font-weight: 600;
+  color: #dff3f5;
+  background: linear-gradient(180deg, #1b3a41 0%, #152b31 100%);
+  border-color: #4a8593;
+}
+.build-back:hover {
+  background: #1d2023;
+  border-color: #4a4f55;
+}
+.build-share:hover {
+  background: linear-gradient(180deg, #22474f 0%, #1a343b 100%);
+  border-color: #72b6c4;
+}
+.build-share.copied {
+  color: #dcf8ec;
+  background: linear-gradient(180deg, #1c3d31 0%, #152e25 100%);
+  border-color: #4f9c7d;
+}
+/* What was copied: the link itself, so nobody has to guess. */
+.build-share-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(360px, calc(100vw - 24px));
+  padding: 12px 14px 13px;
+  border: 1px solid #3a4248;
+  border-radius: 9px;
+  background: #15181b;
+  box-shadow: 0 14px 34px #000000a6;
+  animation: build-share-in 0.14s ease-out;
+}
+.build-share-pop::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  width: 10px;
+  height: 10px;
+  background: #15181b;
+  border-left: 1px solid #3a4248;
+  border-top: 1px solid #3a4248;
+  transform: rotate(45deg);
+}
+.build-share-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--build-ok);
+}
+.build-share-url {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #2c3237;
+  border-radius: 6px;
+  background: #0b0d0e;
+  font:
+    11.5px/1.45 ui-monospace,
+    'Cascadia Mono',
+    Consolas,
+    monospace;
+  color: #dfe6ea;
+  word-break: break-all;
+  -webkit-user-select: all;
+  user-select: all;
+}
+.build-share-hint {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #9aa3aa;
+}
+@keyframes build-share-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .build-share-pop {
+    animation: none;
+  }
+}
+.build-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.build-title-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  color: #191a1c;
+  background: linear-gradient(
+    135deg,
+    var(--accent-bright),
+    var(--accent-violet)
+  );
+}
+.build-title h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  color: #f1f3f4;
+}
+
+/* The two side panels. */
+.build-panels {
+  display: contents;
+}
+.build-tabs {
+  display: none;
+}
+.build-parts,
+.build-report {
+  position: absolute;
+  top: var(--build-top);
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--build-panel);
+}
+.build-parts {
+  left: 0;
+  width: var(--build-parts);
+  border-right: 1px solid var(--build-line);
+}
+.build-report {
+  right: 0;
+  width: var(--build-report);
+  border-left: 1px solid var(--build-line);
+}
+.build-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid #1b1d20;
+}
+.build-report .build-panel-head {
+  flex-direction: row-reverse;
+  padding: 0 16px 0 10px;
+}
+.build-panel-head h2 {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font: 600 10.5px monospace;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #a3a9b0;
+}
+.build-panel-head h2 small {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: none;
+  color: #6c727a;
+}
+.build-collapse {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #2b2f33;
+  border-radius: 7px;
+  color: #a3a9b0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.build-collapse:hover {
+  color: #fff;
+  background: #1d2023;
+  border-color: #464b51;
+}
+.build-parts.collapsed .build-panel-head,
+.build-report.collapsed .build-panel-head {
+  justify-content: center;
+  padding: 0;
+}
+.build-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4c5056 transparent;
+  scrollbar-gutter: stable;
+  padding: 12px 10px 18px 14px;
+}
+.build-report .build-scroll {
+  padding-left: 16px;
+}
+
+/* The parts list: one row per slot, the open one showing its options. */
+.build-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.build-slot {
+  position: relative;
+  border: 1px solid #1f2226;
+  border-radius: 10px;
+  background: var(--build-card);
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+/* The slot's colour runs down its left edge. */
+.build-slot::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--slot);
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+.build-slot:hover::before,
+.build-slot.open::before {
+  opacity: 1;
+}
+.build-slot.open {
+  border-color: color-mix(in srgb, var(--slot) 40%, #24272b);
+}
+.build-slot.focused {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--slot) 28%, transparent);
+}
+.build-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 62px;
+  padding: 9px 12px 9px 14px;
+  text-align: left;
+  color: #c4c8cd;
+  transition: background 0.14s ease;
+}
+.build-slot-head:hover {
+  background: #191c1f;
+}
+.build-slot-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--slot);
+  background: color-mix(in srgb, var(--slot) 15%, #101214);
+  border: 1px solid color-mix(in srgb, var(--slot) 32%, transparent);
+}
+.build-slot-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.build-slot-label {
+  font: 600 9.5px monospace;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--slot) 75%, #8d939a);
+}
+.build-slot-text strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #eef0f2;
+  overflow: hidden;
+}
+.build-slot-text small {
+  font-size: 11px;
+  color: #8d939a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.build-slot-status {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+.status-ok.build-slot-status {
+  color: var(--build-ok);
+  background: #16241f;
+}
+.status-warn.build-slot-status {
+  color: var(--build-warn);
+  background: #2a2216;
+}
+.status-fail.build-slot-status {
+  color: var(--build-fail);
+  background: #2c1918;
+}
+.build-slot-chevron {
+  flex-shrink: 0;
+  color: #6c727a;
+  transition: transform 0.2s ease;
+}
+.build-slot.open .build-slot-chevron {
+  transform: rotate(180deg);
+  color: var(--slot);
+}
+.build-slot-body {
+  padding: 2px 10px 10px 14px;
+  animation: build-reveal 0.18s ease-out;
+}
+@keyframes build-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Maker filter, for a slot with parts from more than one. */
+.build-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.build-filter button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #2c3034;
+  border-radius: 13px;
+  font-size: 11px;
+  color: #a7adb3;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.build-filter button:hover {
+  color: #fff;
+  border-color: #474c52;
+}
+.build-filter button[aria-pressed='true'] {
+  color: #101214;
+  font-weight: 600;
+  background: var(--slot);
+  border-color: var(--slot);
+}
+/* Each maker's colour, for its filter and its tag on an option. */
+.brand-nvidia {
+  --brand: var(--brand-nvidia);
+}
+.brand-amd {
+  --brand: var(--brand-amd);
+}
+.brand-intel {
+  --brand: var(--brand-intel);
+}
+.brand-asus {
+  --brand: var(--brand-asus);
+}
+.brand-msi {
+  --brand: var(--brand-msi);
+}
+.brand-gigabyte {
+  --brand: var(--brand-gigabyte);
+}
+.brand-asrock {
+  --brand: var(--brand-asrock);
+}
+.build-filter button[class*='brand-'][aria-pressed='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* The parts a slot can take, as cards. */
+.build-options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.build-option {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 10px 10px;
+  border: 1px solid #25282c;
+  border-radius: 8px;
+  text-align: left;
+  color: #c4c8cd;
+  background: #181a1d;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease;
+}
+.build-option:hover {
+  background: #1d2024;
+  border-color: color-mix(in srgb, var(--slot) 45%, #34393f);
+}
+.build-option:active {
+  transform: scale(0.99);
+}
+.build-option[aria-pressed='true'] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--slot) 16%, #16181b) 0%,
+    color-mix(in srgb, var(--slot) 8%, #141619) 100%
+  );
+  border-color: color-mix(in srgb, var(--slot) 70%, transparent);
+  color: #f2f5f6;
+  cursor: default;
+}
+.build-option.fit-fail:not([aria-pressed='true']) {
+  background: #1a1617;
+}
+.build-option-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.build-option-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid #565c63;
+  color: #101214;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease;
+}
+.build-option[aria-pressed='true'] .build-option-mark {
+  border-color: var(--slot);
+  background: var(--slot);
+}
+.build-option-text {
+  flex: 1;
+  min-width: 0;
+}
+.build-option strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.build-option small {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: #8d939a;
+}
+.build-option[aria-pressed='true'] small {
+  color: color-mix(in srgb, var(--slot) 35%, #a4aab0);
+}
+.build-brand {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font: 700 9.5px monospace;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+.build-brand {
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 45%, transparent);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+}
+.build-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 25px;
+}
+.build-fact {
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  color: #a9afb5;
+  background: #22252a;
+}
+.build-fact.match {
+  color: var(--build-ok);
+  background: #15251f;
+}
+.build-fact.clash {
+  color: var(--build-fail);
+  background: #2b1817;
+}
+.build-fit-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 25px;
+}
+.build-fit-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: #24272b;
+  overflow: hidden;
+}
+.build-fit-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--slot);
+}
+.tone-warn .build-fit-track > span {
+  background: var(--build-warn);
+}
+.tone-fail .build-fit-track > span {
+  background: var(--build-fail);
+}
+.build-fit-label {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: #8d939a;
+  font-variant-numeric: tabular-nums;
+}
+.build-option-fit {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 25px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.build-option-fit svg {
+  flex-shrink: 0;
+}
+.build-option-fit em {
+  font-style: normal;
+  font-weight: 700;
+}
+.build-option-fit.status-warn {
+  color: var(--build-warn);
+}
+.build-option-fit.status-fail {
+  color: var(--build-fail);
+}
+.build-fixed,
+.build-note {
+  margin: 14px 2px 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #868c93;
+}
+
+/* A folded panel: a rail of what it holds. */
+.build-rail {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: build-reveal 0.18s ease-out;
+}
+.build-rail-slot,
+.build-rail-verdict {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--slot) 30%, transparent);
+  color: var(--slot);
+  background: color-mix(in srgb, var(--slot) 12%, #101214);
+  transition: background 0.14s ease;
+}
+.build-rail-slot:hover {
+  background: color-mix(in srgb, var(--slot) 24%, #101214);
+}
+.build-rail-dot {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #0e0f10;
+  background: var(--build-ok);
+}
+.status-warn > .build-rail-dot {
+  background: var(--build-warn);
+}
+.status-fail > .build-rail-dot {
+  background: var(--build-fail);
+}
+.build-rail-verdict {
+  margin: 10px auto;
+  height: auto;
+  min-height: 38px;
+  padding: 7px 0;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  animation: build-reveal 0.18s ease-out;
+}
+.build-rail-verdict.status-ok {
+  --slot: var(--build-ok);
+}
+.build-rail-verdict.status-warn {
+  --slot: var(--build-warn);
+}
+.build-rail-verdict.status-fail {
+  --slot: var(--build-fail);
+}
+
+/* The report: verdict, rated power, then every check with its sources. */
+.build-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 13px 14px 12px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+.build-summary > output {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.build-summary strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+.build-summary small {
+  font-size: 11px;
+  color: #a2a8ae;
+}
+.build-tally {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.build-tally > span.status-ok {
+  background: var(--build-ok);
+}
+.build-tally > span.status-warn {
+  background: var(--build-warn);
+}
+.build-tally > span.status-fail {
+  background: var(--build-fail);
+}
+.build-summary.status-ok {
+  color: var(--build-ok);
+  border-color: #2f5f50;
+  background: #13221d;
+}
+.build-summary.status-warn {
+  color: var(--build-warn);
+  border-color: #62513b;
+  background: #221d15;
+}
+.build-summary.status-fail {
+  color: var(--build-fail);
+  border-color: #6a3a36;
+  background: #251716;
+}
+.build-power {
+  margin: 14px 0 16px;
+  padding: 11px 12px 10px;
+  border: 1px solid #1f2226;
+  border-radius: 10px;
+  background: var(--build-card);
+}
+.build-power-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #a2a8ae;
+}
+.build-power-head strong {
+  font-size: 14px;
+  font-weight: 650;
+  color: #e9ecee;
+  font-variant-numeric: tabular-nums;
+}
+.build-power-head small {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8d939a;
+}
+.build-power-bar {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin: 9px 0 8px;
+  border-radius: 5px;
+  background: #22252a;
+}
+.build-power-bar > span {
+  background: var(--slot);
+}
+.build-power-bar > span:first-child {
+  border-radius: 5px 0 0 5px;
+}
+/* Where the supply's rating ends. */
+.build-power-bar > i {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--slot-power);
+}
+.build-power.over .build-power-bar > i {
+  background: var(--build-fail);
+}
+.build-power-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.build-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: #a2a8ae;
+  font-variant-numeric: tabular-nums;
+}
+.build-key::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--slot);
+}
+/* The counts under the verdict: each one jumps to its first check. */
+.build-counts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+.build-counts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--state) 40%, transparent);
+  background: color-mix(in srgb, var(--state) 10%, transparent);
+  color: var(--state);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.14s ease;
+}
+.build-counts button:hover {
+  background: color-mix(in srgb, var(--state) 20%, transparent);
+}
+.build-counts .status-ok,
+.build-check.status-ok,
+.build-check-group.status-ok {
+  --state: var(--build-ok);
+}
+.build-counts .status-warn,
+.build-check.status-warn,
+.build-check-group.status-warn {
+  --state: var(--build-warn);
+}
+.build-counts .status-fail,
+.build-check.status-fail,
+.build-check-group.status-fail {
+  --state: var(--build-fail);
+}
+
+/* The checks, grouped by result: problems, then things to check, then the
+   passing ones folded into one line. */
+.build-check-group + .build-check-group {
+  margin-top: 14px;
+}
+.build-check-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 7px;
+  font: 600 10px monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--state);
+}
+.build-check-group h3 small {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-align: center;
+  font: inherit;
+  color: #121314;
+  background: var(--state);
+}
+.build-passing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #1f2226;
+  border-radius: 9px;
+  background: var(--build-card);
+  color: #c9cdd1;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.14s ease;
+}
+.build-passing > svg:first-child {
+  color: var(--build-ok);
+}
+.build-passing > svg:last-child {
+  margin-left: auto;
+  color: #80868d;
+  transition: transform 0.16s;
+}
+.build-passing[aria-expanded='true'] {
+  margin-bottom: 6px;
+}
+.build-passing[aria-expanded='true'] > svg:last-child {
+  transform: rotate(180deg);
+}
+.build-passing:hover,
+.build-check-head:hover {
+  background: #1a1d20;
+}
+.build-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.build-check {
+  position: relative;
+  border: 1px solid #1f2226;
+  border-radius: 9px;
+  background: var(--build-card);
+  overflow: hidden;
+}
+.build-check::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--state);
+  opacity: 0.6;
+}
+.build-check.status-warn,
+.build-check.status-fail {
+  border-color: color-mix(in srgb, var(--state) 28%, #1f2226);
+  background: color-mix(in srgb, var(--state) 5%, #121315);
+}
+.build-check.status-warn::before,
+.build-check.status-fail::before {
+  opacity: 1;
+}
+.build-check.open {
+  border-color: color-mix(in srgb, var(--state) 45%, #1f2226);
+}
+/* One line: the result, what it is about, and the slots it compares. */
+.build-check-head {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 3px 9px;
+  width: 100%;
+  padding: 9px 11px 9px 13px;
+  text-align: left;
+  transition: background 0.14s ease;
+}
+.build-check-head > svg:first-child {
+  color: var(--state);
+}
+.build-check-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #e3e6e8;
+}
+.build-check-chevron {
+  color: #80868d;
+  transition: transform 0.16s;
+}
+.build-check.open .build-check-chevron {
+  transform: rotate(180deg);
+}
+.build-check-slots {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.build-check-slots > span {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font: 600 9.5px monospace;
+  letter-spacing: 0.4px;
+  color: var(--slot);
+  background: color-mix(in srgb, var(--slot) 12%, transparent);
+}
+/* Opened: what it found, where to change it, and its sources. */
+.build-check-body {
+  padding: 0 12px 11px 38px;
+}
+.build-check-body p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #b4b9be;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.build-check.status-fail .build-check-body p {
+  color: #e2c4c0;
+}
+.build-check-fix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+.build-check-fix button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 27px;
+  padding: 0 8px 0 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--slot) 45%, transparent);
+  background: color-mix(in srgb, var(--slot) 12%, transparent);
+  color: var(--slot);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.build-check-fix button:hover {
+  background: color-mix(in srgb, var(--slot) 22%, transparent);
+}
+.build-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 5px;
+}
+.build-sources a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: var(--accent-muted);
+}
+.build-sources a:hover {
+  color: var(--accent-bright);
+}
+.build-restore {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 4px;
+  padding: 8px 12px;
+  border: 1px solid #3a3e44;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #c7cacf;
+}
+.build-restore:hover {
+  background: #1d2023;
+  color: #fff;
+}
+
+/* Over the stage: the tower catching up, and the two overlays. */
+.build-stage-bar {
+  position: absolute;
+  bottom: calc(18px + var(--safe-b));
+  left: var(--build-parts);
+  right: var(--build-report);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.build-stage-bar > * {
+  pointer-events: auto;
+}
+.build-fitting,
+.build-stage-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #2c3034;
+  border-radius: 17px;
+  font-size: 12px;
+  color: #c9cdd1;
+  background: #121416e6;
+  backdrop-filter: blur(6px);
+}
+.build-fitting {
+  white-space: nowrap;
+  color: #d8edf0;
+  border-color: #3f6f7a;
+  pointer-events: none;
+}
+.build-fitting svg {
+  flex-shrink: 0;
+  color: var(--accent-bright);
+  animation: build-spin 0.8s linear infinite;
+}
+.build-stage-bar button:hover {
+  border-color: #4a4f55;
+  color: #fff;
+}
+.build-stage-bar button[aria-pressed='true'] {
+  color: #d8edf0;
+  border-color: #4f8792;
+  background: #18303ae6;
+}
+@keyframes build-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .build-fitting svg,
+  .build-slot-body,
+  .build-rail,
+  .build-rail-verdict {
+    animation: none;
+  }
+  .build-slot,
+  .build-option,
+  .build-slot-chevron {
+    transition: none;
+  }
+}
+
+/* Narrower desktops: slimmer panels. */
+@media (max-width: 1280px) {
+  .build-workbench {
+    --build-parts: 320px;
+    --build-report: 330px;
+  }
+  .build-workbench:has(.build-parts.collapsed) {
+    --build-parts: var(--build-rail);
+  }
+  .build-workbench:has(.build-report.collapsed) {
+    --build-report: var(--build-rail);
+  }
+}
+
+/* Tablets and phones: the tower on top, the panels taking turns below. */
+@media (max-width: 900px) {
+  .build-workbench {
+    --build-top: 60px;
+    --build-stage: 40dvh;
+    --build-tabbar: 53px;
+  }
+  .build-workbench:has(.build-panels.sheet-down) {
+    --build-stage: calc(
+      100dvh - var(--build-top) - var(--build-tabbar) - var(--safe-b)
+    );
+  }
+  .build-topbar {
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .build-title-icon {
+    display: none;
+  }
+  .build-title {
+    justify-content: center;
+    text-align: center;
+  }
+  .build-back span,
+  .build-share span {
+    display: none;
+  }
+  .build-back,
+  .build-share {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .build-workbench .viewport {
+    inset: var(--build-top) 0 auto 0;
+    height: var(--build-stage);
+  }
+  .build-stage-bar {
+    top: calc(var(--build-top) + var(--build-stage) - 46px);
+    bottom: auto;
+    left: 0;
+    right: 0;
+  }
+  .build-panels {
+    position: absolute;
+    top: calc(var(--build-top) + var(--build-stage));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    background: var(--build-panel);
+    border-top: 1px solid var(--build-line);
+    padding-bottom: var(--safe-b);
+  }
+  .build-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: var(--build-tabbar);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--build-line);
+  }
+  .build-tabs button {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #a2a8ae;
+  }
+  .build-tabs button[aria-selected='true'] {
+    color: #f0f7f8;
+    background: #1b2d32;
+  }
+  .build-panels.sheet-down .build-tabs button[aria-selected='true'] {
+    background: none;
+  }
+  .build-tabs .build-sheet-toggle {
+    flex: 0 0 40px;
+    color: #c4c9ce;
+    border: 1px solid #2b2f33;
+  }
+  .build-sheet-toggle svg {
+    transition: transform 0.2s ease;
+  }
+  .build-sheet-toggle[aria-expanded='false'] svg {
+    transform: rotate(180deg);
+  }
+  .build-tab-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 18px;
+    color: #191a1c;
+    background: #8d939a;
+  }
+  .build-tab-count.status {
+    background: var(--build-warn);
+  }
+  .build-tabs .status-fail .build-tab-count.status {
+    background: var(--build-fail);
+  }
+  .build-parts,
+  .build-report {
+    position: static;
+    flex: 1 1 auto;
+    width: auto;
+    border: 0;
+    background: none;
+  }
+  .build-panels[data-tab='parts'] .build-report,
+  .build-panels[data-tab='checks'] .build-parts,
+  .build-panels.sheet-down .build-parts,
+  .build-panels.sheet-down .build-report {
+    display: none;
+  }
+  /* The tabs do the panel heads' job here. */
+  .build-panel-head {
+    display: none;
+  }
+  .build-scroll {
+    padding: 10px 8px 16px 12px;
+  }
+}
+
+/* A phone on its side: the tower on the left, the panels on the right. */
+@media (max-width: 900px) and (max-height: 550px) and (orientation: landscape) {
+  .build-workbench {
+    --build-top: 52px;
+  }
+  .build-workbench .viewport {
+    inset: var(--build-top) 50% 0 0;
+    height: auto;
+  }
+  .build-stage-bar {
+    top: auto;
+    bottom: calc(10px + var(--safe-b));
+    right: 50%;
+  }
+  .build-panels {
+    top: var(--build-top);
+    left: 50%;
+    border-top: 0;
+    border-left: 1px solid var(--build-line);
+  }
+  .build-tabs .build-sheet-toggle {
+    display: none;
+  }
+}

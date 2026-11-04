@@ -14,7 +14,8 @@ import {
   CommandEmpty,
   CommandGroup,
 } from '@/components/ui/command';
-import { byId, colors, searchConcepts } from '@/lib/manifest';
+import { byId, searchConcepts } from '@/lib/manifest';
+import { hueOfSystem, hueStyle } from '@/lib/palette';
 import { levels } from '@/lib/levels';
 
 /** What the palette offers before anything has been typed. */
@@ -71,17 +72,20 @@ export default function SearchDialog({
                 <CommandItem
                   key={c.id}
                   value={c.id}
+                  style={hueStyle(hueOfSystem(c.category))}
                   onSelect={() => onSelect(c.id)}
                 >
-                  <i style={{ background: colors[c.category] }} />
+                  <i />
                   <div>
                     {c.name}
                     <small>
                       <span>{levels[c.level].name}</span>
-                      {c.category} ·{' '}
-                      {c.representationType === 'logical'
-                        ? 'Logical architecture'
-                        : 'Physical hardware'}
+                      <em>
+                        <b>{c.category}</b> ·{' '}
+                        {c.representationType === 'logical'
+                          ? 'Logical architecture'
+                          : 'Physical hardware'}
+                      </em>
                     </small>
                   </div>
                   <ArrowUpRight size={15} />

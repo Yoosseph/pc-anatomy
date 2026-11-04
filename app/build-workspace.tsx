@@ -809,6 +809,17 @@ const countWord: Record<CheckStatus, string> = {
   ok: 'pass',
 };
 
+/** The checks under each result, worst first. */
+function byStatus(checks: BuildCheck[]) {
+  const groups: Record<CheckStatus, BuildCheck[]> = {
+    fail: [],
+    warn: [],
+    ok: [],
+  };
+  for (const check of checks) groups[check.status].push(check);
+  return groups;
+}
+
 /**
  * Whether the parts work together, summarised: the verdict and its counts,
  * the rated draw, then one line per check, problems first and passing checks
@@ -826,10 +837,10 @@ function Report({
 }) {
   const [open, setOpen] = useState<BuildCheck['id'] | null>(null);
   const [passing, setPassing] = useState(false);
-  const of = (status: CheckStatus) => checks.filter((c) => c.status === status);
+  const groups = byStatus(checks);
   // A count in the verdict jumps to its first check and opens it.
   const jump = (status: CheckStatus) => {
-    const first = of(status)[0];
+    const first = groups[status][0];
     if (!first) return;
     if (status === 'ok') setPassing(true);
     setOpen(first.id);
@@ -850,20 +861,25 @@ function Report({
   );
   return (
     <>
-      <Verdict checks={checks} onJump={jump} />
+      <Verdict
+        overall={buildStatus(checks)}
+        groups={groups}
+        total={checks.length}
+        onJump={jump}
+      />
       <PowerBudget build={build} />
       {(['fail', 'warn'] as const).map(
         (status) =>
-          of(status).length > 0 && (
+          groups[status].length > 0 && (
             <section
               key={status}
               className={'build-check-group status-' + status}
               aria-label={groupTitle[status]}
             >
               <h3>
-                {groupTitle[status]} <small>{of(status).length}</small>
+                {groupTitle[status]} <small>{groups[status].length}</small>
               </h3>
-              <ul className="build-checks">{of(status).map(row)}</ul>
+              <ul className="build-checks">{groups[status].map(row)}</ul>
             </section>
           ),
       )}
@@ -874,12 +890,12 @@ function Report({
           onClick={() => setPassing(!passing)}
         >
           <CircleCheck size={14} aria-hidden="true" />
-          {of('ok').length === checks.length
+          {groups.ok.length === checks.length
             ? `All ${checks.length} checks pass`
-            : `${plural(of('ok').length, 'check')} passing`}
+            : `${plural(groups.ok.length, 'check')} passing`}
           <ChevronDown size={14} aria-hidden="true" />
         </button>
-        {passing && <ul className="build-checks">{of('ok').map(row)}</ul>}
+        {passing && <ul className="build-checks">{groups.ok.map(row)}</ul>}
       </section>
     </>
   );
@@ -887,15 +903,17 @@ function Report({
 
 /** The build's worst result, and a count of each result that jumps to it. */
 function Verdict({
-  checks,
+  overall,
+  groups,
+  total,
   onJump,
 }: {
-  checks: BuildCheck[];
+  overall: CheckStatus;
+  groups: Record<CheckStatus, BuildCheck[]>;
+  total: number;
   onJump: (status: CheckStatus) => void;
 }) {
-  const overall = buildStatus(checks);
-  const count = (status: CheckStatus) =>
-    checks.filter((c) => c.status === status).length;
+  const count = (status: CheckStatus) => groups[status].length;
   const Icon = statusIcon[overall];
   return (
     <div className={'build-summary status-' + overall}>
@@ -909,7 +927,7 @@ function Verdict({
               : `${plural(count('fail'), 'problem')} to fix`}
         </strong>
         <small>
-          {count('ok')} of {checks.length} checks pass
+          {count('ok')} of {total} checks pass
         </small>
       </output>
       <span className="build-tally" aria-hidden="true">

@@ -216,6 +216,10 @@ lit flat.
 | `motherboard` | `pc` | Motherboard | physical | 24 |
 | `z890` | `pc` | Motherboard | physical | 25 |
 | `b650m` | `pc` | Motherboard | physical | 25 |
+| `ryzen` | `motherboard` | Processor · Ryzen 9 9950X | logical | 6 |
+| `ryzenio` | `ryzen` | Processor · Ryzen 9 9950X | logical | 5 |
+| `corei9` | `motherboard` | Processor · Core Ultra 9 285K | logical | 9 |
+| `coreio` | `corei9` | Processor · Core Ultra 9 285K | logical | 4 |
 | `dimm` | `motherboard` | Memory · DDR5 | physical | 10 |
 | `dram` | `dimm` | Memory · DDR5 | physical | 8 |
 | `banks` | `dram` | Memory · DDR5 | logical | 9 |
@@ -226,10 +230,6 @@ lit flat.
 | `ddr4banks` | `ddr4dram` | Memory · DDR4 | logical | 9 |
 | `ddr4array` | `ddr4banks` | Memory · DDR4 | logical | 9 |
 | `ddr4cell` | `ddr4array` | Memory · DDR4 | logical | 10 |
-| `ryzen` | `motherboard` | Motherboard | logical | 6 |
-| `ryzenio` | `ryzen` | Motherboard | logical | 5 |
-| `corei9` | `motherboard` | Motherboard | logical | 9 |
-| `coreio` | `corei9` | Motherboard | logical | 4 |
 | `psu` | `pc` | Power supply | physical | 17 |
 | `psubronze` | `pc` | Power supply | physical | 17 |
 | `fan` | `pc` | Cooling | physical | 8 |
@@ -262,7 +262,11 @@ it is listed under that card. There are five, largest first; the two small
 cards end at the card, with no chip scales under them. The Memory menu does the same for its two
 generations, the installed DDR5 module and a DDR4 one from the same product
 line. The Power supply menu lists its two models directly, and the Motherboard
-menu lists the three boards beside the processors.
+menu lists the three boards and nothing else. The processors are a Processor
+menu of their own, with a dropdown each like the cards, but their parent is
+still the board: the package sits in its socket, so the CPU on the board opens
+it and the breadcrumb runs back through the board, the way the M.2 drive is in
+the Storage menu but opens from the board.
 
 Ten scales are marked `alternative: true`: the second processor, the two
 other boards, the liquid cooler, the four other graphics cards, the fixed-cable

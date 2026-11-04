@@ -76,12 +76,12 @@ await test('the GPU menu holds five cards, largest first, each in its own dropdo
     'xve',
   ]);
   // Every GPU scale is in exactly one dropdown. Memory has its own two
-  // generations; no other menu grows one.
+  // generations and Processor its two processors; no other menu grows one.
   const listed = gpu.submenus.flatMap((s) => s.levels);
   assert.deepEqual([...listed].sort(), [...gpu.levels].sort());
   assert.equal(new Set(listed).size, listed.length);
   for (const b of branches().filter(
-    (b) => b.label !== 'GPU' && b.label !== 'Memory',
+    (b) => !['GPU', 'Memory', 'Processor'].includes(b.label),
   ))
     assert.equal(b.submenus.length, 0, b.label);
 });
@@ -108,10 +108,10 @@ await test('the new cards are extra cards, not replacements for the installed 50
     assert.equal(levels[id].alternative, true);
     assert.equal(levels[id].branchLabel, 'GPU');
   }
-  // The board menu lists the two other boards beside the installed one.
+  // The board menu lists the two other boards beside the installed one, and
+  // only boards: the processors have their own menu.
   const boards = branches().find((b) => b.label === 'Motherboard')!;
-  for (const id of ['motherboard', 'z890', 'b650m'] as const)
-    assert.ok(boards.levels.includes(id), id);
+  assert.deepEqual(boards.levels, ['motherboard', 'z890', 'b650m']);
   for (const id of ['z890', 'b650m'] as const)
     assert.equal(levels[id].alternative, true);
   // Each card opens its own chip from both the package and the bare die.

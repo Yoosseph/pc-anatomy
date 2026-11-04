@@ -70,6 +70,38 @@ await test('M.2 is reachable from its motherboard and the Storage menu without d
   );
   assert.equal(selectSearch(initialState, 'nvmenand').level, 'nvme');
 });
+await test('processors have a menu of their own, and still open from the board they sit in', () => {
+  const menu = (label: string) => branches().find((b) => b.label === label)!;
+  assert.deepEqual(menu('Motherboard').levels, [
+    'motherboard',
+    'z890',
+    'b650m',
+  ]);
+  assert.deepEqual(
+    menu('Processor').submenus.map(({ root, levels }) => [root, levels]),
+    [
+      ['ryzen', ['ryzen', 'ryzenio']],
+      ['corei9', ['corei9', 'coreio']],
+    ],
+  );
+  // Side by side, the board first.
+  const labels = branches().map((b) => b.label);
+  assert.equal(labels.indexOf('Processor'), labels.indexOf('Motherboard') + 1);
+  // The dive is the same: the CPU in each board's socket opens its processor,
+  // and the way back runs through the board.
+  assert.equal(byId.cpu.level, 'motherboard');
+  assert.equal(byId.cpu.open, 'ryzen');
+  assert.equal(byId.z890cpu.open, 'corei9');
+  assert.deepEqual(levelPath('ryzenio'), [
+    'pc',
+    'motherboard',
+    'ryzen',
+    'ryzenio',
+  ]);
+  // On the board the CPU is a part of the Compute system, not the Board one.
+  assert.equal(byId.cpu.category, 'Compute');
+  assert.equal(byId.z890cpu.category, 'Compute');
+});
 await test('power supply menu separates modular and fixed-cable models', () => {
   const power = branches().find((b) => b.label === 'Power supply')!;
   assert.deepEqual(power.levels, ['psu', 'psubronze']);

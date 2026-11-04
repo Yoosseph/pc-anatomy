@@ -45,6 +45,10 @@ are illustrative, with their scope and references in each component card.
 ```text
 Desktop PC
 ├── Motherboard
+│   ├── ASUS TUF GAMING X670E-PLUS WIFI
+│   ├── ASUS TUF GAMING Z890-PLUS WIFI
+│   └── ASUS TUF GAMING B650M-PLUS WIFI
+├── Processor (in the board's socket, so the CPU on the board opens it too)
 │   ├── Ryzen 9 9950X
 │   │   └── Ryzen I/O die
 │   └── Core Ultra 9 285K

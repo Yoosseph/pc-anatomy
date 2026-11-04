@@ -5,6 +5,10 @@
   <url><loc>https://pc-anatomy.com/?scale=motherboard</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=z890</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=b650m</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=ryzen</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=ryzenio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=corei9</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=coreio</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dram</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=banks</loc></url>
@@ -15,10 +19,6 @@
   <url><loc>https://pc-anatomy.com/?scale=ddr4banks</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ddr4array</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ddr4cell</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=ryzen</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=ryzenio</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=corei9</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=coreio</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=psu</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=psubronze</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=fan</loc></url>

@@ -107,6 +107,26 @@ const levelIcon: Record<LevelId, typeof Box> = {
   xve: Microscope,
 };
 
+/** What a menu's dropdowns are, where each is a product of its own. */
+const dropdowns: Record<string, string> = {
+  GPU: 'cards',
+  Memory: 'generations',
+  Processor: 'processors',
+};
+/** Menus whose every scale is a whole product, so they are counted as such. */
+const products: Record<string, string> = {
+  Motherboard: 'boards',
+  'Power supply': 'models',
+};
+
+/** The line under a menu: "5 cards · 17 scales", "3 boards", "1 scale inside". */
+function menuNote(label: string, scales: number, submenus: number) {
+  if (submenus > 0)
+    return `${submenus} ${dropdowns[label] ?? 'models'} · ${scales} scales`;
+  if (products[label]) return `${scales} ${products[label]}`;
+  return `${scales} ${scales === 1 ? 'scale' : 'scales'} inside`;
+}
+
 type Props = {
   level: LevelId;
   shownMenu: LevelId | null;
@@ -245,11 +265,7 @@ export default function ScaleNav({
                   <div>
                     {label}
                     <small>
-                      {submenus.length > 0
-                        ? `${submenus.length} ${label === 'GPU' ? 'cards' : label === 'Memory' ? 'generations' : 'models'} · ${scales.length} scales`
-                        : label === 'Power supply'
-                          ? `${scales.length} models`
-                          : `${scales.length} ${scales.length === 1 ? 'scale' : 'scales'} inside`}
+                      {menuNote(label, scales.length, submenus.length)}
                     </small>
                   </div>
                   <ChevronDown size={15} />

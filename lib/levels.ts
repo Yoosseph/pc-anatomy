@@ -15,6 +15,10 @@ export type LevelId =
   | 'motherboard'
   | 'z890'
   | 'b650m'
+  | 'ryzen'
+  | 'ryzenio'
+  | 'corei9'
+  | 'coreio'
   | 'dimm'
   | 'dram'
   | 'banks'
@@ -25,10 +29,6 @@ export type LevelId =
   | 'ddr4banks'
   | 'ddr4array'
   | 'ddr4cell'
-  | 'ryzen'
-  | 'ryzenio'
-  | 'corei9'
-  | 'coreio'
   | 'psu'
   | 'psubronze'
   | 'fan'
@@ -197,6 +197,69 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
+  // The processors are a menu of their own, beside the boards rather than
+  // inside them, but their parent is still the board: the package sits in its
+  // socket, so opening the CPU on the board dives into it, and the breadcrumb
+  // goes back through the board.
+  ryzen: {
+    id: 'ryzen',
+    comparisonCategory: 'processors',
+    parent: 'motherboard',
+    branchLabel: 'Processor',
+    submenu: 'Ryzen 9 9950X',
+    submenuNote: 'AMD · Zen 5 · installed',
+    name: 'Ryzen 9 9950X',
+    title: 'Sixteen cores, on three dies.',
+    caption: 'AMD RYZEN 9 9950X · ZEN 5',
+    summary: 'Two core complex dies and an I/O die',
+    kind: 'logical',
+    concept: 'ryzenpackage',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  ryzenio: {
+    id: 'ryzenio',
+    parent: 'ryzen',
+    name: 'Ryzen I/O die',
+    title: 'Inside the Ryzen I/O die.',
+    caption: 'ZEN 5 I/O DIE · TSMC 6 NM',
+    summary: 'Memory, PCIe, display and chiplet fabric',
+    kind: 'logical',
+    concept: 'zeniod',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  corei9: {
+    id: 'corei9',
+    comparisonCategory: 'processors',
+    parent: 'motherboard',
+    // The board is modelled with the AMD part seated, so the Intel package is
+    // the alternative: same socket position, different processor entirely.
+    alternative: true,
+    branchLabel: 'Processor',
+    submenu: 'Core Ultra 9 285K',
+    submenuNote: 'Intel · Arrow Lake',
+    name: 'Core Ultra 9 285K',
+    title: 'Twenty four cores, on stacked tiles.',
+    caption: 'INTEL CORE ULTRA 9 285K · ARROW LAKE',
+    summary: 'Compute, SoC, graphics and I/O tiles on a base',
+    kind: 'logical',
+    concept: 'corepackage',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  coreio: {
+    id: 'coreio',
+    parent: 'corei9',
+    name: 'Core Ultra I/O tile',
+    title: 'Inside the I/O extender tile.',
+    caption: 'ARROW LAKE I/O EXTENDER · TSMC N6',
+    summary: 'PCIe, Thunderbolt and die-to-die links',
+    kind: 'logical',
+    concept: 'arrowio',
+    phases: dissectionPhases,
+    detailed: true,
+  },
   dimm: {
     id: 'dimm',
     comparisonCategory: 'memory',
@@ -329,59 +392,6 @@ export const levels: Record<LevelId, LevelDef> = {
     summary: 'The same cell as DDR5, its wordlines boosted to 2.5 V',
     kind: 'logical',
     concept: 'ddr4mat',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  ryzen: {
-    id: 'ryzen',
-    comparisonCategory: 'processors',
-    parent: 'motherboard',
-    name: 'Ryzen 9 9950X',
-    title: 'Sixteen cores, on three dies.',
-    caption: 'AMD RYZEN 9 9950X · ZEN 5',
-    summary: 'Two core complex dies and an I/O die',
-    kind: 'logical',
-    concept: 'ryzenpackage',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  ryzenio: {
-    id: 'ryzenio',
-    parent: 'ryzen',
-    name: 'Ryzen I/O die',
-    title: 'Inside the Ryzen I/O die.',
-    caption: 'ZEN 5 I/O DIE · TSMC 6 NM',
-    summary: 'Memory, PCIe, display and chiplet fabric',
-    kind: 'logical',
-    concept: 'zeniod',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  corei9: {
-    id: 'corei9',
-    comparisonCategory: 'processors',
-    parent: 'motherboard',
-    // The board is modelled with the AMD part seated, so the Intel package is
-    // the alternative: same socket position, different processor entirely.
-    alternative: true,
-    name: 'Core Ultra 9 285K',
-    title: 'Twenty four cores, on stacked tiles.',
-    caption: 'INTEL CORE ULTRA 9 285K · ARROW LAKE',
-    summary: 'Compute, SoC, graphics and I/O tiles on a base',
-    kind: 'logical',
-    concept: 'corepackage',
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  coreio: {
-    id: 'coreio',
-    parent: 'corei9',
-    name: 'Core Ultra I/O tile',
-    title: 'Inside the I/O extender tile.',
-    caption: 'ARROW LAKE I/O EXTENDER · TSMC N6',
-    summary: 'PCIe, Thunderbolt and die-to-die links',
-    kind: 'logical',
-    concept: 'arrowio',
     phases: dissectionPhases,
     detailed: true,
   },

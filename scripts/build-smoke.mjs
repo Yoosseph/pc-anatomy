@@ -220,6 +220,31 @@ try {
   await pick('Processor', /^Intel Core Ultra 9 285K/);
   await rebuilt(before);
   assert.match(await summary(), /problem/);
+  // The report lists the problem as one line; clicked, it says what is wrong
+  // and offers the slots that would fix it.
+  const problem = page
+    .locator('.build-check-group.status-fail .build-check')
+    .first();
+  assert.equal(await problem.locator('.build-check-body').count(), 0);
+  await problem
+    .locator('.build-check-head')
+    .evaluate((button) => button.click());
+  assert.match(
+    await problem.locator('.build-check-body').innerText(),
+    /LGA 1851/,
+  );
+  await slot('Processor')
+    .locator('.build-slot-head')
+    .evaluate((button) => button.click());
+  await problem
+    .getByRole('button', { name: /Change the processor/ })
+    .evaluate((button) => button.click());
+  assert.equal(
+    await slot('Processor')
+      .locator('.build-slot-head')
+      .getAttribute('aria-expanded'),
+    'true',
+  );
   // The Intel board takes it, and the build works again.
   before = await model();
   await pick('Motherboard', /^ASUS TUF GAMING Z890-PLUS WIFI/);

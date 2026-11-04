@@ -615,6 +615,13 @@ the rated draw, as meters. An option that would fail or warn says why
 (`optionFit`). Only the open slot renders its options, so the list stays
 short however many parts a slot takes.
 
+**The report is a summary first.** The verdict counts each result, and each
+count jumps to its first check. Then come the problems, then the things worth
+checking, each as one line with the slots it compares; the passing checks fold
+into a single line. A line opens to say what the check found, with a button to
+each slot that would change the answer, which opens that slot in the parts
+list (on a phone, on the Parts tab), and the sources the check rests on.
+
 **Either panel folds to a rail.** The parts rail is the slot icons with their
 status; the report's is the verdict. The viewer takes the room in one step
 rather than through a transition: the renderer resizes its drawing buffer when

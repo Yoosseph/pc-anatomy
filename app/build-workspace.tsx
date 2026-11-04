@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleX,
   CircuitBoard,
@@ -166,6 +167,8 @@ export default function BuildWorkspace({
   const showSlot = (slot: BuildSlot) => {
     setOpen(slot);
     setPartsOpen(true);
+    setTab('parts');
+    setSheet(true);
   };
 
   return (
@@ -179,14 +182,7 @@ export default function BuildWorkspace({
           <span className="build-title-icon" aria-hidden="true">
             <Wrench size={17} />
           </span>
-          <div>
-            <h1>Build your PC</h1>
-            <p>
-              {changed
-                ? `${plural(changed, 'part')} changed from the original machine`
-                : 'The original machine'}
-            </p>
-          </div>
+          <h1>Build your PC</h1>
         </div>
         <ShareBuild />
       </header>
@@ -288,13 +284,7 @@ export default function BuildWorkspace({
           />
           {checksOpen ? (
             <div className="build-scroll">
-              <Verdict checks={checks} />
-              <PowerBudget build={build} />
-              <ul className="build-checks">
-                {checks.map((check) => (
-                  <CheckRow key={check.id} check={check} />
-                ))}
-              </ul>
+              <Report build={build} checks={checks} onShowSlot={showSlot} />
               <p className="build-note">
                 Figures are each maker’s published numbers, or measurements of
                 the modelled case. A supply below a recommendation may still run
@@ -763,36 +753,6 @@ function VerdictRail({
   );
 }
 
-/** The build's worst result, counted. */
-function Verdict({ checks }: { checks: BuildCheck[] }) {
-  const overall = buildStatus(checks);
-  const count = (status: CheckStatus) =>
-    checks.filter((c) => c.status === status).length;
-  const Icon = statusIcon[overall];
-  return (
-    <output className={'build-summary status-' + overall}>
-      <Icon size={22} aria-hidden="true" />
-      <span>
-        <strong>
-          {overall === 'ok'
-            ? 'Everything works together'
-            : overall === 'warn'
-              ? `Works, with ${plural(count('warn'), 'thing')} to check`
-              : `${plural(count('fail'), 'problem')} to fix`}
-        </strong>
-        <small>
-          {count('ok')} of {checks.length} checks pass
-        </small>
-      </span>
-      <span className="build-tally" aria-hidden="true">
-        {(['ok', 'warn', 'fail'] as const).map((s) => (
-          <span key={s} className={'status-' + s} style={{ flex: count(s) }} />
-        ))}
-      </span>
-    </output>
-  );
-}
-
 /**
  * The processor's and the card's published power, stacked in their slots'
  * colours against the supply's rating.
@@ -838,14 +798,177 @@ function Key({ slot, children }: { slot: BuildSlot; children: ReactNode }) {
   );
 }
 
-/** One check: its result, what it compared, and the sources it rests on. */
-function CheckRow({ check }: { check: BuildCheck }) {
-  const Icon = statusIcon[check.status];
+const groupTitle: Record<CheckStatus, string> = {
+  fail: 'Problems to fix',
+  warn: 'Worth checking',
+  ok: 'Passing',
+};
+const countWord: Record<CheckStatus, string> = {
+  fail: 'to fix',
+  warn: 'to check',
+  ok: 'pass',
+};
+
+/**
+ * Whether the parts work together, summarised: the verdict and its counts,
+ * the rated draw, then one line per check, problems first and passing checks
+ * folded away. A line opens to say what it compared and what is wrong, with
+ * a button to the slot that would fix it, and the sources it rests on.
+ */
+function Report({
+  build,
+  checks,
+  onShowSlot,
+}: {
+  build: DesktopBuild;
+  checks: BuildCheck[];
+  onShowSlot: (slot: BuildSlot) => void;
+}) {
+  const [open, setOpen] = useState<BuildCheck['id'] | null>(null);
+  const [passing, setPassing] = useState(false);
+  const of = (status: CheckStatus) => checks.filter((c) => c.status === status);
+  // A count in the verdict jumps to its first check and opens it.
+  const jump = (status: CheckStatus) => {
+    const first = of(status)[0];
+    if (!first) return;
+    if (status === 'ok') setPassing(true);
+    setOpen(first.id);
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`build-check-${first.id}`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+    );
+  };
+  const row = (check: BuildCheck) => (
+    <CheckRow
+      key={check.id}
+      check={check}
+      open={open === check.id}
+      onToggle={() => setOpen((id) => (id === check.id ? null : check.id))}
+      onShowSlot={onShowSlot}
+    />
+  );
   return (
-    <li className={'status-' + check.status}>
-      <Icon size={15} aria-label={statusWord[check.status]} />
-      <div>
-        <strong>{check.title}</strong>
+    <>
+      <Verdict checks={checks} onJump={jump} />
+      <PowerBudget build={build} />
+      {(['fail', 'warn'] as const).map(
+        (status) =>
+          of(status).length > 0 && (
+            <section
+              key={status}
+              className={'build-check-group status-' + status}
+              aria-label={groupTitle[status]}
+            >
+              <h3>
+                {groupTitle[status]} <small>{of(status).length}</small>
+              </h3>
+              <ul className="build-checks">{of(status).map(row)}</ul>
+            </section>
+          ),
+      )}
+      <section className="build-check-group status-ok" aria-label="Passing">
+        <button
+          className="build-passing"
+          aria-expanded={passing}
+          onClick={() => setPassing(!passing)}
+        >
+          <CircleCheck size={14} aria-hidden="true" />
+          {of('ok').length === checks.length
+            ? `All ${checks.length} checks pass`
+            : `${plural(of('ok').length, 'check')} passing`}
+          <ChevronDown size={14} aria-hidden="true" />
+        </button>
+        {passing && <ul className="build-checks">{of('ok').map(row)}</ul>}
+      </section>
+    </>
+  );
+}
+
+/** The build's worst result, and a count of each result that jumps to it. */
+function Verdict({
+  checks,
+  onJump,
+}: {
+  checks: BuildCheck[];
+  onJump: (status: CheckStatus) => void;
+}) {
+  const overall = buildStatus(checks);
+  const count = (status: CheckStatus) =>
+    checks.filter((c) => c.status === status).length;
+  const Icon = statusIcon[overall];
+  return (
+    <div className={'build-summary status-' + overall}>
+      <Icon size={22} aria-hidden="true" />
+      <output>
+        <strong>
+          {overall === 'ok'
+            ? 'Everything works together'
+            : overall === 'warn'
+              ? `Works, with ${plural(count('warn'), 'thing')} to check`
+              : `${plural(count('fail'), 'problem')} to fix`}
+        </strong>
+        <small>
+          {count('ok')} of {checks.length} checks pass
+        </small>
+      </output>
+      <span className="build-tally" aria-hidden="true">
+        {(['ok', 'warn', 'fail'] as const).map((s) => (
+          <span key={s} className={'status-' + s} style={{ flex: count(s) }} />
+        ))}
+      </span>
+      <span className="build-counts">
+        {(['fail', 'warn', 'ok'] as const).map((s) => {
+          if (!count(s)) return null;
+          const CountIcon = statusIcon[s];
+          return (
+            <button key={s} className={'status-' + s} onClick={() => onJump(s)}>
+              <CountIcon size={13} aria-hidden="true" />
+              {count(s)} {countWord[s]}
+            </button>
+          );
+        })}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * One check as a line: its result, what it is about and the slots it
+ * compares. Opened, it says what it found, offers the slots that would change
+ * the answer, and lists the sources it rests on.
+ */
+function CheckRow({
+  check,
+  open,
+  onToggle,
+  onShowSlot,
+}: {
+  check: BuildCheck;
+  open: boolean;
+  onToggle: () => void;
+  onShowSlot: (slot: BuildSlot) => void;
+}) {
+  const Icon = statusIcon[check.status];
+  const body = `build-check-${check.id}-body`;
+  return (
+    <li
+      id={`build-check-${check.id}`}
+      className={'build-check status-' + check.status + (open ? ' open' : '')}
+    >
+      <button
+        className="build-check-head"
+        aria-expanded={open}
+        aria-controls={body}
+        onClick={onToggle}
+      >
+        <Icon size={15} aria-label={statusWord[check.status]} />
+        <span className="build-check-title">{check.title}</span>
+        <ChevronDown
+          size={14}
+          className="build-check-chevron"
+          aria-hidden="true"
+        />
         <span className="build-check-slots">
           {checkSlots(check.id).map((slot) => (
             <span key={slot} style={tint(slot)}>
@@ -853,21 +976,39 @@ function CheckRow({ check }: { check: BuildCheck }) {
             </span>
           ))}
         </span>
-        <p>{check.detail}</p>
-        <span className="build-sources">
-          {check.sources.map((id) => (
-            <a
-              key={id}
-              href={sources[id].url}
-              target="_blank"
-              rel="noreferrer"
-              title={sources[id].name}
-            >
-              {sources[id].name}
-            </a>
-          ))}
-        </span>
-      </div>
+      </button>
+      {open && (
+        <div className="build-check-body" id={body}>
+          <p>{check.detail}</p>
+          {check.status !== 'ok' && (
+            <span className="build-check-fix">
+              {checkSlots(check.id).map((slot) => (
+                <button
+                  key={slot}
+                  style={tint(slot)}
+                  onClick={() => onShowSlot(slot)}
+                >
+                  Change the {slotLabel[slot].toLowerCase()}
+                  <ChevronRight size={13} aria-hidden="true" />
+                </button>
+              ))}
+            </span>
+          )}
+          <span className="build-sources">
+            {check.sources.map((id) => (
+              <a
+                key={id}
+                href={sources[id].url}
+                target="_blank"
+                rel="noreferrer"
+                title={sources[id].name}
+              >
+                {sources[id].name}
+              </a>
+            ))}
+          </span>
+        </div>
+      )}
     </li>
   );
 }

@@ -151,6 +151,11 @@ give each kind of part the same one, so graphics are violet, memory lime and
 power orange wherever they appear, and each graphics card's menu is marked in
 its chip maker's colour.
 
+The compatibility panel sums the build up first: what fails, what is worth
+checking and what passes, each count a link to its checks. Problems come
+first, one line each; click one to see what is wrong, the sources behind it,
+and a button to the part that would fix it.
+
 Every figure the checks use is cited: whether the processor fits the board's
 socket, whether the cooler and the board fit the case, whether the memory fits
 the DDR5 slots and how fast the processor's maker rates two modules or four,

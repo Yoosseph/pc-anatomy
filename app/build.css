@@ -199,14 +199,6 @@
   letter-spacing: 0.2px;
   color: #f1f3f4;
 }
-.build-title p {
-  margin: 1px 0 0;
-  font-size: 11.5px;
-  color: #969ca3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* The two side panels. */
 .build-panels {
@@ -749,7 +741,7 @@
   border-radius: 10px;
   border: 1px solid;
 }
-.build-summary > span:not(.build-tally) {
+.build-summary > output {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -869,76 +861,173 @@
   border-radius: 2px;
   background: var(--slot);
 }
+/* The counts under the verdict: each one jumps to its first check. */
+.build-counts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+.build-counts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--state) 40%, transparent);
+  background: color-mix(in srgb, var(--state) 10%, transparent);
+  color: var(--state);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.14s ease;
+}
+.build-counts button:hover {
+  background: color-mix(in srgb, var(--state) 20%, transparent);
+}
+.build-counts .status-ok,
+.build-check.status-ok,
+.build-check-group.status-ok {
+  --state: var(--build-ok);
+}
+.build-counts .status-warn,
+.build-check.status-warn,
+.build-check-group.status-warn {
+  --state: var(--build-warn);
+}
+.build-counts .status-fail,
+.build-check.status-fail,
+.build-check-group.status-fail {
+  --state: var(--build-fail);
+}
+
+/* The checks, grouped by result: problems, then things to check, then the
+   passing ones folded into one line. */
+.build-check-group + .build-check-group {
+  margin-top: 14px;
+}
+.build-check-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 7px;
+  font: 600 10px monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--state);
+}
+.build-check-group h3 small {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-align: center;
+  font: inherit;
+  color: #121314;
+  background: var(--state);
+}
+.build-passing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #1f2226;
+  border-radius: 9px;
+  background: var(--build-card);
+  color: #c9cdd1;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.14s ease;
+}
+.build-passing > svg:first-child {
+  color: var(--build-ok);
+}
+.build-passing > svg:last-child {
+  margin-left: auto;
+  color: #80868d;
+  transition: transform 0.16s;
+}
+.build-passing[aria-expanded='true'] {
+  margin-bottom: 6px;
+}
+.build-passing[aria-expanded='true'] > svg:last-child {
+  transform: rotate(180deg);
+}
+.build-passing:hover,
+.build-check-head:hover {
+  background: #1a1d20;
+}
 .build-checks {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
-.build-checks li {
+.build-check {
   position: relative;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 11px 10px 13px;
   border: 1px solid #1f2226;
   border-radius: 9px;
   background: var(--build-card);
   overflow: hidden;
 }
-.build-checks li::before {
+.build-check::before {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: var(--build-ok);
+  background: var(--state);
   opacity: 0.6;
 }
-.build-checks li.status-warn {
-  border-color: #3c3324;
-  background: #18160f;
+.build-check.status-warn,
+.build-check.status-fail {
+  border-color: color-mix(in srgb, var(--state) 28%, #1f2226);
+  background: color-mix(in srgb, var(--state) 5%, #121315);
 }
-.build-checks li.status-warn::before {
-  background: var(--build-warn);
+.build-check.status-warn::before,
+.build-check.status-fail::before {
   opacity: 1;
 }
-.build-checks li.status-fail {
-  border-color: #4a2724;
-  background: #1b1212;
+.build-check.open {
+  border-color: color-mix(in srgb, var(--state) 45%, #1f2226);
 }
-.build-checks li.status-fail::before {
-  background: var(--build-fail);
-  opacity: 1;
+/* One line: the result, what it is about, and the slots it compares. */
+.build-check-head {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 3px 9px;
+  width: 100%;
+  padding: 9px 11px 9px 13px;
+  text-align: left;
+  transition: background 0.14s ease;
 }
-.build-checks li > svg {
-  flex-shrink: 0;
-  margin-top: 1px;
+.build-check-head > svg:first-child {
+  color: var(--state);
 }
-.build-checks .status-ok > svg {
-  color: var(--build-ok);
-}
-.build-checks .status-warn > svg {
-  color: var(--build-warn);
-}
-.build-checks .status-fail > svg {
-  color: var(--build-fail);
-}
-.build-checks li > div {
-  min-width: 0;
-}
-.build-checks strong {
-  display: block;
+.build-check-title {
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.35;
   color: #e3e6e8;
 }
+.build-check-chevron {
+  color: #80868d;
+  transition: transform 0.16s;
+}
+.build-check.open .build-check-chevron {
+  transform: rotate(180deg);
+}
 .build-check-slots {
+  grid-column: 2 / 3;
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin-top: 5px;
 }
 .build-check-slots > span {
   padding: 1px 6px;
@@ -948,13 +1037,42 @@
   color: var(--slot);
   background: color-mix(in srgb, var(--slot) 12%, transparent);
 }
-.build-checks p {
-  margin: 5px 0 0;
-  font-size: 11px;
-  line-height: 1.5;
-  color: #a2a8ae;
+/* Opened: what it found, where to change it, and its sources. */
+.build-check-body {
+  padding: 0 12px 11px 38px;
+}
+.build-check-body p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #b4b9be;
   -webkit-user-select: text;
   user-select: text;
+}
+.build-check.status-fail .build-check-body p {
+  color: #e2c4c0;
+}
+.build-check-fix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+.build-check-fix button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 27px;
+  padding: 0 8px 0 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--slot) 45%, transparent);
+  background: color-mix(in srgb, var(--slot) 12%, transparent);
+  color: var(--slot);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.build-check-fix button:hover {
+  background: color-mix(in srgb, var(--slot) 22%, transparent);
 }
 .build-sources {
   display: flex;

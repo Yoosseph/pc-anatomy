@@ -430,79 +430,75 @@ export const supplyPartId = (model: SupplyModel, id: string) =>
 export function supplyConcepts(model: SupplyModel): Concept[] {
   const name = `TUF Gaming ${model.watts}W ${model.efficiency}`;
   const fixed = !model.modular;
-  return psuConcepts.map((original) => {
-    const housing = original.id === 'psucase',
-      panel = original.id === 'psumodular',
-      harness = panel && fixed;
-    const parent = housing
-      ? 'pc'
-      : original.parent === 'psucase' || original.parent === 'psuboard'
-        ? model.prefix + original.parent
-        : original.parent;
-    return concept({
+  // What a model says differently about each kind of part: its housing, its
+  // cable face (a socket panel, or a fixed harness in its place) and its fan.
+  const housing = (original: Concept): Partial<Concept> => ({
+    parent: 'pc',
+    open: model.level,
+    name: `${name} housing`,
+    shortName: `${model.watts}W housing`,
+    description: `The 150 × 150 × 86 mm folded steel shell of the ASUS ${name}.`,
+    specifications: {
+      Format: model.atx ?? 'ATX',
+      Dimensions: '150 × 150 × 86 mm',
+      Output: `${model.watts} W`,
+      Efficiency: `80 PLUS ${model.efficiency}`,
+      Cabling: fixed ? 'Non-modular' : 'Fully modular',
+    },
+    physicalAccuracy:
+      `Published dimensions and external features of the ASUS ${name}; internal geometry and component placement are illustrative.` +
+      (model.housing ? ' ' + model.housing.note : ''),
+    sources: [model.spec, ...(model.housing?.sources ?? []), 'psu'],
+    searchTerms: [
+      ...original.searchTerms,
+      `${model.watts}w`,
+      model.efficiency.toLowerCase(),
+      fixed ? 'non-modular' : 'modular',
+      'asus',
+      'tuf',
+    ],
+  });
+  const cables: Partial<Concept> = fixed
+    ? {
+        name: 'Fixed cable harness',
+        shortName: 'Fixed cables',
+        description:
+          'Permanent sleeved cable looms leave the supply through a protected opening, with no detachable PSU-side sockets.',
+        purpose:
+          'Delivers power through permanently attached leads to the motherboard, CPU, graphics card and drives.',
+        quantity: '4 modeled cable looms',
+        specifications: { Outputs: model.outputs },
+        physicalAccuracy:
+          'Cable families follow ASUS documentation; bundle routing and connector geometry are illustrative.',
+        sources: [model.spec, 'psu'],
+        searchTerms: ['fixed', 'non-modular', 'cable', 'harness', 'loom'],
+      }
+    : {
+        specifications: { Outputs: model.outputs },
+        sources: [model.spec, 'psu'],
+      };
+  const override = (original: Concept): Partial<Concept> =>
+    original.id === 'psucase'
+      ? housing(original)
+      : original.id === 'psumodular'
+        ? cables
+        : original.id === 'psuintake'
+          ? { sources: [model.fan, 'fanconstruction', 'bldc'] }
+          : {};
+  return psuConcepts.map((original) =>
+    concept({
       ...original,
       id: supplyPartId(model, original.id),
-      parent,
+      parent:
+        original.parent === 'psucase' || original.parent === 'psuboard'
+          ? model.prefix + original.parent
+          : original.parent,
       children: [],
       level: model.level,
-      open: housing ? model.level : undefined,
-      name: housing
-        ? `${name} housing`
-        : harness
-          ? 'Fixed cable harness'
-          : original.name,
-      shortName: housing
-        ? `${model.watts}W housing`
-        : harness
-          ? 'Fixed cables'
-          : original.shortName,
-      description: housing
-        ? `The 150 × 150 × 86 mm folded steel shell of the ASUS ${name}.`
-        : harness
-          ? 'Permanent sleeved cable looms leave the supply through a protected opening, with no detachable PSU-side sockets.'
-          : original.description,
-      purpose: harness
-        ? 'Delivers power through permanently attached leads to the motherboard, CPU, graphics card and drives.'
-        : original.purpose,
-      quantity: harness ? '4 modeled cable looms' : original.quantity,
-      specifications: housing
-        ? {
-            Format: model.atx ?? 'ATX',
-            Dimensions: '150 × 150 × 86 mm',
-            Output: `${model.watts} W`,
-            Efficiency: `80 PLUS ${model.efficiency}`,
-            Cabling: fixed ? 'Non-modular' : 'Fully modular',
-          }
-        : panel
-          ? { Outputs: model.outputs }
-          : original.specifications,
-      physicalAccuracy: housing
-        ? `Published dimensions and external features of the ASUS ${name}; internal geometry and component placement are illustrative.` +
-          (model.housing ? ' ' + model.housing.note : '')
-        : harness
-          ? 'Cable families follow ASUS documentation; bundle routing and connector geometry are illustrative.'
-          : original.physicalAccuracy,
-      sources: housing
-        ? [model.spec, ...(model.housing?.sources ?? []), 'psu']
-        : panel
-          ? [model.spec, 'psu']
-          : original.id === 'psuintake'
-            ? [model.fan, 'fanconstruction', 'bldc']
-            : original.sources,
-      searchTerms: housing
-        ? [
-            ...original.searchTerms,
-            `${model.watts}w`,
-            model.efficiency.toLowerCase(),
-            fixed ? 'non-modular' : 'modular',
-            'asus',
-            'tuf',
-          ]
-        : harness
-          ? ['fixed', 'non-modular', 'cable', 'harness', 'loom']
-          : original.searchTerms,
-    });
-  });
+      open: undefined,
+      ...override(original),
+    }),
+  );
 }
 
 export const bronzePsuConcepts = supplyConcepts(supplyModels.psubronze);

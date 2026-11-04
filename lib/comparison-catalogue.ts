@@ -1,9 +1,12 @@
 import { byId } from './manifest.ts';
 import {
+  branches,
   levelIds,
   levelPath,
   levels,
   systemRoot,
+  systemRoots,
+  type Branch,
   type LevelId,
 } from './levels.ts';
 import type { Category } from './concept.ts';
@@ -115,13 +118,38 @@ export function comparisonCategoryLabel(id: ComparisonCategoryId) {
   return categoryDefinitions.find((category) => category.id === id)!.label;
 }
 
-/** Where an item lives, e.g. "Desktop PC / Motherboard / Ryzen 9 9950X". */
+/** The menu each scale is listed under. */
+const menus = new Map<LevelId, Branch>(
+  systemRoots.flatMap((root) =>
+    branches(root).flatMap((branch) =>
+      branch.levels.map((level) => [level, branch] as const),
+    ),
+  ),
+);
+
+/**
+ * Where an item is found, the way the menus file it: the system, the menu,
+ * then the scales above it inside that menu. It follows the menus rather than
+ * the dive, so a processor is filed under Processor although it is opened
+ * from the board it sits in, and the M.2 drive under Storage.
+ */
+function menuPath(level: LevelId) {
+  const path = levelPath(level);
+  const menu = menus.get(level);
+  if (!menu) return [levels[path[0]].name];
+  return [
+    levels[path[0]].name,
+    menu.label,
+    ...path
+      .slice(0, -1)
+      .filter((id) => menu.levels.includes(id))
+      .map((id) => levels[id].name),
+  ];
+}
+
+/** Where an item lives, e.g. "Desktop PC / Processor / Ryzen 9 9950X". */
 export function comparisonItemPath(item: ComparisonItem) {
-  const ancestors = levelPath(item.level).slice(0, -1);
-  return (
-    ancestors.map((level) => levels[level].name).join(' / ') ||
-    levels[item.system].name
-  );
+  return menuPath(item.level).join(' / ');
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +162,8 @@ function searchableText(item: ComparisonItem) {
     item.note,
     item.kind,
     comparisonCategoryLabel(item.category),
-    ...levelPath(item.level).map((level) => levels[level].name),
+    ...menuPath(item.level),
+    levels[item.level].name,
     ...byId[levels[item.level].concept].searchTerms,
     ...item.specs.flatMap((spec) => [spec.label, spec.value]),
   ]

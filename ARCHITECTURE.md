@@ -549,9 +549,13 @@ a level inherits the nearest `comparisonCategory` on its path, so deeper scales
 stay with their subsystem. A physical level that declares `millimetersPerUnit`
 can be shown at true size beside another calibrated one; everything else fits
 its own pane. Specifications are each concept's own, aligned by label only for
-like pairs.
+like pairs. An item's path, shown in the picker and searched, is where the
+menus file it rather than its dive path (`comparisonItemPath`), so a
+processor is under Processor and the M.2 drive under Storage, not under the
+board they are opened from.
 
-Comparison cards show only the selected part's name. The framing buttons are
+Comparison cards show the selected part's name and, in its colour, its
+category. The framing buttons are
 centered beneath the pair, independently of their explanatory note. The
 PC Anatomy brand links to the start page from comparison mode. Explorer root
 views omit the one-item breadcrumb; nested views retain hierarchy navigation.

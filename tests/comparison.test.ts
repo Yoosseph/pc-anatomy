@@ -235,8 +235,31 @@ await test('labels, paths and table eligibility describe items the way the picke
   assert.equal(comparisonItemPath(comparisonItem('pc')), 'Desktop PC');
   assert.equal(
     comparisonItemPath(comparisonItem('ryzenio')),
-    'Desktop PC / Motherboard / Ryzen 9 9950X',
+    'Desktop PC / Processor / Ryzen 9 9950X',
   );
+  // Filed the way the menus file them, not the way the dive reaches them: a
+  // processor and the M.2 drive open from the board, but are not the board's.
+  assert.equal(
+    comparisonItemPath(comparisonItem('corei9')),
+    'Desktop PC / Processor',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('nvme')),
+    'Desktop PC / Storage',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('z890')),
+    'Desktop PC / Motherboard',
+  );
+  assert.equal(
+    comparisonItemPath(comparisonItem('sm')),
+    'Desktop PC / GPU / RTX 5090 / GB202 / GPC / TPC',
+  );
+  // Searching for the board finds the boards, and no longer the processors
+  // that sit in them.
+  const board = filterComparisonItems({ query: 'motherboard' });
+  assert.ok(board.some((item) => item.level === 'z890'));
+  assert.ok(!board.some((item) => item.category === 'processors'));
   assert.ok(sharesSpecTable('ssd', 'legionstorage'));
   assert.equal(sharesSpecTable('maccpu', 'nvme'), false);
   // Same category, but a hardware model and a diagram never share rows.

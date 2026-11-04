@@ -33,7 +33,10 @@ desktop, a scrolling strip on phones), by system, and by free text; the three
 filters combine, and every search word must match the item's names, path,
 category, search terms or specification text. Results are grouped by category
 and show the path to the item, its summary and whether it is hardware or a
-diagram. The model on the other side is disabled rather than hidden, so a pair
+diagram. The path is the way the menus file the item (system, menu, then the
+scales above it inside that menu), not the way the dive reaches it: the
+Ryzen's I/O die reads "Desktop PC / Processor / Ryzen 9 9950X", though the
+processor is opened from the board it sits in. The model on the other side is disabled rather than hidden, so a pair
 is always two distinct models. Choosing one side never changes the other.
 
 Entering comparison starts from the scale the explorer was showing, paired with

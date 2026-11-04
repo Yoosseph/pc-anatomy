@@ -41,6 +41,43 @@ interface BoardFacts {
   absent?: string[];
 }
 
+/** The X670E board's rows for an ATX outline. */
+const atxOutline: Patch = {
+  specifications: { Outline: '305 × 244 mm (ATX)' },
+};
+
+/** A chipset under its passive heatsink. */
+const chipset = (name: string): Patch => ({
+  specifications: {
+    Chipset: name,
+    Role: 'Platform I/O hub',
+    Cooling: 'Passive heatsink',
+  },
+});
+
+/** An Intel board's socket, and the Core Ultra it seats and opens. */
+const lga1851 = (source: SourceId): Record<'socket' | 'cpu', Patch> => ({
+  socket: {
+    description:
+      'An LGA 1851 land-grid array of spring contacts, under a hinged steel load plate that a lever presses down.',
+    specifications: {
+      Type: 'Intel LGA 1851, illustrative',
+      Retention: 'Load plate and lever',
+    },
+    sources: [source, 'corei9'],
+  },
+  cpu: {
+    open: 'corei9',
+    description:
+      'An Intel Core Ultra 9 285K in its rectangular LGA 1851 package, under a heat spreader.',
+    specifications: {
+      Package: 'Intel LGA 1851',
+      Lid: 'Integrated heat spreader',
+    },
+    sources: ['corei9', 'arrowlake'],
+  },
+});
+
 const facts: Record<Variant, BoardFacts> = {
   z890: {
     source: 'tufz890',
@@ -73,33 +110,9 @@ const facts: Record<Variant, BoardFacts> = {
       searchTerms: ['z890', 'intel', 'lga 1851', 'tuf', 'asus', 'mainboard'],
     },
     patches: {
-      moboboard: { specifications: { Outline: '305 × 244 mm (ATX)' } },
-      socket: {
-        description:
-          'An LGA 1851 land-grid array of spring contacts, under a hinged steel load plate that a lever presses down.',
-        specifications: {
-          Type: 'Intel LGA 1851, illustrative',
-          Retention: 'Load plate and lever',
-        },
-        sources: ['tufz890', 'corei9'],
-      },
-      cpu: {
-        open: 'corei9',
-        description:
-          'An Intel Core Ultra 9 285K in its rectangular LGA 1851 package, under a heat spreader.',
-        specifications: {
-          Package: 'Intel LGA 1851',
-          Lid: 'Integrated heat spreader',
-        },
-        sources: ['corei9', 'arrowlake'],
-      },
-      chipset: {
-        specifications: {
-          Chipset: 'Intel Z890',
-          Role: 'Platform I/O hub',
-          Cooling: 'Passive heatsink',
-        },
-      },
+      moboboard: atxOutline,
+      ...lga1851('tufz890'),
+      chipset: chipset('Intel Z890'),
       pcie16: {
         specifications: {
           'From the processor': '1 × PCIe 5.0 ×16',
@@ -155,13 +168,7 @@ const facts: Record<Variant, BoardFacts> = {
     patches: {
       moboboard: { specifications: { Outline: '244 × 244 mm (micro-ATX)' } },
       socket: { sources: ['tufb650m', 'ryzen'] },
-      chipset: {
-        specifications: {
-          Chipset: 'AMD B650',
-          Role: 'Platform I/O hub',
-          Cooling: 'Passive heatsink',
-        },
-      },
+      chipset: chipset('AMD B650'),
       pcie16: {
         specifications: {
           'From the processor': '1 × PCIe 4.0 ×16',
@@ -215,15 +222,9 @@ const facts: Record<Variant, BoardFacts> = {
     // Every slot below the graphics card is full length.
     absent: ['pcie1'],
     patches: {
-      moboboard: { specifications: { Outline: '305 × 244 mm (ATX)' } },
+      moboboard: atxOutline,
       socket: { sources: ['msix870', 'ryzen'] },
-      chipset: {
-        specifications: {
-          Chipset: 'AMD X870',
-          Role: 'Platform I/O hub',
-          Cooling: 'Passive heatsink',
-        },
-      },
+      chipset: chipset('AMD X870'),
       pcie16: {
         name: 'PCIe ×16 slots',
         quantity: '3 modeled slots',
@@ -281,33 +282,9 @@ const facts: Record<Variant, BoardFacts> = {
     },
     absent: ['pcie1'],
     patches: {
-      moboboard: { specifications: { Outline: '305 × 244 mm (ATX)' } },
-      socket: {
-        description:
-          'An LGA 1851 land-grid array of spring contacts, under a hinged steel load plate that a lever presses down.',
-        specifications: {
-          Type: 'Intel LGA 1851, illustrative',
-          Retention: 'Load plate and lever',
-        },
-        sources: ['gbz890elite', 'corei9'],
-      },
-      cpu: {
-        open: 'corei9',
-        description:
-          'An Intel Core Ultra 9 285K in its rectangular LGA 1851 package, under a heat spreader.',
-        specifications: {
-          Package: 'Intel LGA 1851',
-          Lid: 'Integrated heat spreader',
-        },
-        sources: ['corei9', 'arrowlake'],
-      },
-      chipset: {
-        specifications: {
-          Chipset: 'Intel Z890 Express',
-          Role: 'Platform I/O hub',
-          Cooling: 'Passive heatsink',
-        },
-      },
+      moboboard: atxOutline,
+      ...lga1851('gbz890elite'),
+      chipset: chipset('Intel Z890 Express'),
       pcie16: {
         name: 'PCIe ×16 slots',
         quantity: '3 modeled slots',
@@ -363,13 +340,7 @@ const facts: Record<Variant, BoardFacts> = {
         specifications: { Outline: 'Micro-ATX, drawn at 244 × 244 mm' },
       },
       socket: { sources: ['asrockb850m', 'ryzen'] },
-      chipset: {
-        specifications: {
-          Chipset: 'AMD B850',
-          Role: 'Platform I/O hub',
-          Cooling: 'Passive heatsink',
-        },
-      },
+      chipset: chipset('AMD B850'),
       pcie16: {
         name: 'PCIe ×16 slot',
         quantity: '1 modeled slot',

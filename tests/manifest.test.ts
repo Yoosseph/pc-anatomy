@@ -24,8 +24,12 @@ import {
   systemRoot,
 } from '../lib/levels.ts';
 import { sources } from '../lib/sources.ts';
-import { supplyModels, supplyPartId } from '../lib/concepts/psu.ts';
-import { powerOptions } from '../lib/desktop-build.ts';
+import {
+  supplyModels,
+  supplyPartId,
+  type SupplyModel,
+} from '../lib/concepts/psu.ts';
+import { defaultBuild, powerOptions } from '../lib/desktop-build.ts';
 
 await test('all concepts have unique identities, reciprocal parents, sources and no cycles', () => {
   assert.equal(new Set(manifest.map((c) => c.id)).size, manifest.length);
@@ -119,10 +123,22 @@ await test('the power supply menu runs from 650 W to 1200 W, each a supply of it
   ]);
   assert.deepEqual(Object.keys(powerOptions), power.levels);
   assert.equal(power.submenus.length, 0);
-  // Only the installed one is reached from the tower.
-  assert.equal(byId.psu.open, 'psu');
-  for (const level of power.levels)
-    assert.equal(levels[level].alternative ?? false, level !== 'psu', level);
+  // Only the installed one, the 1000W, is reached from the tower, and it is
+  // the one a build starts on.
+  assert.equal(byId.psu.open, 'psu1000');
+  assert.equal(defaultBuild.power, 'psu1000');
+  for (const level of power.levels) {
+    const installed = level === 'psu1000';
+    const model: SupplyModel = supplyModels[level as keyof typeof supplyModels];
+    assert.equal(levels[level].alternative ?? false, !installed, level);
+    assert.equal(model.installed ?? false, installed, level);
+    // Its housing hangs under the tower's PSU; the others stand on their own.
+    assert.equal(
+      byId[supplyPartId(model, 'psucase')].parent,
+      installed ? 'psu' : 'pc',
+      level,
+    );
+  }
   for (const level of power.levels) {
     const model = supplyModels[level as keyof typeof supplyModels];
     const option = powerOptions[level as keyof typeof powerOptions];

@@ -169,7 +169,9 @@ try {
   );
   // Nothing sits at the bottom of the stage once the tower is built.
   assert.equal(await page.locator('.build-fitting').count(), 0);
-  assert.match(await summary(), /1 thing to check/);
+  // A new visitor's build, on the 1000 W supply, has nothing to fix or check.
+  assert.match(await summary(), /Everything works together/);
+  assert.match(await summary(), /10 of 10 checks pass/);
   await settled();
   await capture('build-original');
 
@@ -425,7 +427,8 @@ try {
   before = await model();
   await click('Back to the original build');
   await rebuilt(before);
-  assert.match(await summary(), /1 thing to check/);
+  assert.match(await summary(), /10 of 10 checks pass/);
+  assert.equal(await chosen('Power supply'), 'ASUS TUF Gaming 1000W Gold');
   await page.waitForURL(
     (url) => !/gpu=|psu=|cooler=|storage=|board=|cpu=|ram=/.test(url.search),
   );

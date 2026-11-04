@@ -68,8 +68,11 @@ Desktop PC
 │               └── Bank
 │                   └── Cells
 ├── Power supply
+│   ├── ASUS TUF Gaming 650W Bronze · non-modular
+│   ├── ASUS TUF Gaming 750W Bronze · non-modular
 │   ├── ASUS TUF Gaming 850W Gold · modular
-│   └── ASUS TUF Gaming 750W Bronze · non-modular
+│   ├── ASUS TUF Gaming 1000W Gold · modular
+│   └── ASUS TUF Gaming 1200W Gold · modular
 ├── Cooling
 │   ├── Case fan
 │   ├── CPU cooler
@@ -105,7 +108,7 @@ Descending into a part rebuilds it at its own scale with its own timeline, so th
 
 ## The interface
 
-The rail on the left carries the scale tree and per-system visibility. The GPU menu holds five cards, the RTX 5090, Radeon RX 9070 XT, Arc B580, RTX 5060 Ti and RTX 5060, each with its own dropdown of scales. The Memory menu holds the installed DDR5 module and a DDR4 module from the same line, so the two generations can be taken apart side by side or compared in the comparison workbench. The Power supply menu lists two TUF Gaming units directly: an 850W Gold with modular sockets and a 750W Bronze with fixed cables. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. On a touch screen, a tap shows the component's card and its **Take apart** button opens it. At 100% every laid-out part carries its name, and tapping a name describes it. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen. The address bar follows you: a link such as `https://pc-anatomy.com/?scale=sm` opens straight on the RTX 5090's streaming multiprocessor, `&part=` describes a part, `&open=` sets the disassembly, and the back button climbs back out.
+The rail on the left carries the scale tree and per-system visibility. The GPU menu holds five cards, the RTX 5090, Radeon RX 9070 XT, Arc B580, RTX 5060 Ti and RTX 5060, each with its own dropdown of scales. The Memory menu holds the installed DDR5 module and a DDR4 module from the same line, so the two generations can be taken apart side by side or compared in the comparison workbench. The Power supply menu lists five TUF Gaming units, from a 650W Bronze with fixed cables to a 1200W Gold with modular sockets; the tower carries the 1000W Gold, the supply ASUS recommends for its RTX 5090. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. On a touch screen, a tap shows the component's card and its **Take apart** button opens it. At 100% every laid-out part carries its name, and tapping a name describes it. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen. The address bar follows you: a link such as `https://pc-anatomy.com/?scale=sm` opens straight on the RTX 5090's streaming multiprocessor, `&part=` describes a part, `&open=` sets the disassembly, and the back button climbs back out.
 
 | Workbench                                                                                                              | On a phone                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -160,7 +163,9 @@ its chip maker's colour.
 The compatibility panel sums the build up first: what fails, what is worth
 checking and what passes, each count a link to its checks. Problems come
 first, one line each; click one to see what is wrong, the sources behind it,
-and a button to the part that would fix it.
+and a button to the part that would fix it. The build starts on the machine
+the explorer shows, which passes every check: its 1000W Gold is the supply
+ASUS recommends for the RTX 5090.
 
 Every figure the checks use is cited: whether the processor fits the board's
 socket, whether the cooler and the board fit the case, whether the memory fits
@@ -220,7 +225,7 @@ Read it before the first edit. It is kept current with the code, and a change th
 
 ## Accuracy and sources
 
-The machine follows published ATX dimensions where those dimensions are standardized. Seventeen products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, ASUS Dual GeForce RTX 5060 Ti, MSI GeForce RTX 5060 INSPIRE ITX, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF GAMING Z890-PLUS WIFI, ASUS TUF GAMING B650M-PLUS WIFI, MSI MAG X870 TOMAHAWK WIFI, GIGABYTE Z890 AORUS ELITE WIFI7, ASRock B850M Pro RS WiFi, and five ASUS TUF Gaming supplies: the 650W and 750W Bronze and the 850W, 1000W and 1200W Gold. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+), the Arc (Intel Limited Edition) and the two small cards are complete alternative cards opened from the GPU menu. The X670E board is the one installed; the other five open from the Motherboard menu, built on the same ATX or micro-ATX layout with their own socket, outline, slots and their maker's finish. The 850W Gold is the supply installed in the tower; the other four open from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
+The machine follows published ATX dimensions where those dimensions are standardized. Seventeen products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, ASUS Dual GeForce RTX 5060 Ti, MSI GeForce RTX 5060 INSPIRE ITX, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF GAMING Z890-PLUS WIFI, ASUS TUF GAMING B650M-PLUS WIFI, MSI MAG X870 TOMAHAWK WIFI, GIGABYTE Z890 AORUS ELITE WIFI7, ASRock B850M Pro RS WiFi, and five ASUS TUF Gaming supplies: the 650W and 750W Bronze and the 850W, 1000W and 1200W Gold. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+), the Arc (Intel Limited Edition) and the two small cards are complete alternative cards opened from the GPU menu. The X670E board is the one installed; the other five open from the Motherboard menu, built on the same ATX or micro-ATX layout with their own socket, outline, slots and their maker's finish. The 1000W Gold, ASUS's recommended supply for the RTX 5090, is the one installed in the tower; the other four open from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
 
 Processor and GPU floorplans are explanatory diagrams of documented logical architecture. They are not semiconductor mask layouts and do not claim exact transistor-level placement. See [SOURCES.md](SOURCES.md) for standards, product documentation, architecture references, and the scope of each source.
 

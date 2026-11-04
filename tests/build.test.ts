@@ -134,12 +134,19 @@ const check = (build: DesktopBuild, id: string) =>
 await test('the explorer starts on the machine it has always shown, and that build passes', () => {
   assert.deepEqual(initialState.build, defaultBuild);
   const checks = checkBuild(defaultBuild);
-  // The 5090's maker asks for more than the 850 W unit, which is a warning,
-  // and nothing else in the original machine is in question.
-  assert.equal(buildStatus(checks), 'warn');
+  // The 1000 W unit meets ASUS's recommendation for the 5090, so a new
+  // visitor's build has nothing to fix or check.
+  assert.equal(buildStatus(checks), 'ok');
   assert.deepEqual(
     checks.filter((c) => c.status !== 'ok').map((c) => c.id),
-    ['supply'],
+    [],
+  );
+  // The 850 W unit it used to carry still runs the 5090, below that figure.
+  assert.equal(
+    checkBuild({ ...defaultBuild, power: 'psu' }).find(
+      (c) => c.id === 'supply',
+    )!.status,
+    'warn',
   );
 });
 
@@ -360,13 +367,15 @@ await test('each drive has its connection, and the SATA drive its lead', () => {
   const m2 = { ...defaultBuild, storage: 'nvme' } as const;
   assert.equal(check(m2, 'storage').status, 'ok');
   assert.match(check(m2, 'storage').detail, /no drive cables/);
-  const original = powerOptions.psu.sata;
+  // A supply with no SATA power leaves the SATA drive unpowered.
+  const supply = powerOptions[defaultBuild.power];
+  const original = supply.sata;
   try {
-    powerOptions.psu.sata = 0;
+    supply.sata = 0;
     assert.equal(check(defaultBuild, 'storage').status, 'fail');
     assert.equal(check(m2, 'storage').status, 'ok');
   } finally {
-    powerOptions.psu.sata = original;
+    supply.sata = original;
   }
 });
 

@@ -53,7 +53,11 @@ export interface DesktopBuild {
 }
 export type BuildSlot = keyof DesktopBuild;
 
-/** The machine as the explorer has always shown it. */
+/**
+ * The machine as the explorer shows it. Its supply is the 1000W Gold, the
+ * figure ASUS recommends for the RTX 5090, so the build starts with every
+ * check passing.
+ */
 export const defaultBuild: DesktopBuild = {
   processor: 'ryzen',
   cooler: 'cooler',
@@ -61,7 +65,7 @@ export const defaultBuild: DesktopBuild = {
   memory: 'dimm',
   storage: 'nvmesata',
   graphics: 'card',
-  power: 'psu',
+  power: 'psu1000',
 };
 
 /**

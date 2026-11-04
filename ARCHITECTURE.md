@@ -122,7 +122,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 711 catalogue entries are authored in source, and each one
+any kind. The 712 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -180,7 +180,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              711 entries, each with a globally unique id
+      │              712 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -206,13 +206,13 @@ state.
 
 ## The scale tree
 
-72 scales, 711 concepts. `physical` scales are lit like hardware and keep real
+72 scales, 712 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
 | Scale | Parent | Menu | Kind | Concepts |
 | --- | --- | --- | --- | ---: |
-| `pc` | — | root | physical | 18 |
+| `pc` | — | root | physical | 19 |
 | `motherboard` | `pc` | Motherboard | physical | 24 |
 | `z890` | `pc` | Motherboard | physical | 25 |
 | `b650m` | `pc` | Motherboard | physical | 25 |
@@ -683,9 +683,19 @@ the supply builder's is its cable variant.
   memory and primary slot, so the cooler, the card and the cables land where
   they always did; the micro-ATX board stops 61 mm higher and the tray's
   bottom row of standoffs moves up with it.
-- **Processor and memory.** They are part of the board assembly: the AM5
-  Ryzen or the rectangular LGA 1851 Core Ultra in the socket, or its cover;
-  two modules in the second slot of each channel, four, or none.
+- **Processor.** The board builds the processor the build seats (the AM5
+  Ryzen or the rectangular LGA 1851 Core Ultra) or the socket's cover, and
+  marks the package. `buildMotherboardAssembly` lifts the marked package off
+  the installed board with its place in the board's frame, and the tower adds
+  it as a piece of its own, `processor`, at the board's position: in the
+  socket, in the Compute system rather than the Board one, so it can be
+  pointed at, hidden and opened by itself, and it rises out of the socket
+  between the board and the cooler as the machine comes apart. It describes
+  and opens the processor the build seats (`standIn`, `opensTo`), and the
+  Processor slot points at it (`pieceForSlot`); with the socket empty there is
+  no piece, and the slot points at the board.
+- **Memory.** Part of the board assembly: two modules in the second slot of
+  each channel, four, or none.
 - **Cards.** `machine.ts` installs the chosen card through `tools.assembly`.
   All five card builders share the 5090's millimetre scale, so one factor
   installs any of them at true length. Each bracket stands against the rear
@@ -782,7 +792,7 @@ one uniform millimetre conversion on every axis declares it as
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 711 concepts currently cite at least one
+and vendor documentation first. All 712 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -817,7 +827,8 @@ with Node.js 22.
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule
-  that no rendered object is anonymous. Also checks pose-cache invalidation,
+  that no rendered object is anonymous, and that the installed board and
+  processor together carry the whole board scale. Also checks pose-cache invalidation,
   unchanged instance-buffer versions, dive restoration, and precise picking
   equivalence with and without geometry bounding boxes.
 - `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
@@ -875,7 +886,9 @@ with Node.js 22.
   the adapter's lead count, a card too long for the case and the
   room a front radiator takes, a cooler too tall or a radiator too long, each
   drive's connection, which option and slot are marked as the problem, rated
-  draw, that every slot changes the tower, and the power legend naming the
+  draw, that every slot changes the tower, the tower's processor as a piece of
+  its own (in the socket, under the cooler, describing and opening the one
+  seated, and absent with the socket empty), and the power legend naming the
   installed card's feed. Also every board, card, cooler, module count, drive set and supply built
   into the tower: an empty socket or slots where a part cannot seat, seated
   on the slot at true length, clear of the case and the cooler, both coolers

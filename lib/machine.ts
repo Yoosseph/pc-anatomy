@@ -118,7 +118,14 @@ const RAD_FACE = RAD_X - RAD_T / 2;
 
 /**
  * The chosen board's inspection model, installed vertically at the tower's
- * physical scale, carrying the processor and modules the build fits.
+ * physical scale, carrying the modules the build fits.
+ *
+ * The processor the build seats comes back on its own. In the tower it is a
+ * part of its own, in the Compute system rather than the board's, so it can
+ * be pointed at, hidden and opened by itself. It is lifted off the board's
+ * assembly with its place in the board's frame, so installed at the board's
+ * position it sits exactly where it was, in the socket. Null when the build
+ * leaves the socket empty.
  */
 function buildMotherboardAssembly(tools: ModelTools) {
   const board = tools.assembly(tools.build.board, tools.build);
@@ -126,7 +133,19 @@ function buildMotherboardAssembly(tools: ModelTools) {
   board.rotation.x = Math.PI / 2;
   const group = new T.Group();
   group.add(board);
-  return group;
+  group.updateMatrixWorld(true);
+  const marked: T.Object3D[] = [];
+  board.traverse((o) => {
+    if (o.userData.processor) marked.push(o);
+  });
+  const [cpu] = marked;
+  if (!cpu) return { board: group, processor: null };
+  const placed = cpu.matrixWorld.clone();
+  cpu.removeFromParent();
+  placed.decompose(cpu.position, cpu.quaternion, cpu.scale);
+  const processor = new T.Group();
+  processor.add(cpu);
+  return { board: group, processor };
 }
 
 /**
@@ -685,8 +704,12 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   );
 
   // ── Motherboard ─────────────────────────────────────────────────────────
-  const motherboard = buildMotherboardAssembly(tools);
+  const { board: motherboard, processor } = buildMotherboardAssembly(tools);
   add('motherboard', motherboard, [BOARD_X, BOARD_Y, BOARD_Z], [0, 0, -3.2]);
+  // Coming apart, the processor rises out of the socket between the board,
+  // which falls back to the tray, and the cooler, which lifts off above it.
+  if (processor)
+    add('processor', processor, [BOARD_X, BOARD_Y, BOARD_Z], [0, 1.2, -0.9]);
 
   /**
    * The rear I/O shield, cut to the board's own port stack.

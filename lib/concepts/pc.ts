@@ -259,6 +259,32 @@ export const pcConcepts: Concept[] = [
     searchTerms: ['mainboard', 'mobo', 'board', 'logic board'],
   }),
   concept({
+    id: 'processor',
+    name: 'Processor',
+    shortName: 'CPU',
+    category: 'Compute',
+    parent: 'pc',
+    // The package in the board's socket, under the cooler. In the tower it is
+    // a part of its own, in the Compute system rather than the board's, and
+    // the way into the processor's scale. The CPU on the board opens the same
+    // scale, so the processor can still be reached through the board.
+    level: 'pc',
+    open: 'ryzen',
+    description:
+      'An AMD Ryzen 9 9950X in the board’s AM5 socket, under the cooler: two eight-core dies and an I/O die beneath one heat spreader.',
+    purpose:
+      'Runs the operating system and program logic, and decides what every other part of the machine does next.',
+    quantity: '1 processor package',
+    specifications: {
+      Processor: 'AMD Ryzen 9 9950X',
+      Socket: 'AM5',
+      Cores: '16 cores, 32 threads',
+    },
+    representationType: 'physical',
+    sources: ['ryzen'],
+    searchTerms: ['cpu', 'processor', 'ryzen', 'chip'],
+  }),
+  concept({
     id: 'graphicscard',
     name: 'Graphics card',
     shortName: 'Graphics card',

@@ -534,8 +534,37 @@ await test('installed pieces keep their ids and describe what is actually in the
   assert.equal(standIn('cpucooler', liquid), 'aio');
   assert.equal(opensTo('cpucooler', defaultBuild), 'cooler');
   assert.equal(opensTo('cpucooler', liquid), 'liquid');
-  // Each slot points at the piece its part went into, and back. The
-  // processor and the memory go into the board, which is the board's slot.
+  // The processor is a piece of its own in the tower, in the Compute
+  // system, describing and opening the one the build seats.
+  assert.equal(byId.processor.category, 'Compute');
+  assert.equal(standIn('processor', defaultBuild), 'processor');
+  assert.equal(opensTo('processor', defaultBuild), 'ryzen');
+  const intelPair = {
+    ...defaultBuild,
+    board: 'z890',
+    processor: 'corei9',
+  } as const;
+  assert.equal(standIn('processor', intelPair), 'corepackage');
+  assert.equal(opensTo('processor', intelPair), 'corei9');
+  assert.equal(slotForPiece('processor'), 'processor');
+  assert.ok(piece(tower(intelPair), 'processor'));
+  // It sits in the board's socket, under the cooler.
+  const cpuBox = box(piece(tower(defaultBuild), 'processor'));
+  assert.ok(
+    cpuBox.intersectsBox(box(piece(tower(defaultBuild), 'motherboard'))),
+  );
+  assert.ok(cpuBox.intersectsBox(box(piece(tower(defaultBuild), 'cpucooler'))));
+  // A processor that cannot seat leaves the socket empty: no piece, and the
+  // slot points at the board instead.
+  const unseated = {
+    ...defaultBuild,
+    memory: 'ddr4',
+    processor: 'corei9',
+  } as const;
+  assert.equal(piece(tower(unseated), 'processor'), undefined);
+  assert.equal(pieceForSlot('processor', unseated), 'motherboard');
+  // Each slot points at the piece its part went into, and back. The memory
+  // goes into the board, which is the board's slot.
   for (const { id } of slots) {
     const target = pieceForSlot(id, defaultBuild);
     assert.ok(piece(tower(defaultBuild), target), id);

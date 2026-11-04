@@ -48,7 +48,7 @@ Desktop PC
 │   ├── ASUS TUF GAMING X670E-PLUS WIFI
 │   ├── ASUS TUF GAMING Z890-PLUS WIFI
 │   └── ASUS TUF GAMING B650M-PLUS WIFI
-├── Processor (in the board's socket, so the CPU on the board opens it too)
+├── Processor (in the board's socket: the CPU on the board opens it too)
 │   ├── Ryzen 9 9950X
 │   │   └── Ryzen I/O die
 │   └── Core Ultra 9 285K
@@ -159,8 +159,10 @@ meets the card maker's minimum or recommendation and has the leads the card
 and the drives take, and the processor's and card's rated power against the
 supply. The case is the same in every build.
 
-The build is written into the address, so **Share your build** copies a link
-to it and shows you the link it copied. On a phone the tower sits on top and the parts and the checks are two
+In the tower the processor is a part of its own, in the Compute system: it can
+be pointed at, hidden and taken apart by itself, and it lifts out of the socket
+as the machine comes apart. The build is written into the address, so **Share
+your build** copies a link to it and shows you the link it copied. On a phone the tower sits on top and the parts and the checks are two
 tabs underneath, which drop away to give the tower the screen. Every part on
 offer is a scale of its own: it can be taken apart from the explorer and set
 beside another in the comparison workbench.

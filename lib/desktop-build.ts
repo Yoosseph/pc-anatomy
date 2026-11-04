@@ -467,7 +467,11 @@ export function towerKey(build: DesktopBuild) {
  * the hidden list and the selection all hold onto them. What the reader is
  * shown, and where opening the piece leads, follow the part in the slot.
  */
-const towerPieces = new Map<string, 'cooler' | 'board' | 'graphics' | 'power'>([
+const towerPieces = new Map<
+  string,
+  'processor' | 'cooler' | 'board' | 'graphics' | 'power'
+>([
+  ['processor', 'processor'],
   ['cpucooler', 'cooler'],
   ['motherboard', 'board'],
   ['graphicscard', 'graphics'],
@@ -490,11 +494,14 @@ export function opensTo(id: string, build: DesktopBuild): LevelId | null {
 
 /**
  * The tower piece that holds each slot's part, so the workspace can point at
- * what just changed. The processor and memory are inside the board assembly,
- * and with no SATA drive the M.2 drive is too.
+ * what just changed. The processor is a piece of its own, unless it cannot
+ * seat and the socket is empty; the memory is inside the board assembly, and
+ * with no SATA drive the M.2 drive is too.
  */
 export function pieceForSlot(slot: BuildSlot, build: DesktopBuild) {
   switch (slot) {
+    case 'processor':
+      return fittedParts(build).processor ? 'processor' : 'motherboard';
     case 'cooler':
       return 'cpucooler';
     case 'graphics':

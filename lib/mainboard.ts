@@ -398,6 +398,9 @@ export function buildMotherboard(
       label(cpu, 'intel CORE ULTRA 9', vector(0, 3.4, -4), mm(26), '#53585b');
       label(cpu, '285K', vector(0, 3.4, 6), mm(10), '#61676a');
     }
+    // Marked so the tower can lift it off the board's assembly: installed, the
+    // processor is a part of its own, in the Compute system.
+    cpu.userData.processor = true;
     add('cpu', cpu, sx, 5.2, sz, [0, 2.6, 0]);
   }
 

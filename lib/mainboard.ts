@@ -94,6 +94,92 @@ interface BoardDesign {
   short: { z: number; length: number }[];
 }
 
+/**
+ * The chipset heatsinks, in millimetres: the outline, where the chip sits
+ * under it, the printed marks' size and place, the two screws, and where the
+ * heatsink stands on the board.
+ */
+const chipsetSinks: Record<
+  BoardDesign['chipset'] | 'short',
+  {
+    outline: [number, number][];
+    chip: number;
+    marks: [w: number, d: number];
+    marksAt: number;
+    screws: [number, number];
+    at: [x: number, z: number];
+  }
+> = {
+  // TUF's broad angular armour, the dominant panel in its reference layout.
+  armour: {
+    outline: [
+      [-90, -19],
+      [91, -19],
+      [95, -15],
+      [95, 11],
+      [85, 15],
+      [-23, 15],
+      [-34, 27],
+      [-73, 27],
+      [-90, 13],
+    ],
+    chip: 54,
+    marks: [171, 25],
+    marksAt: 1,
+    screws: [-80, 87],
+    at: [6, 65],
+  },
+  // A broad plate with a straight lower edge, clear of a slot below it.
+  plate: {
+    outline: [
+      [-90, -19],
+      [91, -19],
+      [95, -15],
+      [95, 21],
+      [-86, 21],
+      [-90, 17],
+    ],
+    chip: 54,
+    marks: [171, 25],
+    marksAt: 1,
+    screws: [-80, 87],
+    at: [6, 65],
+  },
+  // A micro-ATX board has room only for a short plate beside its second slot.
+  short: {
+    outline: [
+      [-34, -19],
+      [34, -19],
+      [36, -17],
+      [36, 15],
+      [28, 19],
+      [-26, 19],
+      [-34, 11],
+    ],
+    chip: 0,
+    marks: [64, 22],
+    marksAt: 0,
+    screws: [-28, 30],
+    at: [70, 65],
+  },
+  // ASRock's square heatsink stands to the right, where its manual draws it.
+  square: {
+    outline: [
+      [-22, -23],
+      [20, -23],
+      [22, -21],
+      [22, 23],
+      [-20, 23],
+      [-22, 21],
+    ],
+    chip: 0,
+    marks: [40, 10],
+    marksAt: 0,
+    screws: [-16, 16],
+    at: [78, 66],
+  },
+};
+
 const tufMarks = {
   big: 'TUF',
   small: 'GAMING',
@@ -110,23 +196,19 @@ const tuf: Omit<BoardDesign, 'x16' | 'short'> = {
   chipset: 'armour',
 };
 
+/** TUF's ATX boards: two ×16 slots, and two ×1 slots between them. */
+const tufAtx: BoardDesign = {
+  ...tuf,
+  x16: [32, 134],
+  short: [
+    { z: 59, length: 20 },
+    { z: 84, length: 20 },
+  ],
+};
+
 const designs: Record<BoardChoice, BoardDesign> = {
-  motherboard: {
-    ...tuf,
-    x16: [32, 134],
-    short: [
-      { z: 59, length: 20 },
-      { z: 84, length: 20 },
-    ],
-  },
-  z890: {
-    ...tuf,
-    x16: [32, 134],
-    short: [
-      { z: 59, length: 20 },
-      { z: 84, length: 20 },
-    ],
-  },
+  motherboard: tufAtx,
+  z890: tufAtx,
   b650m: {
     ...tuf,
     x16: microAtx.pcie16,
@@ -634,79 +716,19 @@ export function buildMotherboard(
   add('vrmheatsink', topSink, 6, 7.8, -131, [0.4, 2.4, -0.8]);
   add('vrmheatsink', sideSink, -67, 7.8, -69, [-0.7, 2.4, -0.2]);
 
-  // Broad angular chipset armour is the dominant panel in the reference. The
-  // micro-ATX board has room only for a short plate beside its second slot.
+  const sink =
+    chipsetSinks[
+      design.chipset === 'square' ? 'square' : micro ? 'short' : design.chipset
+    ];
   const chipset = new T.Group();
-  const square = design.chipset === 'square';
-  put(
-    chipset,
-    block(28, 2, 28, material('#202326', 0.12)),
-    micro ? 0 : 54,
-    1,
-    0,
-  );
-  put(
-    chipset,
-    plate(
-      square
-        ? [
-            [-22, -23],
-            [20, -23],
-            [22, -21],
-            [22, 23],
-            [-20, 23],
-            [-22, 21],
-          ]
-        : design.chipset === 'plate' && !micro
-          ? [
-              [-90, -19],
-              [91, -19],
-              [95, -15],
-              [95, 21],
-              [-86, 21],
-              [-90, 17],
-            ]
-          : micro
-            ? [
-                [-34, -19],
-                [34, -19],
-                [36, -17],
-                [36, 15],
-                [28, 19],
-                [-26, 19],
-                [-34, 11],
-              ]
-            : [
-                [-90, -19],
-                [91, -19],
-                [95, -15],
-                [95, 11],
-                [85, 15],
-                [-23, 15],
-                [-34, 27],
-                [-73, 27],
-                [-90, 13],
-              ],
-      5,
-    ),
-    0,
-    4,
-    0,
-  );
+  put(chipset, block(28, 2, 28, material('#202326', 0.12)), sink.chip, 1, 0);
+  put(chipset, plate(sink.outline, 5), 0, 4, 0);
   const graphic = new T.Group();
-  branding(
-    graphic,
-    square ? 40 : micro ? 64 : 171,
-    square ? 10 : micro ? 22 : 25,
-    9.35,
-  );
-  put(chipset, graphic, micro ? 0 : 1, 0, -2);
-  screw(chipset, square ? -16 : micro ? -28 : -80, 10, -13, 2);
-  screw(chipset, square ? 16 : micro ? 30 : 87, 10, 9, 2);
-  // ASRock's square heatsink stands to the right, where its manual draws it.
-  if (square) add('chipset', chipset, 78, 1.2, 66, [0.6, 1.4, 0.6]);
-  else if (micro) add('chipset', chipset, 70, 1.2, 65, [0.6, 1.4, 0.6]);
-  else add('chipset', chipset, 6, 1.2, 65, [0.6, 1.4, 0.6]);
+  branding(graphic, ...sink.marks, 9.35);
+  put(chipset, graphic, sink.marksAt, 0, -2);
+  screw(chipset, sink.screws[0], 10, -13, 2);
+  screw(chipset, sink.screws[1], 10, 9, 2);
+  add('chipset', chipset, sink.at[0], 1.2, sink.at[1], [0.6, 1.4, 0.6]);
 
   const controller = (
     id: string,

@@ -11,6 +11,24 @@
   --accent-bright: #a1d9e2;
   --accent-violet: #b497cf;
   --accent-muted: #9dc5cc;
+  /* One colour per kind of part, the same on every page: the scale menus,
+     the visible systems, the detail panel, search, the comparison picker and
+     the build workspace's slots (lib/palette.ts says which part takes which).
+     Rules read them through `--hue`, set on the element a part colours. */
+  --hue-system: var(--accent-bright);
+  --hue-processor: #6aa8ff;
+  --hue-cooling: #4fd1e8;
+  --hue-board: #5ed39f;
+  --hue-memory: #b9de5b;
+  --hue-storage: #f0c35a;
+  --hue-graphics: #b18cff;
+  --hue-power: #ff9b5e;
+  --hue-display: #f383c6;
+  --hue-chassis: #aeb7c1;
+  /* Whose silicon a product carries. */
+  --brand-nvidia: #8fd12a;
+  --brand-amd: #ff5d63;
+  --brand-intel: #4aa6f0;
   --muted: #232427;
   --muted-foreground: #b3b5ba;
   --rail: 286px;
@@ -358,10 +376,32 @@ a {
 }
 .scale-navigation > button > span {
   font: 600 9.5px monospace;
-  color: #6c7078;
+  color: color-mix(in srgb, var(--hue, #6c7078) 50%, #5f636b);
 }
 .scale-navigation > button > svg {
   color: #9da2aa;
+}
+/* A menu's icon sits on a tile of its part colour, as a slot does in the
+   build workspace, so a subsystem is recognisable by colour before its name
+   is read. */
+.nav-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--hue);
+  background: color-mix(in srgb, var(--hue) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hue) 26%, transparent);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+.scale-navigation > button:hover .nav-tile,
+.branch-head:hover .nav-tile {
+  background: color-mix(in srgb, var(--hue) 19%, transparent);
+  border-color: color-mix(in srgb, var(--hue) 40%, transparent);
 }
 .scale-navigation > button > svg:last-child {
   margin-left: auto;
@@ -382,15 +422,24 @@ a {
   line-height: 1.25;
 }
 .scale-navigation > button.active {
-  background: linear-gradient(90deg, #272f36 0%, #20252b 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hue) 13%, #1d2024) 0%,
+    #1f2329 100%
+  );
   box-shadow:
-    inset 2.5px 0 0 var(--accent-bright),
-    inset 0 0 0 1px #3e4d57;
+    inset 2.5px 0 0 var(--hue),
+    inset 0 0 0 1px color-mix(in srgb, var(--hue) 30%, #30353b);
   color: #ebf7f9;
 }
 .scale-navigation > button.active > span,
 .scale-navigation > button.active > svg {
-  color: var(--accent-bright);
+  color: var(--hue);
+}
+.scale-navigation > button.active .nav-tile,
+.branch.here .nav-tile {
+  background: color-mix(in srgb, var(--hue) 22%, transparent);
+  border-color: color-mix(in srgb, var(--hue) 55%, transparent);
 }
 .scale-navigation > button.active > svg:last-child {
   opacity: 1;
@@ -447,10 +496,12 @@ a {
   background: #26292e;
 }
 .category-visibility > i {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
+  background: var(--hue);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--hue) 45%, transparent);
 }
 .category-visibility > span {
   min-width: 0;
@@ -462,9 +513,9 @@ a {
   letter-spacing: 0.5px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: #162327;
-  border: 1px solid #2e4f58;
-  color: #97ced9;
+  background: color-mix(in srgb, var(--hue) 13%, #141618);
+  border: 1px solid color-mix(in srgb, var(--hue) 38%, #2a2d32);
+  color: var(--hue);
   text-transform: uppercase;
 }
 .category-visibility[aria-pressed='false'] {
@@ -472,6 +523,7 @@ a {
 }
 .category-visibility[aria-pressed='false'] > i {
   opacity: 0.35;
+  box-shadow: none;
 }
 .category-visibility[aria-pressed='false'] > small {
   background: #151719;
@@ -493,8 +545,12 @@ a {
 .category-expand[aria-expanded='true'] svg {
   transform: rotate(180deg);
 }
+/* A system's parts, each switch lit in the system's colour. */
 .sublayers {
-  padding: 4px 0 6px 14px;
+  --primary: var(--hue);
+  margin: 2px 0 6px 9px;
+  padding: 2px 0 4px 12px;
+  border-left: 1px solid color-mix(in srgb, var(--hue) 34%, #33373e);
 }
 .sublayers > div {
   display: flex;
@@ -586,11 +642,18 @@ a {
   align-items: center;
   gap: 8px;
 }
+/* Each scale on the path in its part's colour, the one shown brightest. */
+.breadcrumbs > span > button {
+  color: color-mix(in srgb, var(--hue) 45%, #80848c);
+}
+.breadcrumbs > span > button:hover {
+  color: color-mix(in srgb, var(--hue) 75%, #ffffff);
+}
 .breadcrumbs button[aria-current] {
-  color: #e6e7e8;
+  color: var(--hue);
 }
 .crumb-selected {
-  color: #c5aad8;
+  color: var(--hue);
   max-width: 170px;
   white-space: nowrap;
   overflow: hidden;
@@ -1003,6 +1066,7 @@ a {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  background: var(--hue);
 }
 .hidden-components-menu li > span {
   overflow: hidden;
@@ -1408,7 +1472,6 @@ a {
   -webkit-user-select: text;
   user-select: text;
   height: auto;
-  background: #151618;
   border: 0;
   border-left: 1px solid #43464b;
   border-radius: 0;
@@ -1417,7 +1480,15 @@ a {
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: #595c63 transparent;
-  box-shadow: -15px 0 45px #0002;
+  box-shadow:
+    -15px 0 45px #0002,
+    inset 0 3px 0 var(--hue, transparent);
+  /* The part's colour washes in from the top, under its kind. */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hue, #151618) 9%, #151618) 0,
+    #151618 220px
+  );
   z-index: 20;
   padding-right: calc(25px + var(--safe-r));
   padding-bottom: calc(27px + var(--safe-b));
@@ -1430,8 +1501,23 @@ a {
   margin-bottom: 20px;
 }
 .detail-top > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px 3px 7px;
+  border-radius: 4px;
   font: 10px monospace;
   letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--hue);
+  background: color-mix(in srgb, var(--hue) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hue) 32%, transparent);
+}
+.detail-top > span > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--hue);
 }
 .detail-top button {
   padding: 4px;
@@ -1447,7 +1533,7 @@ a {
 .instance-label {
   font: 9px monospace;
   letter-spacing: 1px;
-  color: var(--accent-muted);
+  color: color-mix(in srgb, var(--hue, #9dc5cc) 70%, #9aa1a8);
   margin: 12px 0 25px;
 }
 .detail-panel [data-slot='sheet-description'] {
@@ -1461,12 +1547,12 @@ a {
   line-height: 1.65;
   color: #dbdcde;
   margin: 0 0 20px;
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--hue, var(--accent));
   padding: 2px 0 2px 14px;
 }
 .purpose h3 {
   margin: 0 0 7px;
-  color: var(--accent-bright);
+  color: var(--hue, var(--accent-bright));
   font: 10px monospace;
   letter-spacing: 1.1px;
   text-transform: uppercase;
@@ -1476,7 +1562,7 @@ a {
 }
 .quantity {
   font: 12px monospace;
-  color: #b7dce1;
+  color: color-mix(in srgb, var(--hue, #b7dce1) 55%, #dfe3e6);
   padding: 18px 0;
   border-top: 1px solid #414348;
   border-bottom: 1px solid #414348;
@@ -1522,14 +1608,15 @@ a {
   width: 100%;
   padding: 13px 15px;
   font-size: 14px;
-  background: #83c6d2;
-  color: #161719;
+  /* In the colour of what it opens: a card's scale is violet, a board's green. */
+  background: color-mix(in srgb, var(--hue, #83c6d2) 88%, #0f1011);
+  color: #121314;
   border-radius: 4px;
-  font-weight: 550;
+  font-weight: 600;
 }
 .open-component:hover {
-  color: #161719;
-  background: #afe1e8;
+  color: #121314;
+  background: color-mix(in srgb, var(--hue, #afe1e8) 78%, #ffffff);
 }
 .detail-actions {
   display: flex;
@@ -1631,12 +1718,17 @@ a {
   font-size: 14px;
 }
 .search-dialog [data-slot='command-item'][data-selected='true'] {
-  background: #2b2c2f;
+  background: color-mix(in srgb, var(--hue) 10%, #2a2c2f);
+  box-shadow: inset 2.5px 0 0 var(--hue);
 }
 .search-dialog [data-slot='command-item'] > i {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
+  flex: none;
   margin-right: 6px;
+  border-radius: 2px;
+  background: var(--hue);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--hue) 45%, transparent);
 }
 .search-dialog [data-slot='command-item'] small {
   display: flex;
@@ -1651,6 +1743,13 @@ a {
   padding-right: 8px;
   border-right: 1px solid #4d5157;
   color: var(--accent-muted);
+  font-weight: 600;
+}
+.search-dialog [data-slot='command-item'] small > em {
+  font-style: normal;
+}
+.search-dialog [data-slot='command-item'] small > em > b {
+  color: var(--hue);
   font-weight: 600;
 }
 .search-dialog [data-slot='command-item'] > svg {
@@ -2441,7 +2540,7 @@ a {
 }
 .branch-head > span {
   font: 600 9.5px monospace;
-  color: #6c7078;
+  color: color-mix(in srgb, var(--hue) 50%, #5f636b);
   flex: none;
 }
 .branch-head > svg {
@@ -2474,13 +2573,12 @@ a {
   color: #eceef0;
 }
 .branch.here > .branch-head {
-  background: #22262b;
-  box-shadow: inset 2.5px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--hue) 10%, #1f2226);
+  box-shadow: inset 2.5px 0 0 var(--hue);
   color: #eaf5f7;
 }
-.branch.here .branch-head > span,
-.branch.here .branch-head > svg:not(:last-child) {
-  color: var(--accent-bright);
+.branch.here .branch-head > span {
+  color: var(--hue);
 }
 .branch-scales {
   display: flex;
@@ -2488,7 +2586,7 @@ a {
   gap: 1px;
   margin: 2px 0 5px 9px;
   padding-left: 12px;
-  border-left: 1px solid #3c4149;
+  border-left: 1px solid color-mix(in srgb, var(--hue) 34%, #33373e);
 }
 .branch-scales button {
   display: flex;
@@ -2503,12 +2601,14 @@ a {
     background 0.14s ease,
     color 0.14s ease;
 }
+/* Each scale's dot is its own part's colour: in the Motherboard menu the
+   boards are green and the processors blue. */
 .branch-scales button > i {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   flex: none;
   border-radius: 50%;
-  background: #4d5056;
+  background: color-mix(in srgb, var(--hue) 62%, #34373c);
 }
 .branch-scales button > div {
   font-size: 12px;
@@ -2528,12 +2628,13 @@ a {
   color: #eceef0;
 }
 .branch-scales button.active {
-  background: #31363d;
-  color: #e8f7f9;
+  background: color-mix(in srgb, var(--hue) 14%, #262a30);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue) 26%, transparent);
+  color: #f1f6f8;
 }
 .branch-scales button.active > i {
-  background: var(--accent);
-  box-shadow: 0 0 7px #79bfcc99;
+  background: var(--hue);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--hue) 65%, transparent);
 }
 
 /* Nested card dropdowns inside a subsystem menu: the GPU menu holds three
@@ -2558,15 +2659,17 @@ a {
 .submenu.open .submenu-head > svg {
   transform: rotate(180deg);
 }
+/* A card's dropdown is marked in its chip maker's colour (NVIDIA, AMD,
+   Intel), as the build workspace marks its options. */
 .branch-scales .submenu-head > i {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
-  background: #5a5e65;
+  background: color-mix(in srgb, var(--hue) 75%, #34373c);
 }
 .submenu.here .submenu-head > i {
-  background: var(--accent);
-  box-shadow: 0 0 7px #79bfcc99;
+  background: var(--hue);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--hue) 65%, transparent);
 }
 .submenu-scales {
   display: flex;
@@ -2574,7 +2677,7 @@ a {
   gap: 1px;
   margin: 1px 0 4px 11px;
   padding-left: 11px;
-  border-left: 1px solid #3a3e44;
+  border-left: 1px solid color-mix(in srgb, var(--hue) 34%, #33373e);
 }
 
 /* ---------------------------------------------------------------------------

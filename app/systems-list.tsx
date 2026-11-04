@@ -3,7 +3,8 @@ import { systemRoot, type LevelId } from '@/lib/levels';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { categories, colors, manifest, type Category } from '@/lib/manifest';
+import { categories, manifest, type Category } from '@/lib/manifest';
+import { hueOfSystem, hueStyle } from '@/lib/palette';
 
 type Props = {
   level: LevelId;
@@ -41,7 +42,7 @@ export default function SystemsList({
       </div>
       <div className="layer-scroll">
         {categories.map((category) => (
-          <div key={category}>
+          <div key={category} style={hueStyle(hueOfSystem(category))}>
             <div className="layer-row">
               <button
                 className="category-visibility"
@@ -51,7 +52,7 @@ export default function SystemsList({
                 }
                 onClick={() => onToggleCategory(category)}
               >
-                <i style={{ background: colors[category] }} />
+                <i />
                 <span>{category}</span>
                 <small>{visible.includes(category) ? 'On' : 'Off'}</small>
               </button>

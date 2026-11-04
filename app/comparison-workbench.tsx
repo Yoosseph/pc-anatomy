@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import {
   canComparePhysicalScale,
+  comparisonCategoryLabel,
   comparisonItem,
   createComparisonState,
   selectComparisonItem,
@@ -25,6 +26,7 @@ import {
   type ComparisonSide,
   type ComparisonViewState,
 } from '@/lib/comparison-state';
+import { hueOfCategory, hueStyle } from '@/lib/palette';
 import ComparisonPicker from './comparison-picker';
 import ComparisonViewer from './comparison-viewer';
 import ComparisonSpecs from './comparison-specs';
@@ -58,6 +60,7 @@ function PartSelector({ side, item, buttonRef, onOpen }: PartSelectorProps) {
   return (
     <button
       className={`comparison-selector ${side}`}
+      style={hueStyle(hueOfCategory(item.category))}
       ref={buttonRef}
       aria-label={`Choose part ${sideLetter(side)}`}
       aria-haspopup="dialog"
@@ -66,6 +69,7 @@ function PartSelector({ side, item, buttonRef, onOpen }: PartSelectorProps) {
       <span className="comparison-letter">{sideLetter(side)}</span>
       <span className="comparison-selected-part">
         <strong>{item.shortName}</strong>
+        <small>{comparisonCategoryLabel(item.category)}</small>
       </span>
       <ChevronDown size={17} aria-hidden="true" />
     </button>

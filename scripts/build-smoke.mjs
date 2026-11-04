@@ -321,11 +321,17 @@ try {
     /mode=build&cooler=liquid&storage=nvme&gpu=arcb580&psu=psubronze/,
   );
   assert.doesNotMatch(page.url(), /cpu=|board=|ram=/);
+  // Sharing shows the link it copied, and goes on Escape.
   await page.locator('.build-share').evaluate((button) => button.click());
-  await page
-    .locator('.build-share')
-    .filter({ hasText: /Link copied|Copy the address bar/ })
-    .waitFor();
+  const pop = page.locator('.build-share-pop');
+  await pop.waitFor();
+  assert.match(
+    await pop.locator('.build-share-head').innerText(),
+    /Link copied to your clipboard|Copy this link/,
+  );
+  assert.equal(await pop.locator('.build-share-url').innerText(), page.url());
+  await page.keyboard.press('Escape');
+  await pop.waitFor({ state: 'detached' });
   const shared = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
     reducedMotion: 'reduce',

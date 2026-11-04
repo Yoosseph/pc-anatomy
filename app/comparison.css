@@ -121,16 +121,22 @@
   padding: 8px 14px;
   color: #e9ecee;
   text-align: left;
-  background: #1f2225;
-  border: 1px solid #40454a;
+  /* The part's colour down its edge, and under its name its category. */
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hue) 10%, #1f2225) 0%,
+    #1f2225 60%
+  );
+  border: 1px solid color-mix(in srgb, var(--hue) 24%, #40454a);
   border-radius: 7px;
+  box-shadow: inset 3px 0 0 var(--hue);
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
 }
 .comparison-selector:hover {
-  background: #262a2e;
-  border-color: #65a6b4;
+  background: color-mix(in srgb, var(--hue) 12%, #262a2e);
+  border-color: color-mix(in srgb, var(--hue) 55%, #40454a);
 }
 .comparison-selector:focus-visible {
   outline: 2px solid var(--accent-bright);
@@ -162,6 +168,12 @@
 .comparison-selected-part strong {
   font-size: 14px;
   font-weight: 600;
+}
+.comparison-selected-part small {
+  color: var(--hue);
+  font: 600 9.5px monospace;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
 }
 .comparison-swap {
   width: 44px;
@@ -420,7 +432,7 @@
 .comparison-category-nav button {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   min-height: 36px;
   padding: 0 10px;
@@ -436,12 +448,23 @@
 }
 .comparison-category-nav button[aria-pressed='true'] {
   color: #f4fbfc;
-  background: #2b3f44;
-  box-shadow: inset 3px 0 var(--accent-bright);
+  background: color-mix(in srgb, var(--hue) 16%, #1f2326);
+  box-shadow: inset 3px 0 var(--hue);
+}
+.comparison-category-nav button > i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--hue);
 }
 .comparison-category-nav button span {
+  margin-left: auto;
   color: #7f858c;
   font: 10px monospace;
+}
+.comparison-category-nav button[aria-pressed='true'] span {
+  color: var(--hue);
 }
 .comparison-results {
   min-height: 0;
@@ -466,12 +489,22 @@
   top: -12px;
   z-index: 1;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 0 8px;
-  color: #a1d9e2;
+  color: var(--hue);
   background: #17191b;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
+}
+.comparison-results h3::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--hue);
 }
 .comparison-results ul {
   display: grid;
@@ -493,12 +526,12 @@
   border-radius: 6px;
 }
 .comparison-results li button:hover:not(:disabled) {
-  background: #222528;
-  border-color: #3d4247;
+  background: color-mix(in srgb, var(--hue) 6%, #222528);
+  border-color: color-mix(in srgb, var(--hue) 32%, #3d4247);
 }
 .comparison-results li button[aria-pressed='true'] {
-  background: #1c2c30;
-  border-color: #497b86;
+  background: color-mix(in srgb, var(--hue) 12%, #1a1d20);
+  border-color: color-mix(in srgb, var(--hue) 60%, #3d4247);
 }
 .comparison-results li button:disabled {
   cursor: not-allowed;
@@ -506,7 +539,7 @@
 }
 .comparison-results li button > svg {
   grid-column: 3;
-  color: var(--accent-bright);
+  color: var(--hue);
 }
 .comparison-result-copy {
   min-width: 0;
@@ -519,7 +552,7 @@
 }
 .comparison-result-copy small {
   overflow: hidden;
-  color: #8fb7be;
+  color: color-mix(in srgb, var(--hue) 55%, #8d949b);
   font: 10px monospace;
   letter-spacing: 0.4px;
   text-overflow: ellipsis;
@@ -879,7 +912,7 @@
     font-size: 12px;
   }
   .comparison-category-nav button[aria-pressed='true'] {
-    border-color: #6ea7b2;
+    border-color: color-mix(in srgb, var(--hue) 65%, #3d4247);
     box-shadow: none;
   }
   .comparison-results {

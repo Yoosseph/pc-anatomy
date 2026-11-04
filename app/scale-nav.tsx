@@ -29,6 +29,7 @@ import {
   submenuRoot,
   type LevelId,
 } from '@/lib/levels';
+import { brandOf, brandStyle, hueOfLevel, hueStyle } from '@/lib/palette';
 
 /** One icon per scale, so the branch you are on is recognisable at a glance. */
 const levelIcon: Record<LevelId, typeof Box> = {
@@ -183,13 +184,16 @@ export default function ScaleNav({
         <button
           className={level === rootLevel ? 'active' : ''}
           aria-current={level === rootLevel ? 'true' : undefined}
+          style={hueStyle('system')}
           onClick={() => {
             onOpenMenu(null);
             onNavigate(rootLevel);
           }}
         >
           <span>01</span>
-          <RootIcon size={17} />
+          <b className="nav-tile" aria-hidden="true">
+            <RootIcon size={15} />
+          </b>
           <div>
             {levels[rootLevel].name}
             <small>{levels[rootLevel].summary}</small>
@@ -207,6 +211,7 @@ export default function ScaleNav({
                 key={id}
                 className={id === level ? 'active' : ''}
                 aria-current={id === level ? 'true' : undefined}
+                style={hueStyle(hueOfLevel(id))}
                 onClick={() => onNavigate(id)}
               >
                 <i />
@@ -226,6 +231,7 @@ export default function ScaleNav({
                   'branch' + (open ? ' open' : '') + (here ? ' here' : '')
                 }
                 key={root}
+                style={hueStyle(hueOfLevel(root))}
               >
                 <button
                   className="branch-head"
@@ -233,7 +239,9 @@ export default function ScaleNav({
                   onClick={() => onOpenMenu(open ? rootLevel : root)}
                 >
                   <span>{String(index + 2).padStart(2, '0')}</span>
-                  <Icon size={18} />
+                  <b className="nav-tile" aria-hidden="true">
+                    <Icon size={15} />
+                  </b>
                   <div>
                     {label}
                     <small>
@@ -254,9 +262,16 @@ export default function ScaleNav({
                     {submenus.map((sub) => {
                       const subOpen = shownSubmenu === sub.root;
                       const subHere = submenuRoot(level) === sub.root;
+                      // A card's dropdown wears its chip maker's colour.
+                      const brand = brandOf(sub.root);
                       return (
                         <div
                           key={sub.root}
+                          style={
+                            brand
+                              ? brandStyle(brand)
+                              : hueStyle(hueOfLevel(sub.root))
+                          }
                           className={
                             'submenu' +
                             (subOpen ? ' open' : '') +

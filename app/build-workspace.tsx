@@ -17,6 +17,7 @@ import {
   Fan,
   Gpu,
   HardDrive,
+  Link2,
   LoaderCircle,
   MemoryStick,
   PanelLeftClose,
@@ -398,40 +399,105 @@ function PanelHead({
   );
 }
 
-/** Copies the address, which carries the build, so it can be sent on. */
+/**
+ * Copies the address, which carries the build, so it can be sent on, and
+ * shows the link it copied: someone who has never shared a page this way sees
+ * what is on their clipboard and what it will open. If the browser refuses
+ * the clipboard, the link is selected instead, ready to copy by hand.
+ */
 function ShareBuild() {
-  const [copied, setCopied] = useState<'yes' | 'no' | null>(null);
-  const timer = useRef(0);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const [shared, setShared] = useState<{ url: string; copied: boolean }>();
+  const [held, setHeld] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const link = useRef<HTMLParagraphElement>(null);
+
+  // Gone after a few seconds, unless the pointer is over it.
+  useEffect(() => {
+    if (!shared || held) return;
+    const timer = window.setTimeout(() => setShared(undefined), 6000);
+    return () => clearTimeout(timer);
+  }, [shared, held]);
+
+  // Gone on a click elsewhere, or Escape.
+  useEffect(() => {
+    if (!shared) return;
+    const away = (event: PointerEvent) => {
+      if (!box.current?.contains(event.target as Node)) setShared(undefined);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShared(undefined);
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [shared]);
+
+  useEffect(() => {
+    if (shared && !shared.copied && link.current)
+      getSelection()?.selectAllChildren(link.current);
+  }, [shared]);
+
   const copy = async () => {
+    const url = location.href;
+    let copied = true;
     try {
-      await navigator.clipboard.writeText(location.href);
-      setCopied('yes');
+      await navigator.clipboard.writeText(url);
     } catch {
-      setCopied('no');
+      copied = false;
     }
-    clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setCopied(null), 2200);
+    setShared({ url, copied });
   };
+
   return (
-    <button
-      className="build-share"
-      onClick={copy}
-      title="Copy a link to this build"
+    <div
+      className="build-share-box"
+      ref={box}
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
     >
-      {copied === 'yes' ? (
-        <Check size={15} aria-hidden="true" />
-      ) : (
-        <Share2 size={15} aria-hidden="true" />
+      <button
+        className={'build-share' + (shared?.copied ? ' copied' : '')}
+        onClick={copy}
+        title="Copy a link to this build"
+      >
+        {shared?.copied ? (
+          <Check size={15} aria-hidden="true" />
+        ) : (
+          <Share2 size={15} aria-hidden="true" />
+        )}
+        <span aria-live="polite">
+          {shared?.copied ? 'Copied' : 'Share your build'}
+        </span>
+      </button>
+      {shared && (
+        <div className="build-share-pop">
+          <p className="build-share-head">
+            {shared.copied ? (
+              <>
+                <Check size={14} aria-hidden="true" />
+                Link copied to your clipboard
+              </>
+            ) : (
+              <>
+                <Link2 size={14} aria-hidden="true" />
+                Copy this link
+              </>
+            )}
+          </p>
+          <p className="build-share-url" ref={link}>
+            {shared.url}
+          </p>
+          <p className="build-share-hint">
+            {shared.copied
+              ? 'Paste it into a message or a post. Whoever opens it sees this build, part for part.'
+              : 'The browser did not allow copying, so the link is selected for you to copy.'}
+          </p>
+        </div>
       )}
-      <span aria-live="polite">
-        {copied === 'yes'
-          ? 'Link copied'
-          : copied === 'no'
-            ? 'Copy the address bar'
-            : 'Share your build'}
-      </span>
-    </button>
+    </div>
   );
 }
 

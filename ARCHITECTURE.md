@@ -286,7 +286,7 @@ subsystems stop touching.
 | Path | Responsibility |
 | --- | --- |
 | `lib/levels.ts` | The scale tree: parents, kind, phases, spread, menu grouping. Also `levelPath`, `branchRoot`, `submenuRoot`, `branches`, `menuRoot`. |
-| `lib/concept.ts` | The `Concept` shape, the eight categories and their colours, the three accuracy strings, and the `concept()` factory. |
+| `lib/concept.ts` | The `Concept` shape, the eight categories and the model's tints for them, the three accuracy strings, and the `concept()` factory. |
 | `lib/concepts/*.ts` | The written catalogue, one file per subsystem. Ids are global. |
 | `lib/sources.ts` | Every citable reference, keyed by id. 84 of them. |
 | `lib/manifest.ts` | Composes the catalogue, wires parents to children, and answers questions about it: `byId`, `searchConcepts`, `openLevel`, `levelConcept`. Nothing about the current view. |
@@ -319,6 +319,7 @@ subsystems stop touching.
 | `lib/desktop-build.ts` | The build workspace's parts, without three.js: the seven slots, the parts each can take with their published figures and sources, the measured room in the case (`caseRoom`), what a build actually seats (`fittedParts`), which tower model it needs (`towerKey`), and `standIn` / `opensTo`, which say what an installed tower piece describes and opens. |
 | `lib/build-checks.ts` | Whether a build works, without three.js: one function per check, `checkBuild`, the verdict, the per-slot markers, the rated draw, and `optionFit`, what one option would do to its own checks and why. |
 | `lib/part-facts.ts` | What the parts picker shows on an option beyond its name: the facts the checks compare, toned by whether they agree with the rest of the build, and the card's length and the supply's rating as meters. |
+| `lib/palette.ts` | The interface's part colours: which `--hue-*` custom property (declared in `workbench.css`) a scale, a visibility system or a comparison category takes, and which maker's colour a product carries (`brandOf`). No three.js. |
 | `lib/picking.ts` | `resolvePick` / `resolvePickNear` — the see-through picking policy. Deliberately outside the scene so tests can import it. |
 | `lib/raycast-acceleration.ts` | Idle-time bounds trees for heavy geometry, behind three.js's own sphere and box rejection. Picks are unchanged; only unreachable triangles are skipped. |
 | `lib/layout.ts` | `inventoryLayout`, `hardwareInventory`, `spatialInventory`, `smoothstep`, `Vec3`. |
@@ -334,11 +335,11 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 162 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 163 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
-| `scripts/build-smoke.mjs` | The build workspace in headless Edge: opens it on the explorer's scene, swaps every slot, filters a slot by maker, times each choice from click to next frame, folds both panels away and back, follows a shared link, leaves and comes back, opens the installed card, survives Reset, and checks phone widths with the sheet up and down. Screenshots go to `outputs/build`. |
+| `scripts/build-smoke.mjs` | The build workspace in headless Edge: opens it on the explorer's scene, swaps every slot, filters a slot by maker, times each choice from click to next frame, folds both panels away and back, follows a shared link (checking the link Share shows is the address), leaves and comes back, opens the installed card, survives Reset, and checks phone widths with the sheet up and down. Screenshots go to `outputs/build`. |
 | `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
 
 ## The interfaces you will touch
@@ -496,8 +497,8 @@ These interaction decisions are settled, and re-opening them has been tried:
   opens it where the card leaves it in reach. `tapIntent` is the rule.
 - **The address is the place, not the view.** `?scale=`, `&part=` (with
   `&n=` for the n-th identical part), `&open=` for the disassembly,
-  `&cpu=`, `&cooler=`, `&ram=`, `&gpu=`, `&storage=`, `&psu=` for a changed
-  build, and `&mode=build` for the build workspace. Camera,
+  `&cpu=`, `&cooler=`, `&board=`, `&ram=`, `&gpu=`, `&storage=`, `&psu=` for
+  a changed build, and `&mode=build` for the build workspace. Camera,
   hidden parts and the airflow preference stay out: they are how one person is
   looking, not where. Scale changes and opening or leaving the workspace are
   history steps; selections, part swaps and slider moves replace the current
@@ -519,6 +520,20 @@ These interaction decisions are settled, and re-opening them has been tried:
   until Reset, so returning to the tower having asked for air does not switch
   it off again. The switch is absent where there are no fans, and airflow
   follows the Cooling category — hide the fans and the arrows go with them.
+- **One colour per kind of part, on every page.** Boards are green,
+  processors blue, graphics violet, memory lime, storage amber, cooling cyan,
+  power orange, displays pink and the chassis steel; a whole machine takes the
+  site's accent. The scale menus (each menu's icon tile, each scale's dot),
+  the visible systems, the detail panel, search, the breadcrumbs, the
+  comparison picker and the build workspace's slots all use the same one, so a
+  part is recognisable by colour before its name is read. A card's dropdown is
+  marked in its chip maker's colour instead (NVIDIA, AMD, Intel), as the
+  build workspace marks its options. `lib/palette.ts` says which colour a
+  scale, system or category takes and sets `--hue` on the element; the
+  stylesheets colour from `var(--hue)`, mixing it with `color-mix()` for
+  tints and borders. The interface's colours are not the model's: the 3D
+  pieces keep the quieter tints in `concept.ts`, which are tuned to sit under
+  the scene's lighting, and changing those changes every render.
 
 ## Part comparison mode
 
@@ -620,6 +635,13 @@ positions at the front. A front radiator stands inside the intakes, so with
 the liquid loop the card's room is 420 mm less the radiator's 27 mm
 (`cardClearance`). `tests/build.test.ts` measures every one of those
 numbers in the built tower.
+
+**Share your build** copies the address, which carries the build, and shows
+the link it copied under the button with a line on what it opens, so a reader
+who has never shared a page this way sees what is on their clipboard. Where
+the browser refuses the clipboard, the link is shown selected, to copy by
+hand. It goes after a few seconds, on a click elsewhere or on Escape, and
+stays while the pointer is over it.
 
 `ExplorerState.build` holds the choice. It survives navigation and Reset; only
 the workspace puts the original parts back. It is in the address as `&cpu=`,
@@ -777,7 +799,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-162 tests, all through Node's built-in runner.
+163 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -814,13 +836,16 @@ with Node.js 22.
   its filter anywhere in the first half of the disassembly, that every rear
   connector can be seen from behind the machine through the I/O shield, and
   that the front I/O sits on the outside of the roof.
-- `tests/comparison.test.ts` (10) — every level discovered once across all
+- `tests/comparison.test.ts` (11) — every level discovered once across all
   systems, category inheritance through deeper scales, combined category,
   system and search filters, entry pairs from every scale, every distinct
   cross pair selectable, true size limited to calibrated models, own-only
   specifications, label-aligned rows with gaps kept, picker labels and
   paths, which pairs share a table, and pane-local pointer coordinates at
-  desktop and mobile widths.
+  desktop and mobile widths. Also that every scale, visibility system and
+  category takes a part colour `workbench.css` declares, that a scale keeps
+  the colour of the part it is inside, and that each card's menu carries its
+  chip maker's colour.
 - `tests/comparison-framing.test.ts` (6) — fit-each and true-size distances,
   unknown or invalid units never implying a shared scale, off-centre models
   contained at phone and wide aspects, one orbit mapping consistently into

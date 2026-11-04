@@ -141,6 +141,12 @@ and red where they do not, a meter for a card's length against the case and a
 supply's rating against the draw, and why it would not work if it would not.
 Either panel folds away to a rail to give the tower the room.
 
+The colours are the whole site's, not just this page's: the explorer's scale
+menus, the visible systems, the part card, search and the comparison picker
+give each kind of part the same one, so graphics are violet, memory lime and
+power orange wherever they appear, and each graphics card's menu is marked in
+its chip maker's colour.
+
 Every figure the checks use is cited: whether the processor fits the board's
 socket, whether the cooler and the board fit the case, whether the memory fits
 the DDR5 slots and how fast the processor's maker rates two modules or four,
@@ -150,7 +156,7 @@ and the drives take, and the processor's and card's rated power against the
 supply. The case is the same in every build.
 
 The build is written into the address, so **Share your build** copies a link
-to it. On a phone the tower sits on top and the parts and the checks are two
+to it and shows you the link it copied. On a phone the tower sits on top and the parts and the checks are two
 tabs underneath, which drop away to give the tower the screen. Every part on
 offer is a scale of its own: it can be taken apart from the explorer and set
 beside another in the comparison workbench.

@@ -8,7 +8,8 @@ import {
   Minimize,
   Wind,
 } from 'lucide-react';
-import { byId, colors } from '@/lib/manifest';
+import { byId } from '@/lib/manifest';
+import { hueOfSystem, hueStyle } from '@/lib/palette';
 import {
   airflowShown,
   hasAirflow,
@@ -164,8 +165,11 @@ export default function StageTools({
               </div>
               <ul>
                 {hiddenComponents.map((component) => (
-                  <li key={component.id}>
-                    <i style={{ background: colors[component.category] }} />
+                  <li
+                    key={component.id}
+                    style={hueStyle(hueOfSystem(component.category))}
+                  >
+                    <i />
                     <span>{component.shortName}</span>
                     <button
                       aria-label={`Show ${component.name}`}

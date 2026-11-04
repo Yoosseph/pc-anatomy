@@ -13,7 +13,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
-import { byId, colors, sources, type Concept } from '@/lib/manifest';
+import { byId, sources, type Concept } from '@/lib/manifest';
+import { hueOfLevel, hueOfSystem, hueStyle } from '@/lib/palette';
 import type { Selection } from '@/lib/explorer-state';
 import { levels, type LevelId } from '@/lib/levels';
 
@@ -59,6 +60,7 @@ export default function DetailPanel({
     >
       <SheetContent
         className="detail-panel"
+        style={selected ? hueStyle(hueOfSystem(selected.category)) : undefined}
         side="right"
         showCloseButton={false}
         initialFocus={false}
@@ -66,7 +68,8 @@ export default function DetailPanel({
         {selected && (
           <>
             <div className="detail-top">
-              <span style={{ color: colors[selected.category] }}>
+              <span className="detail-kind">
+                <i aria-hidden="true" />
                 {selected.category} /{' '}
                 {selected.representationType === 'logical'
                   ? 'ARCHITECTURE'
@@ -106,7 +109,11 @@ export default function DetailPanel({
               </div>
             )}
             {opens && opens !== level && (
-              <button className="open-component" onClick={() => onDive(piece!)}>
+              <button
+                className="open-component"
+                style={hueStyle(hueOfLevel(opens))}
+                onClick={() => onDive(piece!)}
+              >
                 Take apart {levels[opens].name}
                 <ChevronRight size={17} />
               </button>

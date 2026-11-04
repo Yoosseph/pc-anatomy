@@ -17,18 +17,16 @@
   --build-panel: #0e0f10f2;
   --build-card: #141619;
   --build-line: #24272b;
-  /* One colour per slot: its icon, its options, its tags on the checks. */
-  --slot-processor: #6aa8ff;
-  --slot-cooler: #4fd1e8;
-  --slot-board: #5ed39f;
-  --slot-memory: #b9de5b;
-  --slot-storage: #f0c35a;
-  --slot-graphics: #b18cff;
-  --slot-power: #ff9b5e;
-  /* Whose silicon a part carries. */
-  --brand-nvidia: #8fd12a;
-  --brand-amd: #ff5d63;
-  --brand-intel: #4aa6f0;
+  /* One colour per slot: its icon, its options, its tags on the checks. They
+     are the site's part colours (workbench.css), so a slot matches its menu
+     in the explorer. */
+  --slot-processor: var(--hue-processor);
+  --slot-cooler: var(--hue-cooling);
+  --slot-board: var(--hue-board);
+  --slot-memory: var(--hue-memory);
+  --slot-storage: var(--hue-storage);
+  --slot-graphics: var(--hue-graphics);
+  --slot-power: var(--hue-power);
   background: radial-gradient(
     ellipse at 50% 46%,
     #1d2022 0%,
@@ -84,8 +82,11 @@
 .build-back {
   justify-self: start;
 }
-.build-share {
+.build-share-box {
+  position: relative;
   justify-self: end;
+}
+.build-share {
   font-weight: 600;
   color: #dff3f5;
   background: linear-gradient(180deg, #1b3a41 0%, #152b31 100%);
@@ -98,6 +99,78 @@
 .build-share:hover {
   background: linear-gradient(180deg, #22474f 0%, #1a343b 100%);
   border-color: #72b6c4;
+}
+.build-share.copied {
+  color: #dcf8ec;
+  background: linear-gradient(180deg, #1c3d31 0%, #152e25 100%);
+  border-color: #4f9c7d;
+}
+/* What was copied: the link itself, so nobody has to guess. */
+.build-share-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(360px, calc(100vw - 24px));
+  padding: 12px 14px 13px;
+  border: 1px solid #3a4248;
+  border-radius: 9px;
+  background: #15181b;
+  box-shadow: 0 14px 34px #000000a6;
+  animation: build-share-in 0.14s ease-out;
+}
+.build-share-pop::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  width: 10px;
+  height: 10px;
+  background: #15181b;
+  border-left: 1px solid #3a4248;
+  border-top: 1px solid #3a4248;
+  transform: rotate(45deg);
+}
+.build-share-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--build-ok);
+}
+.build-share-url {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #2c3237;
+  border-radius: 6px;
+  background: #0b0d0e;
+  font:
+    11.5px/1.45 ui-monospace,
+    'Cascadia Mono',
+    Consolas,
+    monospace;
+  color: #dfe6ea;
+  word-break: break-all;
+  -webkit-user-select: all;
+  user-select: all;
+}
+.build-share-hint {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #9aa3aa;
+}
+@keyframes build-share-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .build-share-pop {
+    animation: none;
+  }
 }
 .build-title {
   display: flex;

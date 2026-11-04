@@ -24,6 +24,8 @@ import {
   systemRoot,
 } from '../lib/levels.ts';
 import { sources } from '../lib/sources.ts';
+import { supplyModels, supplyPartId } from '../lib/concepts/psu.ts';
+import { powerOptions } from '../lib/desktop-build.ts';
 
 await test('all concepts have unique identities, reciprocal parents, sources and no cycles', () => {
   assert.equal(new Set(manifest.map((c) => c.id)).size, manifest.length);
@@ -102,22 +104,57 @@ await test('processors have a menu of their own, and still open from the board t
   assert.equal(byId.cpu.category, 'Compute');
   assert.equal(byId.z890cpu.category, 'Compute');
 });
-await test('power supply menu separates modular and fixed-cable models', () => {
+await test('the power supply menu runs from 650 W to 1200 W, each a supply of its own', () => {
   const power = branches().find((b) => b.label === 'Power supply')!;
-  assert.deepEqual(power.levels, ['psu', 'psubronze']);
+  // Smallest first, the menu, the catalogue and the build listing them alike.
+  assert.deepEqual(power.levels, [
+    'psu650',
+    'psubronze',
+    'psu',
+    'psu1000',
+    'psu1200',
+  ]);
+  assert.deepEqual(Object.keys(powerOptions), power.levels);
   assert.equal(power.submenus.length, 0);
-  assert.match(levels.psu.name, /^Modular/);
-  assert.match(levels.psubronze.name, /^Non-modular/);
+  // Only the installed one is reached from the tower.
   assert.equal(byId.psu.open, 'psu');
-  assert.equal(levels.psubronze.alternative, true);
-  assert.equal(byId.bronzepsucase.open, 'psubronze');
-  assert.ok(manifest.some((c) => c.id === 'psumodular' && c.level === 'psu'));
-  assert.ok(
-    manifest.some(
-      (c) => c.id === 'bronzepsuharness' && c.level === 'psubronze',
-    ),
-  );
-  assert.ok(!manifest.some((c) => c.id === 'bronzepsumodular'));
+  for (const level of power.levels)
+    assert.equal(levels[level].alternative ?? false, level !== 'psu', level);
+  for (const level of power.levels) {
+    const model = supplyModels[level as keyof typeof supplyModels];
+    const option = powerOptions[level as keyof typeof powerOptions];
+    const housing = byId[supplyPartId(model, 'psucase')];
+    // Each housing opens its own scale and carries the figures the build
+    // workspace checks against.
+    assert.equal(housing.open, level);
+    assert.equal(byId[levels[level].concept].open, level);
+    assert.equal(model.watts, option.watts, level);
+    assert.equal(housing.specifications.Output, `${option.watts} W`);
+    assert.equal(model.modular, option.modular, level);
+    assert.match(
+      levels[level].name,
+      option.modular ? /^Modular/ : /^Non-modular/,
+    );
+    // A modular unit has its socket panel; a fixed one a harness in its place.
+    const cables = manifest.filter(
+      (c) => c.level === level && /psu(modular|harness)$/.test(c.id),
+    );
+    assert.deepEqual(
+      cables.map((c) => c.id),
+      [supplyPartId(model, 'psumodular')],
+    );
+    assert.match(cables[0].id, option.modular ? /psumodular$/ : /psuharness$/);
+    // Every model has the same parts as the 850W Gold, under its own ids.
+    assert.equal(
+      manifest.filter((c) => c.level === level).length,
+      manifest.filter((c) => c.level === 'psu').length,
+      level,
+    );
+  }
+  // The 1000 W meets ASUS's recommendation for the 5090, and the 650 W has
+  // too few 8-pin leads for the Radeon's three-lead adapter.
+  assert.equal(powerOptions.psu1000.watts, 1000);
+  assert.ok(powerOptions.psu650.eightPin < 3);
 });
 await test('shipping SKU counts are distinct from full-chip capacity', () => {
   assert.equal(byId.die.specifications.SMs, '170');

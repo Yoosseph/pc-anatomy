@@ -19,8 +19,11 @@
   <url><loc>https://pc-anatomy.com/?scale=ddr4banks</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ddr4array</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ddr4cell</loc></url>
-  <url><loc>https://pc-anatomy.com/?scale=psu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=psubronze</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=fan</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=cooler</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=liquid</loc></url>
@@ -456,6 +459,54 @@
   <url><loc>https://pc-anatomy.com/?scale=psubronze&amp;part=bronzepsusupervisor</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=psubronze&amp;part=bronzepsuharness</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=psubronze&amp;part=bronzepsugrille</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuintake</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuinlet</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psufilter</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psubridge</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psupfc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psubulk</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuswitch</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psutransformer</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psusinks</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psusecondary</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psudcdc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuoutput</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psusupervisor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psuharness</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu650&amp;part=tuf650psugrille</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psuintake</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psuboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psuinlet</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psufilter</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psubridge</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psupfc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psubulk</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psuswitch</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psutransformer</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psusinks</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psusecondary</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psudcdc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psuoutput</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psusupervisor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psumodular</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1000&amp;part=tuf1000psugrille</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psuintake</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psuboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psuinlet</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psufilter</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psubridge</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psupfc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psubulk</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psuswitch</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psutransformer</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psusinks</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psusecondary</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psudcdc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psuoutput</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psusupervisor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psumodular</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=psu1200&amp;part=tuf1200psugrille</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=fan&amp;part=fanpads</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=fan&amp;part=fanimpeller</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=fan&amp;part=fanmagnet</loc></url>

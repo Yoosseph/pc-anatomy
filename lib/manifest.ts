@@ -13,7 +13,13 @@ import { b650mConcepts, z890Concepts } from './concepts/boards.ts';
 import { dualCardConcepts, itxCardConcepts } from './concepts/compact-cards.ts';
 import { ramConcepts } from './concepts/ram.ts';
 import { pcConcepts } from './concepts/pc.ts';
-import { psuConcepts, bronzePsuConcepts } from './concepts/psu.ts';
+import {
+  psuConcepts,
+  bronzePsuConcepts,
+  tuf650Concepts,
+  tuf1000Concepts,
+  tuf1200Concepts,
+} from './concepts/psu.ts';
 import { categories, colors, type Category, type Concept } from './concept.ts';
 import {
   isPhysical,
@@ -52,6 +58,9 @@ export const manifest: Concept[] = [
   ...ramConcepts,
   ...psuConcepts,
   ...bronzePsuConcepts,
+  ...tuf650Concepts,
+  ...tuf1000Concepts,
+  ...tuf1200Concepts,
   ...fanConcepts,
   ...coolerConcepts,
   ...liquidConcepts,

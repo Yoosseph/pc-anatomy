@@ -118,6 +118,34 @@ export const sources = {
     name: 'ASUS · TUF Gaming 750W Bronze fan and construction',
     url: 'https://www.asus.com/us/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-750b/',
   },
+  tuf650b: {
+    name: 'ASUS · TUF Gaming 650W Bronze specifications',
+    url: 'https://www.asus.com/uk/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/techspec/',
+  },
+  tuf650fan: {
+    name: 'ASUS · TUF Gaming 650W Bronze fan and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/',
+  },
+  tuf650cabling: {
+    name: 'Umart · TUF Gaming 650W Bronze non-modular listing (retailer)',
+    url: 'https://www.umart.com.au/product/asus-650w-tuf-gaming-80-bronze-non-modular-atx-power-supply-tuf-gaming-650b-83656',
+  },
+  tuf1000g: {
+    name: 'ASUS · TUF Gaming 1000W Gold specifications',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/techspec/',
+  },
+  tuf1000fan: {
+    name: 'ASUS · TUF Gaming 1000W Gold fan, cables and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/',
+  },
+  tuf1200g: {
+    name: 'ASUS · TUF Gaming 1200W Gold specifications',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/techspec/',
+  },
+  tuf1200fan: {
+    name: 'ASUS · TUF Gaming 1200W Gold fan, cables and construction',
+    url: 'https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/',
+  },
   ddr5: {
     name: 'Micron · DDR5 client module architecture white paper',
     url: 'https://www.micron.com/content/dam/micron/global/public/products/white-paper/ddr5-key-module-features-wp-client.pdf',

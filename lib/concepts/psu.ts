@@ -1,4 +1,6 @@
 import { concept, standard, type Concept } from '../concept.ts';
+import type { LevelId } from '../levels.ts';
+import type { SourceId } from '../sources.ts';
 
 /**
  * Inside the power supply.
@@ -330,87 +332,180 @@ export const psuConcepts: Concept[] = [
   }),
 ];
 
-/** The fixed-cable unit shares an explanatory conversion chain, with its own identities. */
-export const bronzePsuConcepts: Concept[] = psuConcepts.map((original) => {
-  const id =
-    original.id === 'psumodular' ? 'bronzepsuharness' : `bronze${original.id}`;
-  const parent =
-    original.id === 'psucase'
-      ? 'pc'
-      : original.parent === 'psucase'
-        ? 'bronzepsucase'
-        : original.parent === 'psuboard'
-          ? 'bronzepsuboard'
-          : original.parent;
-  return concept({
-    ...original,
-    id,
-    parent,
-    children: [],
+/**
+ * One of the TUF Gaming supplies, as the builder and the catalogue draw it.
+ * Every model in the family is a 150 × 150 × 86 mm box with a 135 mm fan, so
+ * they share the 850W Gold's conversion chain and differ in their rating,
+ * their efficiency class, and whether the leads plug in or are fixed.
+ */
+export interface SupplyModel {
+  /** The supply's own scale. */
+  level: LevelId;
+  /** Put in front of every part id; the 850W Gold's parts carry none. */
+  prefix: string;
+  watts: number;
+  efficiency: 'Gold' | 'Bronze';
+  modular: boolean;
+  /** ASUS's specification page, and the product page for the fan. */
+  spec: SourceId;
+  fan: SourceId;
+  /** The outputs ASUS lists, for the socket panel or the fixed harness. */
+  outputs: string;
+  /** The ATX revision ASUS states, where it states one. */
+  atx?: string;
+  /** More for the housing: a claim the maker's pages do not make. */
+  housing?: { sources: SourceId[]; note: string };
+}
+
+export const supplyModels = {
+  psu650: {
+    level: 'psu650',
+    prefix: 'tuf650',
+    watts: 650,
+    efficiency: 'Bronze',
+    modular: false,
+    spec: 'tuf650b',
+    fan: 'tuf650fan',
+    outputs: '24-pin · 2 × CPU 4+4-pin · 2 × PCIe 6+2-pin · 4 × SATA',
+    housing: {
+      sources: ['tuf650cabling'],
+      note: 'ASUS does not state the cabling; it is drawn with fixed leads, as retail listings describe it.',
+    },
+  },
+  psubronze: {
     level: 'psubronze',
-    open: original.id === 'psucase' ? 'psubronze' : undefined,
-    name:
-      original.id === 'psucase'
-        ? 'TUF Gaming 750W Bronze housing'
-        : original.id === 'psumodular'
+    prefix: 'bronze',
+    watts: 750,
+    efficiency: 'Bronze',
+    modular: false,
+    spec: 'tuf750b',
+    fan: 'tuf750fan',
+    outputs: '24-pin · EPS · PCIe 6+2-pin · SATA',
+  },
+  psu: {
+    level: 'psu',
+    prefix: '',
+    watts: 850,
+    efficiency: 'Gold',
+    modular: true,
+    spec: 'tuf850g',
+    fan: 'tuf850fan',
+    outputs: '24-pin · EPS · PCIe 16-pin · PCIe 8-pin · SATA',
+  },
+  psu1000: {
+    level: 'psu1000',
+    prefix: 'tuf1000',
+    watts: 1000,
+    efficiency: 'Gold',
+    modular: true,
+    spec: 'tuf1000g',
+    fan: 'tuf1000fan',
+    outputs:
+      '24-pin · 2 × CPU 4+4-pin · PCIe 16-pin · 4 × PCIe 8-pin · 5 × SATA',
+    atx: 'ATX 3.1',
+  },
+  psu1200: {
+    level: 'psu1200',
+    prefix: 'tuf1200',
+    watts: 1200,
+    efficiency: 'Gold',
+    modular: true,
+    spec: 'tuf1200g',
+    fan: 'tuf1200fan',
+    outputs:
+      '24-pin · 2 × CPU 4+4-pin · 2 × PCIe 16-pin · 3 × PCIe 8-pin · 5 × SATA',
+    atx: 'ATX 3.1',
+  },
+} satisfies Record<string, SupplyModel>;
+
+/** A part's id in a model: its prefix, and a harness where sockets would be. */
+export const supplyPartId = (model: SupplyModel, id: string) =>
+  model.prefix + (!model.modular && id === 'psumodular' ? 'psuharness' : id);
+
+/**
+ * Another model's catalogue, from the 850W Gold's: the same conversion chain
+ * under its own identities, with its own housing, outputs and fan source, and
+ * permanent leads in place of the socket panel on a fixed-cable unit.
+ */
+export function supplyConcepts(model: SupplyModel): Concept[] {
+  const name = `TUF Gaming ${model.watts}W ${model.efficiency}`;
+  const fixed = !model.modular;
+  return psuConcepts.map((original) => {
+    const housing = original.id === 'psucase',
+      panel = original.id === 'psumodular',
+      harness = panel && fixed;
+    const parent = housing
+      ? 'pc'
+      : original.parent === 'psucase' || original.parent === 'psuboard'
+        ? model.prefix + original.parent
+        : original.parent;
+    return concept({
+      ...original,
+      id: supplyPartId(model, original.id),
+      parent,
+      children: [],
+      level: model.level,
+      open: housing ? model.level : undefined,
+      name: housing
+        ? `${name} housing`
+        : harness
           ? 'Fixed cable harness'
           : original.name,
-    shortName:
-      original.id === 'psucase'
-        ? '750W housing'
-        : original.id === 'psumodular'
+      shortName: housing
+        ? `${model.watts}W housing`
+        : harness
           ? 'Fixed cables'
           : original.shortName,
-    description:
-      original.id === 'psucase'
-        ? 'The 150 × 150 × 86 mm folded steel shell of the ASUS TUF Gaming 750W Bronze.'
-        : original.id === 'psumodular'
+      description: housing
+        ? `The 150 × 150 × 86 mm folded steel shell of the ASUS ${name}.`
+        : harness
           ? 'Permanent sleeved cable looms leave the supply through a protected opening, with no detachable PSU-side sockets.'
           : original.description,
-    purpose:
-      original.id === 'psumodular'
+      purpose: harness
         ? 'Delivers power through permanently attached leads to the motherboard, CPU, graphics card and drives.'
         : original.purpose,
-    quantity:
-      original.id === 'psumodular'
-        ? '4 modeled cable looms'
-        : original.quantity,
-    specifications:
-      original.id === 'psucase'
+      quantity: harness ? '4 modeled cable looms' : original.quantity,
+      specifications: housing
         ? {
-            Format: 'ATX',
+            Format: model.atx ?? 'ATX',
             Dimensions: '150 × 150 × 86 mm',
-            Output: '750 W',
-            Efficiency: '80 PLUS Bronze',
-            Cabling: 'Non-modular',
+            Output: `${model.watts} W`,
+            Efficiency: `80 PLUS ${model.efficiency}`,
+            Cabling: fixed ? 'Non-modular' : 'Fully modular',
           }
-        : original.id === 'psumodular'
-          ? { Outputs: '24-pin · EPS · PCIe 6+2-pin · SATA' }
+        : panel
+          ? { Outputs: model.outputs }
           : original.specifications,
-    physicalAccuracy:
-      original.id === 'psucase'
-        ? 'Published dimensions and external features of the ASUS TUF Gaming 750W Bronze; internal geometry and component placement are illustrative.'
-        : original.id === 'psumodular'
+      physicalAccuracy: housing
+        ? `Published dimensions and external features of the ASUS ${name}; internal geometry and component placement are illustrative.` +
+          (model.housing ? ' ' + model.housing.note : '')
+        : harness
           ? 'Cable families follow ASUS documentation; bundle routing and connector geometry are illustrative.'
           : original.physicalAccuracy,
-    sources:
-      original.id === 'psucase' || original.id === 'psumodular'
-        ? ['tuf750b', 'psu']
-        : original.id === 'psuintake'
-          ? ['tuf750fan', 'fanconstruction', 'bldc']
-          : original.sources,
-    searchTerms:
-      original.id === 'psucase'
+      sources: housing
+        ? [model.spec, ...(model.housing?.sources ?? []), 'psu']
+        : panel
+          ? [model.spec, 'psu']
+          : original.id === 'psuintake'
+            ? [model.fan, 'fanconstruction', 'bldc']
+            : original.sources,
+      searchTerms: housing
         ? [
             ...original.searchTerms,
-            '750w',
-            'bronze',
-            'non-modular',
+            `${model.watts}w`,
+            model.efficiency.toLowerCase(),
+            fixed ? 'non-modular' : 'modular',
             'asus',
             'tuf',
           ]
-        : original.id === 'psumodular'
+        : harness
           ? ['fixed', 'non-modular', 'cable', 'harness', 'loom']
           : original.searchTerms,
+    });
   });
-});
+}
+
+export const bronzePsuConcepts = supplyConcepts(supplyModels.psubronze);
+export const tuf650Concepts = supplyConcepts(supplyModels.psu650);
+export const tuf1000Concepts = supplyConcepts(supplyModels.psu1000);
+export const tuf1200Concepts = supplyConcepts(supplyModels.psu1200);

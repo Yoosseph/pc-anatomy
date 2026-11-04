@@ -29,8 +29,11 @@ export type LevelId =
   | 'ddr4banks'
   | 'ddr4array'
   | 'ddr4cell'
-  | 'psu'
+  | 'psu650'
   | 'psubronze'
+  | 'psu'
+  | 'psu1000'
+  | 'psu1200'
   | 'fan'
   | 'cooler'
   | 'liquid'
@@ -398,18 +401,22 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  psu: {
-    id: 'psu',
+  // The supplies, smallest first. One is in the tower; the others are whole
+  // supplies of their own from the same TUF Gaming family, reached from the
+  // Power supply menu, that the build workspace can fit in its place.
+  psu650: {
+    id: 'psu650',
     comparisonCategory: 'power',
     millimetersPerUnit: 12,
     parent: 'pc',
-    name: 'Modular · TUF Gaming 850W Gold',
-    title: 'Inside a modular power supply.',
-    caption: 'ASUS TUF GAMING 850W GOLD',
-    summary: 'ASUS · 850 W · 80 PLUS Gold',
+    alternative: true,
+    name: 'Non-modular · TUF Gaming 650W Bronze',
+    title: 'A smaller fixed-cable supply.',
+    caption: 'ASUS TUF GAMING 650W BRONZE',
+    summary: 'ASUS · 650 W · 80 PLUS Bronze',
     kind: 'physical',
     branchLabel: 'Power supply',
-    concept: 'psu',
+    concept: 'tuf650psucase',
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,
@@ -427,6 +434,56 @@ export const levels: Record<LevelId, LevelDef> = {
     kind: 'physical',
     branchLabel: 'Power supply',
     concept: 'bronzepsucase',
+    spread: 1.9,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  psu: {
+    id: 'psu',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
+    parent: 'pc',
+    name: 'Modular · TUF Gaming 850W Gold',
+    title: 'Inside a modular power supply.',
+    caption: 'ASUS TUF GAMING 850W GOLD',
+    summary: 'ASUS · 850 W · 80 PLUS Gold',
+    kind: 'physical',
+    branchLabel: 'Power supply',
+    concept: 'psu',
+    spread: 1.9,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  psu1000: {
+    id: 'psu1000',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
+    parent: 'pc',
+    alternative: true,
+    name: 'Modular · TUF Gaming 1000W Gold',
+    title: 'A thousand watts, fully modular.',
+    caption: 'ASUS TUF GAMING 1000W GOLD',
+    summary: 'ASUS · 1000 W · 80 PLUS Gold',
+    kind: 'physical',
+    branchLabel: 'Power supply',
+    concept: 'tuf1000psucase',
+    spread: 1.9,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  psu1200: {
+    id: 'psu1200',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
+    parent: 'pc',
+    alternative: true,
+    name: 'Modular · TUF Gaming 1200W Gold',
+    title: 'Twelve hundred watts, two 16-pin leads.',
+    caption: 'ASUS TUF GAMING 1200W GOLD',
+    summary: 'ASUS · 1200 W · 80 PLUS Gold',
+    kind: 'physical',
+    branchLabel: 'Power supply',
+    concept: 'tuf1200psucase',
     spread: 1.9,
     phases: dissectionPhases,
     detailed: true,

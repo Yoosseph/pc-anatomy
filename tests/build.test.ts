@@ -851,3 +851,28 @@ function memory(model: { pieces: Piece[] }) {
     );
   return ram.applyMatrix4(installed.matrixWorld);
 }
+
+await test('the supply range lands either side of each card maker’s figure', () => {
+  // ASUS recommends 1000 W for the 5090: the 1000 W and 1200 W units meet it,
+  // so the original machine on either works with nothing to check.
+  for (const power of ['psu1000', 'psu1200'] as const) {
+    assert.equal(check({ ...defaultBuild, power }, 'supply').status, 'ok');
+    assert.equal(buildStatus(checkBuild({ ...defaultBuild, power })), 'ok');
+  }
+  // The 650 W unit is below Sapphire's 850 W minimum for the Radeon, and its
+  // two 8-pin leads cannot feed the card's three-lead adapter.
+  const radeon = {
+    ...defaultBuild,
+    graphics: 'rx9070',
+    power: 'psu650',
+  } as const;
+  assert.equal(check(radeon, 'supply').status, 'fail');
+  assert.equal(check(radeon, 'connector').status, 'fail');
+  // It is enough for the small card, whose maker asks for 550 W.
+  assert.equal(
+    buildStatus(
+      checkBuild({ ...defaultBuild, graphics: 'rtx5060', power: 'psu650' }),
+    ),
+    'ok',
+  );
+});

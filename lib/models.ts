@@ -15,6 +15,7 @@ import { buildDdr4, buildDimm } from './memory-module.ts';
 import { buildDdr4Dram, buildDram } from './dram-package.ts';
 import { buildRamArchitecture } from './ram-architecture.ts';
 import { buildPowerSupply } from './power-supply.ts';
+import { supplyModels } from './concepts/psu.ts';
 import { buildFanUnit } from './fan-unit.ts';
 import { buildCooler } from './cooler.ts';
 import { buildLiquid } from './liquid.ts';
@@ -126,8 +127,12 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ryzenio: buildRyzenIo,
   corei9: buildCoreUltra,
   coreio: buildCoreIo,
+  psu650: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu650),
+  psubronze: (tools, root) =>
+    buildPowerSupply(tools, root, supplyModels.psubronze),
   psu: buildPowerSupply,
-  psubronze: (tools, root) => buildPowerSupply(tools, root, 'fixed'),
+  psu1000: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu1000),
+  psu1200: (tools, root) => buildPowerSupply(tools, root, supplyModels.psu1200),
   fan: buildFanUnit,
   cooler: buildCooler,
   liquid: buildLiquid,

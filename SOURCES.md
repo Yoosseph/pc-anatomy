@@ -236,6 +236,41 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
+## Three more supplies · November 4, 2026
+
+The TUF Gaming family at the low and high end, so the build workspace offers
+650 W to 1200 W. Each is a scale of its own, drawn from the 850W Gold's
+conversion chain, with an exploded view and a place in the comparison
+workbench.
+
+- [ASUS TUF Gaming 650W Bronze specifications](https://www.asus.com/uk/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/techspec/):
+  650 W, 80 PLUS Bronze, 150 × 150 × 86 mm, one 24-pin, two CPU 4+4-pin, two
+  PCIe 6+2-pin, four SATA and four peripheral connectors. Its
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/)
+  gives the 135 mm Axial-tech fan on dual ball bearings. ASUS does not state
+  whether the leads are fixed; a
+  [retail listing](https://www.umart.com.au/product/asus-650w-tuf-gaming-80-bronze-non-modular-atx-power-supply-tuf-gaming-650b-83656),
+  **a retailer, not the maker**, names it non-modular, and it is drawn with
+  fixed leads like the 750W Bronze.
+- [ASUS TUF Gaming 1000W Gold specifications](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/techspec/):
+  1000 W, 80 PLUS Gold, ATX 3.1, 150 × 150 × 86 mm, one 24-pin, two CPU
+  4+4-pin, one PCIe 16-pin, four PCIe 8-pin, five SATA and four peripheral
+  connectors. The
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1000g/)
+  gives fully modular cables, the 135 mm fan on dual ball bearings and the
+  bundled 16-pin cable.
+- [ASUS TUF Gaming 1200W Gold specifications](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/techspec/):
+  1200 W, 80 PLUS Gold, ATX 3.1, 150 × 150 × 86 mm, one 24-pin, two CPU
+  4+4-pin, two PCIe 16-pin, three PCIe 8-pin, five SATA and four peripheral
+  connectors; its
+  [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/)
+  gives fully modular cables and the same fan.
+
+**Limits.** The internal layout is the 850W Gold's illustrative conversion
+chain for all five; ASUS publishes no board layout for any of them. The model
+draws one modular socket panel for every Gold unit, so the 1200W's second
+16-pin socket is in its outputs list but not drawn separately.
+
 ## Two small cards and two more boards · November 4, 2026
 
 Added so the build workspace has cards at the small end of the range and a

@@ -29,7 +29,12 @@ export type GraphicsChoice =
   | 'rtx5060ti'
   | 'rtx5060';
 export type StorageChoice = 'nvmesata' | 'nvme';
-export type PowerChoice = 'psu' | 'psubronze';
+export type PowerChoice =
+  | 'psu650'
+  | 'psubronze'
+  | 'psu'
+  | 'psu1000'
+  | 'psu1200';
 
 export interface DesktopBuild {
   processor: ProcessorChoice;
@@ -351,16 +356,17 @@ export const storageOptions: Record<StorageChoice, StorageOption> = {
   },
 };
 
+/** Smallest first, as the menu lists them. */
 export const powerOptions: Record<PowerChoice, PowerOption> = {
-  psu: {
-    name: 'ASUS TUF Gaming 850W Gold',
-    summary: '850 W · modular',
-    watts: 850,
-    modular: true,
-    sixteenPin: true,
-    eightPin: 3,
-    sata: 5,
-    sources: ['tuf850g'],
+  psu650: {
+    name: 'ASUS TUF Gaming 650W Bronze',
+    summary: '650 W · fixed cables',
+    watts: 650,
+    modular: false,
+    sixteenPin: false,
+    eightPin: 2,
+    sata: 4,
+    sources: ['tuf650b', 'tuf650cabling'],
   },
   psubronze: {
     name: 'ASUS TUF Gaming 750W Bronze',
@@ -371,6 +377,36 @@ export const powerOptions: Record<PowerChoice, PowerOption> = {
     eightPin: 4,
     sata: 4,
     sources: ['tuf750b'],
+  },
+  psu: {
+    name: 'ASUS TUF Gaming 850W Gold',
+    summary: '850 W · modular',
+    watts: 850,
+    modular: true,
+    sixteenPin: true,
+    eightPin: 3,
+    sata: 5,
+    sources: ['tuf850g'],
+  },
+  psu1000: {
+    name: 'ASUS TUF Gaming 1000W Gold',
+    summary: '1000 W · modular',
+    watts: 1000,
+    modular: true,
+    sixteenPin: true,
+    eightPin: 4,
+    sata: 5,
+    sources: ['tuf1000g', 'tuf1000fan'],
+  },
+  psu1200: {
+    name: 'ASUS TUF Gaming 1200W Gold',
+    summary: '1200 W · modular · two 16-pin',
+    watts: 1200,
+    modular: true,
+    sixteenPin: true,
+    eightPin: 3,
+    sata: 5,
+    sources: ['tuf1200g', 'tuf1200fan'],
   },
 };
 

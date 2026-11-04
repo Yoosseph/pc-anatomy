@@ -3,6 +3,7 @@ import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import { keyCenter, MODULE } from './memory-module.ts';
 import {
+  boardOptions,
   defaultBuild,
   fittedParts,
   type BoardChoice,
@@ -64,10 +65,120 @@ const microAtx = {
 };
 
 /**
- * One of three ASUS TUF boards. `motherboard` is the X670E board the machine
- * is built on; `z890` swaps in Intel's LGA 1851 socket; `b650m` is the AM5
- * board cut to micro-ATX. The other two prefix their part ids with their
- * own scale, as the fixed-cable supply does.
+ * How one maker dresses a board: the finish of its armour and the trim on
+ * it, the fins on its power-delivery heatsinks, the marks printed on the
+ * chipset and I/O covers, the chipset heatsink's shape, and the expansion
+ * slots it carries. The layout under it, ATX or micro-ATX, is shared.
+ *
+ * Only the ASUS boards and the slot lists follow published drawings and
+ * specifications; the other makers' finishes are in their style, and say so.
+ */
+interface BoardDesign {
+  /** The armour's colour, metalness and roughness, and its reflections. */
+  armour: [colour: string, metal: number, rough: number, env: number];
+  /** Fin tops, M.2 trim and the frame around the printed marks. */
+  trim: [colour: string, metal: number, rough: number];
+  /** The colour of the printed marks. */
+  ink: string;
+  marks: { big: string; small: string; tag: string; io: string };
+  /** TUF's printed grid and hazard stripes. */
+  tuf: boolean;
+  fins: 'blades' | 'slats' | 'block';
+  chipset: 'armour' | 'plate' | 'square';
+  /**
+   * Slots down the board, millimetres from its centre line: the full-length
+   * ones (the first is the graphics card's, with its armour) and the short
+   * ones, each with its length.
+   */
+  x16: number[];
+  short: { z: number; length: number }[];
+}
+
+const tufMarks = {
+  big: 'TUF',
+  small: 'GAMING',
+  tag: 'GET TUF. GAME TOUGH.',
+  io: 'TUF GAMING',
+};
+const tuf: Omit<BoardDesign, 'x16' | 'short'> = {
+  armour: ['#08090b', 0.62, 0.9, 0.22],
+  trim: ['#14181c', 0.65, 0.82],
+  ink: '#919797',
+  marks: tufMarks,
+  tuf: true,
+  fins: 'blades',
+  chipset: 'armour',
+};
+
+const designs: Record<BoardChoice, BoardDesign> = {
+  motherboard: {
+    ...tuf,
+    x16: [32, 134],
+    short: [
+      { z: 59, length: 20 },
+      { z: 84, length: 20 },
+    ],
+  },
+  z890: {
+    ...tuf,
+    x16: [32, 134],
+    short: [
+      { z: 59, length: 20 },
+      { z: 84, length: 20 },
+    ],
+  },
+  b650m: {
+    ...tuf,
+    x16: microAtx.pcie16,
+    short: microAtx.pcie1.map((z) => ({ z, length: 20 })),
+  },
+  // Black armour with yellow trim, after MSI's product photograph, and three
+  // full-length slots from its datasheet.
+  tomahawk: {
+    armour: ['#0b0c0e', 0.6, 0.82, 0.26],
+    trim: ['#c9c04a', 0.45, 0.55],
+    ink: '#b8b26a',
+    marks: { big: 'MAG', small: 'TOMAHAWK', tag: 'MSI', io: 'MAG' },
+    tuf: false,
+    fins: 'slats',
+    chipset: 'plate',
+    x16: [32, 93, 134],
+    short: [],
+  },
+  // Gunmetal and silver, in the maker's style; three full-length slots
+  // (PCIEX16, PCIEX4_1, PCIEX4_2) from its manual.
+  aorus: {
+    armour: ['#575e66', 0.9, 0.34, 0.75],
+    trim: ['#cdd3d9', 0.95, 0.24],
+    ink: '#e6e9ec',
+    marks: { big: 'AORUS', small: 'ELITE', tag: 'GIGABYTE', io: 'AORUS' },
+    tuf: false,
+    fins: 'slats',
+    chipset: 'plate',
+    x16: [32, 93, 134],
+    short: [],
+  },
+  // Silver with dark trim, in the maker's style; the ×16 slot and the short
+  // ×4 slot under it, and the square chipset heatsink, from its manual.
+  b850m: {
+    armour: ['#8e959c', 0.9, 0.36, 0.8],
+    trim: ['#1d2023', 0.4, 0.7],
+    ink: '#24282c',
+    marks: { big: 'ASRock', small: 'PRO RS', tag: 'B850M', io: 'PRO RS' },
+    tuf: false,
+    fins: 'block',
+    chipset: 'square',
+    x16: [32],
+    short: [{ z: 78, length: 39 }],
+  },
+};
+
+/**
+ * One of six boards. `motherboard` is the ASUS X670E board the machine is
+ * built on; `z890` swaps in Intel's LGA 1851 socket; `b650m` is the AM5
+ * board cut to micro-ATX; `tomahawk`, `aorus` and `b850m` are MSI's,
+ * GIGABYTE's and ASRock's, each in its maker's design (`designs`). The others
+ * prefix their part ids with their own scale, as the other supplies do.
  *
  * The processor and modules it carries come from the build when the tower
  * fits this board, and are left out when they cannot seat: the socket keeps
@@ -80,8 +191,9 @@ export function buildMotherboard(
   variant: BoardChoice = 'motherboard',
 ) {
   const { pcb, material, label } = tools;
-  const micro = variant === 'b650m',
-    intel = variant === 'z890';
+  const micro = boardOptions[variant].formFactor === 'Micro-ATX',
+    intel = boardOptions[variant].socket === 'LGA 1851';
+  const design = designs[variant];
   const name = (id: string) => (variant === 'motherboard' ? id : variant + id);
   const build: DesktopBuild =
     tools.build.board === variant
@@ -111,10 +223,11 @@ export function buildMotherboard(
       occupied.push(new T.Box3().setFromObject(o).expandByScalar(mm(1.2)));
     return p;
   };
-  // Rough black anodised aluminium: distinct from polished retention hardware.
-  const dark = material('#08090b', 0.62, 0.9);
-  const edge = material('#14181c', 0.65, 0.82);
-  dark.envMapIntensity = 0.22;
+  // The maker's armour (TUF's is rough black anodised aluminium), distinct
+  // from the polished retention hardware, and the trim on it.
+  const dark = material(design.armour[0], design.armour[1], design.armour[2]);
+  const edge = material(...design.trim);
+  dark.envMapIntensity = design.armour[3];
   edge.envMapIntensity = 0.3;
   const metal = material('#939a9e', 0.82, 0.68);
   metal.envMapIntensity = 0.75;
@@ -155,40 +268,48 @@ export function buildMotherboard(
     canvas.width = 1536;
     canvas.height = 384;
     const c = canvas.getContext('2d')!;
-    c.strokeStyle = '#34393d';
-    c.lineWidth = 2;
-    for (let x = 12; x < 1510; x += 38) {
-      c.beginPath();
-      c.moveTo(x, 20);
-      c.lineTo(x, 365);
-      c.stroke();
+    const { marks, ink } = design;
+    if (design.tuf) {
+      c.strokeStyle = '#34393d';
+      c.lineWidth = 2;
+      for (let x = 12; x < 1510; x += 38) {
+        c.beginPath();
+        c.moveTo(x, 20);
+        c.lineTo(x, 365);
+        c.stroke();
+      }
+      for (let z = 20; z < 380; z += 38) {
+        c.beginPath();
+        c.moveTo(12, z);
+        c.lineTo(1510, z);
+        c.stroke();
+      }
+      c.fillStyle = '#0b0d10';
+      c.fillRect(790, 20, 736, 345);
+    } else {
+      // A trim line in the maker's colour where TUF prints its grid.
+      c.fillStyle = design.trim[0];
+      c.fillRect(40, 300, 700, 10);
     }
-    for (let z = 20; z < 380; z += 38) {
-      c.beginPath();
-      c.moveTo(12, z);
-      c.lineTo(1510, z);
-      c.stroke();
-    }
-    c.fillStyle = '#0b0d10';
-    c.fillRect(790, 20, 736, 345);
-    c.fillStyle = '#919797';
-    c.textAlign = 'center';
     c.textAlign = 'left';
     if (vertical) {
-      c.fillStyle = '#0b0d10';
-      c.fillRect(150, 120, 1240, 145);
-      c.fillStyle = '#919797';
+      if (design.tuf) {
+        c.fillStyle = '#0b0d10';
+        c.fillRect(150, 120, 1240, 145);
+      }
+      c.fillStyle = ink;
       c.font = '900 130px sans-serif';
-      c.fillText('TUF GAMING', 190, 242, 1170);
+      c.fillText(marks.io, 190, 242, 1170);
     } else {
+      c.fillStyle = ink;
       c.font = '900 290px sans-serif';
-      c.fillText('TUF', 800, 312, 320);
+      c.fillText(marks.big, 800, 312, design.tuf ? 320 : 330);
       c.font = '900 116px sans-serif';
-      c.fillText('GAMING', 1140, 177, 365);
+      c.fillText(marks.small, 1140, 177, 365);
       c.font = '700 33px sans-serif';
-      c.fillText('GET TUF. GAME TOUGH.', 1140, 263, 365);
+      c.fillText(marks.tag, 1140, 263, 365);
     }
-    c.strokeStyle = '#a5a9a4';
+    c.strokeStyle = design.tuf ? '#a5a9a4' : design.trim[0];
     c.lineWidth = 5;
     c.strokeRect(14, 15, 1508, 350);
     const texture = new T.CanvasTexture(canvas);
@@ -251,7 +372,8 @@ export function buildMotherboard(
       ),
     );
   }
-  for (let i = 0; i < (micro ? 0 : 6); i++) {
+  // TUF's yellow and orange hazard stripes, on its ATX boards.
+  for (let i = 0; i < (design.tuf && !micro ? 6 : 0); i++) {
     const mark = block(
       1.8,
       0.25,
@@ -463,37 +585,59 @@ export function buildMotherboard(
   for (const child of vrm.children)
     occupied.push(new T.Box3().setFromObject(child).expandByScalar(mm(1)));
   tools.add(name('cpuvrm'), vrm, [0, 0, 0], [0, 1.2, -0.6], 0);
+  // Power-delivery heatsinks, in the maker's fin style: TUF's five angled
+  // blades, a stack of thin slats, or a solid grooved block. All three stand
+  // the same height, so the cooler clears every one.
   const topSink = new T.Group();
-  put(topSink, block(96, 5, 28), 0, 2.5, 0);
-  for (let i = 0; i < 5; i++) {
-    put(
-      topSink,
-      plate(
-        [
-          [-9, -14],
-          [9, -14],
-          [9, 10],
-          [6, 14],
-          [-9, 14],
-        ],
-        9,
-      ),
-      -38 + i * 19,
-      5,
-      0,
-    );
-    put(topSink, block(16, 0.7, 24, edge), -38 + i * 19, 14.5, 0);
+  const sideSink = new T.Group();
+  if (design.fins === 'blades') {
+    put(topSink, block(96, 5, 28), 0, 2.5, 0);
+    for (let i = 0; i < 5; i++) {
+      put(
+        topSink,
+        plate(
+          [
+            [-9, -14],
+            [9, -14],
+            [9, 10],
+            [6, 14],
+            [-9, 14],
+          ],
+          9,
+        ),
+        -38 + i * 19,
+        5,
+        0,
+      );
+      put(topSink, block(16, 0.7, 24, edge), -38 + i * 19, 14.5, 0);
+    }
+    put(sideSink, block(32, 5, 113), 0, 2.5, 0);
+    for (let i = 0; i < 5; i++)
+      put(sideSink, block(32, 10, 20), 0, 10, -45 + i * 23);
+  } else if (design.fins === 'slats') {
+    put(topSink, block(96, 5, 28), 0, 2.5, 0);
+    for (let i = 0; i < 15; i++)
+      put(topSink, block(2.2, 9.4, 26), -44 + i * 6.3, 9.7, 0);
+    put(topSink, block(96, 0.8, 3, edge), 0, 14.6, 12);
+    put(sideSink, block(32, 5, 113), 0, 2.5, 0);
+    for (let i = 0; i < 14; i++)
+      put(sideSink, block(30, 9.4, 2.2), 0, 9.7, -52 + i * 8);
+    put(sideSink, block(3, 0.8, 113, edge), 14, 14.6, 0);
+  } else {
+    put(topSink, block(96, 14, 28), 0, 7, 0);
+    for (let i = 0; i < 4; i++)
+      put(topSink, block(94, 0.5, 1.2, edge), 0, 14.1, -9 + i * 6);
+    put(sideSink, block(32, 14, 113), 0, 7, 0);
+    for (let i = 0; i < 4; i++)
+      put(sideSink, block(1.2, 0.5, 111, edge), -9 + i * 6, 14.1, 0);
   }
   add('vrmheatsink', topSink, 6, 7.8, -131, [0.4, 2.4, -0.8]);
-  const sideSink = new T.Group();
-  put(sideSink, block(32, 5, 113), 0, 2.5, 0);
-  for (let i = 0; i < 5; i++)
-    put(sideSink, block(32, 10, 20), 0, 10, -45 + i * 23);
   add('vrmheatsink', sideSink, -67, 7.8, -69, [-0.7, 2.4, -0.2]);
 
   // Broad angular chipset armour is the dominant panel in the reference. The
   // micro-ATX board has room only for a short plate beside its second slot.
   const chipset = new T.Group();
+  const square = design.chipset === 'square';
   put(
     chipset,
     block(28, 2, 28, material('#202326', 0.12)),
@@ -504,27 +648,45 @@ export function buildMotherboard(
   put(
     chipset,
     plate(
-      micro
+      square
         ? [
-            [-34, -19],
-            [34, -19],
-            [36, -17],
-            [36, 15],
-            [28, 19],
-            [-26, 19],
-            [-34, 11],
+            [-22, -23],
+            [20, -23],
+            [22, -21],
+            [22, 23],
+            [-20, 23],
+            [-22, 21],
           ]
-        : [
-            [-90, -19],
-            [91, -19],
-            [95, -15],
-            [95, 11],
-            [85, 15],
-            [-23, 15],
-            [-34, 27],
-            [-73, 27],
-            [-90, 13],
-          ],
+        : design.chipset === 'plate' && !micro
+          ? [
+              [-90, -19],
+              [91, -19],
+              [95, -15],
+              [95, 21],
+              [-86, 21],
+              [-90, 17],
+            ]
+          : micro
+            ? [
+                [-34, -19],
+                [34, -19],
+                [36, -17],
+                [36, 15],
+                [28, 19],
+                [-26, 19],
+                [-34, 11],
+              ]
+            : [
+                [-90, -19],
+                [91, -19],
+                [95, -15],
+                [95, 11],
+                [85, 15],
+                [-23, 15],
+                [-34, 27],
+                [-73, 27],
+                [-90, 13],
+              ],
       5,
     ),
     0,
@@ -532,11 +694,18 @@ export function buildMotherboard(
     0,
   );
   const graphic = new T.Group();
-  branding(graphic, micro ? 64 : 171, micro ? 22 : 25, 9.35);
+  branding(
+    graphic,
+    square ? 40 : micro ? 64 : 171,
+    square ? 10 : micro ? 22 : 25,
+    9.35,
+  );
   put(chipset, graphic, micro ? 0 : 1, 0, -2);
-  screw(chipset, micro ? -28 : -80, 10, -13, 2);
-  screw(chipset, micro ? 30 : 87, 10, 9, 2);
-  if (micro) add('chipset', chipset, 70, 1.2, 65, [0.6, 1.4, 0.6]);
+  screw(chipset, square ? -16 : micro ? -28 : -80, 10, -13, 2);
+  screw(chipset, square ? 16 : micro ? 30 : 87, 10, 9, 2);
+  // ASRock's square heatsink stands to the right, where its manual draws it.
+  if (square) add('chipset', chipset, 78, 1.2, 66, [0.6, 1.4, 0.6]);
+  else if (micro) add('chipset', chipset, 70, 1.2, 65, [0.6, 1.4, 0.6]);
   else add('chipset', chipset, 6, 1.2, 65, [0.6, 1.4, 0.6]);
 
   const controller = (
@@ -587,11 +756,8 @@ export function buildMotherboard(
   label(battery, '+  CR2032', vector(0, 2.55, 0), mm(17), '#53595d');
   add('cmos', battery, micro ? -82 : -89, 3, micro ? 52 : 113, [-1.2, 1, 0.6]);
 
-  const [slot1, slot2] = micro ? microAtx.pcie16 : [32, 134];
-  for (const [z, primary] of [
-    [slot1, true],
-    [slot2, false],
-  ] as const) {
+  for (const [i, z] of design.x16.entries()) {
+    const primary = i === 0;
     const slot = buildSlot(material, mm(100), '#202326', {
       width: mm(7.5),
       height: mm(8),
@@ -603,15 +769,17 @@ export function buildMotherboard(
     });
     add('pcie16', slot, -31, 5, z, [0, 1.1, 0]);
   }
-  for (const z of micro ? microAtx.pcie1 : [59, 84])
+  // Short slots: TUF's ×1 slots out by the rear edge, or a ×4 slot lined up
+  // with the graphics card's.
+  for (const { z, length } of design.short)
     add(
       'pcie1',
-      buildSlot(material, mm(20), '#202326', {
+      buildSlot(material, mm(length), '#202326', {
         width: mm(6),
         height: mm(7),
         notch: 0.2,
       }),
-      -108,
+      length > 20 ? -81 + length / 2 : -108,
       4.5,
       z,
       [0, 1.1, 0],
@@ -654,11 +822,13 @@ export function buildMotherboard(
     screw(cover, w / 2 - 6, 4.8, 0);
     if (z === 11)
       label(cover, 'M.2 PCIe 5.0', vector(-12, 4.4, -1), mm(48), '#8b9192');
-    for (let j = 0; j < 4; j++) {
-      const slash = block(6, 0.2, 1, edge);
-      slash.rotation.y = -0.6;
-      put(cover, slash, w / 2 - 18 - j * 4, 4.3, 2);
-    }
+    if (design.tuf)
+      for (let j = 0; j < 4; j++) {
+        const slash = block(6, 0.2, 1, edge);
+        slash.rotation.y = -0.6;
+        put(cover, slash, w / 2 - 18 - j * 4, 4.3, 2);
+      }
+    else put(cover, block(w - 14, 0.2, 1.4, edge), 0, 4.3, d / 2 - 3);
     add('m2heatsink', cover, x, 7.4, z, [0, 2.6, 0]);
   }
 

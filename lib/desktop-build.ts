@@ -20,7 +20,13 @@ import type { SourceId } from './sources.ts';
 
 export type ProcessorChoice = 'ryzen' | 'corei9';
 export type CoolerChoice = 'cooler' | 'liquid';
-export type BoardChoice = 'motherboard' | 'z890' | 'b650m';
+export type BoardChoice =
+  | 'motherboard'
+  | 'z890'
+  | 'b650m'
+  | 'tomahawk'
+  | 'aorus'
+  | 'b850m';
 export type MemoryChoice = 'dimm' | 'dimm4' | 'ddr4';
 export type GraphicsChoice =
   | 'card'
@@ -77,12 +83,26 @@ export const caseRoom = {
   boards: ['ATX', 'Micro-ATX'] as const,
 };
 
-/** Whose silicon a part carries, for the picker's colour and its filter. */
-export type Brand = 'amd' | 'intel' | 'nvidia';
+/**
+ * Whose part it is, for the picker's colour and its filter: the silicon's
+ * maker for a processor or a card, and the board's own maker for a board.
+ */
+export type Brand =
+  | 'amd'
+  | 'intel'
+  | 'nvidia'
+  | 'asus'
+  | 'msi'
+  | 'gigabyte'
+  | 'asrock';
 export const brandName: Record<Brand, string> = {
   amd: 'AMD',
   intel: 'Intel',
   nvidia: 'NVIDIA',
+  asus: 'ASUS',
+  msi: 'MSI',
+  gigabyte: 'GIGABYTE',
+  asrock: 'ASRock',
 };
 
 interface Option {
@@ -208,8 +228,9 @@ export const coolerOptions: Record<CoolerChoice, CoolerOption> = {
 };
 
 /**
- * Three ASUS TUF boards: the one the machine is built on, the same family's
- * Intel board, and its smaller AM5 sibling. All three take DDR5 only.
+ * Six boards from four makers: the ASUS TUF board the machine is built on,
+ * the same family's Intel board and its smaller AM5 sibling, and an MSI, a
+ * GIGABYTE and an ASRock board. All six take DDR5 only.
  */
 export const boardOptions: Record<BoardChoice, BoardOption> = {
   motherboard: {
@@ -220,7 +241,7 @@ export const boardOptions: Record<BoardChoice, BoardOption> = {
     memory: 'DDR5',
     formFactor: 'ATX',
     size: [305, 244],
-    brand: 'amd',
+    brand: 'asus',
     sources: ['mainboardmanual'],
   },
   z890: {
@@ -231,7 +252,7 @@ export const boardOptions: Record<BoardChoice, BoardOption> = {
     memory: 'DDR5',
     formFactor: 'ATX',
     size: [305, 244],
-    brand: 'intel',
+    brand: 'asus',
     sources: ['tufz890'],
   },
   b650m: {
@@ -242,8 +263,42 @@ export const boardOptions: Record<BoardChoice, BoardOption> = {
     memory: 'DDR5',
     formFactor: 'Micro-ATX',
     size: [244, 244],
-    brand: 'amd',
+    brand: 'asus',
     sources: ['tufb650m'],
+  },
+  tomahawk: {
+    name: 'MSI MAG X870 TOMAHAWK WIFI',
+    summary: 'AM5 · X870 · ATX',
+    socket: 'AM5',
+    chipset: 'AMD X870',
+    memory: 'DDR5',
+    formFactor: 'ATX',
+    size: [305, 244],
+    brand: 'msi',
+    sources: ['msix870', 'kitguru870'],
+  },
+  aorus: {
+    name: 'GIGABYTE Z890 AORUS ELITE WIFI7',
+    summary: 'LGA 1851 · Z890 · ATX',
+    socket: 'LGA 1851',
+    chipset: 'Intel Z890',
+    memory: 'DDR5',
+    formFactor: 'ATX',
+    size: [305, 244],
+    brand: 'gigabyte',
+    sources: ['gbz890elite'],
+  },
+  b850m: {
+    name: 'ASRock B850M Pro RS WiFi',
+    summary: 'AM5 · B850 · micro-ATX',
+    socket: 'AM5',
+    chipset: 'AMD B850',
+    memory: 'DDR5',
+    formFactor: 'Micro-ATX',
+    // ASRock gives the form factor, not the size: micro-ATX's largest.
+    size: [244, 244],
+    brand: 'asrock',
+    sources: ['asrockb850m'],
   },
 };
 

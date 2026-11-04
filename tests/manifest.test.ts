@@ -78,6 +78,9 @@ await test('processors have a menu of their own, and still open from the board t
     'motherboard',
     'z890',
     'b650m',
+    'tomahawk',
+    'aorus',
+    'b850m',
   ]);
   assert.deepEqual(
     menu('Processor').submenus.map(({ root, levels }) => [root, levels]),

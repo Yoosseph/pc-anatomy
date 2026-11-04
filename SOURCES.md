@@ -236,6 +236,49 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
+## Boards from three more makers · November 4, 2026
+
+So the Motherboard slot offers more than one maker. Each is a scale of its own,
+with an exploded view and a place in the comparison workbench.
+
+### MSI MAG X870 TOMAHAWK WIFI
+
+- [MSI's datasheet](https://storage-asset.msi.com/datasheet/mb/global/MAG-X870-TOMAHAWK-WIFI.pdf):
+  AM5, AMD X870, four DIMMs of dual-channel DDR5, one PCIe 5.0 ×16, one
+  PCIe 4.0 ×16 and one PCIe 3.0 ×16 slot, two M.2 Gen5 ×4, one Gen4 ×4 and
+  one Gen4 ×2 slot, four SATA ports, 5G LAN and Wi-Fi 7. Its product
+  photograph shows the black armour with yellow trim the model is drawn in.
+- [KitGuru's review](https://www.kitguru.net/components/motherboard/leo-waldock/msi-mag-x870-tomahawk-review/),
+  an **independent review**, for what the datasheet leaves out: the ATX
+  305 × 244 mm outline, 256 GB of memory, the lanes behind the second and
+  third slots (×4 and ×1 from the chipset), and 14+2+1 80 A smart power
+  stages. MSI's own specification page refuses automated requests, so the
+  review is cited for these instead.
+
+### GIGABYTE Z890 AORUS ELITE WIFI7
+
+- [GIGABYTE's user's manual](https://download.gigabyte.com/FileList/Manual/mb_manual_z890-a-elite-wf7-series_1005_e.pdf):
+  ATX, 30.5 × 24.4 cm, LGA 1851 for Core Ultra processors, Intel Z890, four
+  DDR5 sockets up to 256 GB, one PCIe 5.0 ×16 slot from the processor and two
+  ×16 slots at PCIe 4.0 ×4 from the chipset, four M.2 connectors (one PCIe
+  5.0 ×4), four SATA ports and two 8-pin 12 V connectors.
+
+### ASRock B850M Pro RS WiFi
+
+- [ASRock's user manual](https://download.asrock.com/Manual/B850M%20Pro%20RS%20WiFi.pdf):
+  micro-ATX, AM5 for Ryzen 9000, 8000 and 7000, AMD B850, four DDR5 slots
+  up to 256 GB, a PCIe 5.0 ×16 slot and a PCIe 4.0 ×4 slot from the
+  processor, three M.2 sockets (one PCIe 5.0 ×4) and four SATA ports. Its
+  layout drawing puts the large square chipset heatsink to the right of the
+  CMOS battery, as the model does. The manual gives the form factor but not
+  the size; the model is drawn at micro-ATX's 244 × 244 mm.
+
+**Limits.** All three are built on the ASUS boards' ATX or micro-ATX layout,
+with each maker's slot list. Component positions, routing and the rear I/O are
+representative. Only the MSI finish follows a photograph; the GIGABYTE and
+ASRock finishes are in their makers' style, and say so. Two of each board's
+M.2 sockets are modelled.
+
 ## Three more supplies · November 4, 2026
 
 The TUF Gaming family at the low and high end, so the build workspace offers

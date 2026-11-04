@@ -99,6 +99,9 @@ const boardBuilds: DesktopBuild[] = [
   { ...defaultBuild, board: 'z890' },
   { ...defaultBuild, board: 'z890', processor: 'corei9' },
   { ...defaultBuild, board: 'b650m' },
+  { ...defaultBuild, board: 'tomahawk' },
+  { ...defaultBuild, board: 'aorus', processor: 'corei9' },
+  { ...defaultBuild, board: 'b850m' },
 ];
 const boards = new Map(
   boardBuilds.map((build) => {
@@ -796,6 +799,10 @@ function* allBuilds(): Generator<DesktopBuild> {
   yield { ...defaultBuild, memory: 'dimm4' };
   yield { ...defaultBuild, memory: 'dimm4', cooler: 'liquid' };
   yield { ...defaultBuild, memory: 'ddr4', processor: 'corei9' };
+  // The other makers' boards, each in the tower.
+  yield { ...defaultBuild, board: 'tomahawk' };
+  yield { ...defaultBuild, board: 'aorus', processor: 'corei9' };
+  yield { ...defaultBuild, board: 'b850m', graphics: 'rtx5060ti' };
 }
 
 /** Every vertex of a piece, in case coordinates. */
@@ -874,5 +881,66 @@ await test('the supply range lands either side of each card maker’s figure', (
       checkBuild({ ...defaultBuild, graphics: 'rtx5060', power: 'psu650' }),
     ),
     'ok',
+  );
+});
+
+await test('each maker’s board is built in its own design, with its own slots', () => {
+  const asus = boardFor(defaultBuild);
+  const msi = boardFor({ ...defaultBuild, board: 'tomahawk' });
+  const gigabyte = boardFor({
+    ...defaultBuild,
+    board: 'aorus',
+    processor: 'corei9',
+  });
+  const asrock = boardFor({ ...defaultBuild, board: 'b850m' });
+  // The slots each maker lists: three full-length ones on the MSI and
+  // GIGABYTE boards, one ×16 and one ×4 on the ASRock one.
+  assert.equal(parts(asus, 'pcie16').length, 2);
+  assert.equal(parts(asus, 'pcie1').length, 2);
+  assert.equal(parts(msi, 'tomahawkpcie16').length, 3);
+  assert.equal(parts(msi, 'tomahawkpcie1').length, 0);
+  assert.equal(parts(gigabyte, 'aoruspcie16').length, 3);
+  assert.equal(parts(asrock, 'b850mpcie16').length, 1);
+  assert.equal(parts(asrock, 'b850mpcie1').length, 1);
+  assert.equal(byId.b850mpcie1.shortName, 'PCIe ×4');
+  // The GIGABYTE board is an Intel one: it seats the Core Ultra, and a Ryzen
+  // leaves its socket covered.
+  assert.equal(parts(gigabyte, 'aoruscpu').length, 1);
+  assert.equal(
+    check({ ...defaultBuild, board: 'aorus' }, 'socket').status,
+    'fail',
+  );
+  // Each maker's heatsinks are its own finish.
+  const finish = (model: { pieces: Piece[] }, id: string) => {
+    const colours = new Set<string>();
+    for (const p of parts(model, id))
+      p.object.traverse((o) => {
+        if (o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial)
+          colours.add(o.material.color.getHexString());
+      });
+    return [...colours].sort().join(' ');
+  };
+  const finishes = [
+    finish(asus, 'vrmheatsink'),
+    finish(msi, 'tomahawkvrmheatsink'),
+    finish(gigabyte, 'aorusvrmheatsink'),
+    finish(asrock, 'b850mvrmheatsink'),
+  ];
+  assert.equal(new Set(finishes).size, 4, finishes.join(' | '));
+  // The picker names each board's maker, for its tag and its filter.
+  assert.deepEqual(
+    (['motherboard', 'tomahawk', 'aorus', 'b850m'] as const).map(
+      (id) => boardOptions[id].brand,
+    ),
+    ['asus', 'msi', 'gigabyte', 'asrock'],
+  );
+  // The micro-ATX ASRock board is as short as the ASUS one.
+  const height = (m: { pieces: Piece[] }, id: string) =>
+    box(piece(m, id)).getSize(new T.Vector3()).z;
+  assert.ok(
+    Math.abs(
+      height(asrock, 'b850mmoboboard') -
+        height(boardFor({ ...defaultBuild, board: 'b650m' }), 'b650mmoboboard'),
+    ) < 1e-6,
   );
 });

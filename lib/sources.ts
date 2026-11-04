@@ -118,6 +118,22 @@ export const sources = {
     name: 'ASUS · TUF Gaming 750W Bronze fan and construction',
     url: 'https://www.asus.com/us/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-750b/',
   },
+  msix870: {
+    name: 'MSI · MAG X870 TOMAHAWK WIFI datasheet',
+    url: 'https://storage-asset.msi.com/datasheet/mb/global/MAG-X870-TOMAHAWK-WIFI.pdf',
+  },
+  kitguru870: {
+    name: 'KitGuru · MSI MAG X870 Tomahawk WiFi review (independent review)',
+    url: 'https://www.kitguru.net/components/motherboard/leo-waldock/msi-mag-x870-tomahawk-review/',
+  },
+  gbz890elite: {
+    name: "GIGABYTE · Z890 AORUS ELITE WIFI7 user's manual",
+    url: 'https://download.gigabyte.com/FileList/Manual/mb_manual_z890-a-elite-wf7-series_1005_e.pdf',
+  },
+  asrockb850m: {
+    name: 'ASRock · B850M Pro RS WiFi user manual',
+    url: 'https://download.asrock.com/Manual/B850M%20Pro%20RS%20WiFi.pdf',
+  },
   tuf650b: {
     name: 'ASUS · TUF Gaming 650W Bronze specifications',
     url: 'https://www.asus.com/uk/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-650b/techspec/',

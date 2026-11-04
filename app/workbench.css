@@ -29,6 +29,11 @@
   --brand-nvidia: #8fd12a;
   --brand-amd: #ff5d63;
   --brand-intel: #4aa6f0;
+  /* Whose board it is. */
+  --brand-asus: #e8b84a;
+  --brand-msi: #ff4b55;
+  --brand-gigabyte: #ff8f3f;
+  --brand-asrock: #c9d0d8;
   --muted: #232427;
   --muted-foreground: #b3b5ba;
   --rail: 286px;

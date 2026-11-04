@@ -462,17 +462,31 @@
   background: var(--slot);
   border-color: var(--slot);
 }
-.build-filter button.brand-nvidia[aria-pressed='true'] {
-  background: var(--brand-nvidia);
-  border-color: var(--brand-nvidia);
+/* Each maker's colour, for its filter and its tag on an option. */
+.brand-nvidia {
+  --brand: var(--brand-nvidia);
 }
-.build-filter button.brand-amd[aria-pressed='true'] {
-  background: var(--brand-amd);
-  border-color: var(--brand-amd);
+.brand-amd {
+  --brand: var(--brand-amd);
 }
-.build-filter button.brand-intel[aria-pressed='true'] {
-  background: var(--brand-intel);
-  border-color: var(--brand-intel);
+.brand-intel {
+  --brand: var(--brand-intel);
+}
+.brand-asus {
+  --brand: var(--brand-asus);
+}
+.brand-msi {
+  --brand: var(--brand-msi);
+}
+.brand-gigabyte {
+  --brand: var(--brand-gigabyte);
+}
+.brand-asrock {
+  --brand: var(--brand-asrock);
+}
+.build-filter button[class*='brand-'][aria-pressed='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
 }
 
 /* The parts a slot can take, as cards. */
@@ -572,20 +586,10 @@
   text-transform: uppercase;
   border: 1px solid;
 }
-.build-brand.brand-nvidia {
-  color: var(--brand-nvidia);
-  border-color: color-mix(in srgb, var(--brand-nvidia) 45%, transparent);
-  background: color-mix(in srgb, var(--brand-nvidia) 10%, transparent);
-}
-.build-brand.brand-amd {
-  color: var(--brand-amd);
-  border-color: color-mix(in srgb, var(--brand-amd) 45%, transparent);
-  background: color-mix(in srgb, var(--brand-amd) 10%, transparent);
-}
-.build-brand.brand-intel {
-  color: var(--brand-intel);
-  border-color: color-mix(in srgb, var(--brand-intel) 45%, transparent);
-  background: color-mix(in srgb, var(--brand-intel) 10%, transparent);
+.build-brand {
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 45%, transparent);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
 }
 .build-facts {
   display: flex;

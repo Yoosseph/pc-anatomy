@@ -122,7 +122,7 @@ sounds arbitrary, it is usually the scar of a bug.
 
 A static single-page app. Every polygon is generated in TypeScript at runtime
 with three.js — no imported meshes, no image textures, no runtime asset files of
-any kind. The 763 catalogue entries are authored in source, and each one
+any kind. The 836 catalogue entries are authored in source, and each one
 is joined to its geometry by a single string id.
 
 React 19, strict TypeScript, Vite 8, Tailwind 4, and three.js used directly:
@@ -180,7 +180,7 @@ Four layers, joined by the concept id.
 lib/levels.ts        the scale tree: what scales exist, what opens into what
       │
 lib/concepts/*.ts    the written catalogue, composed by lib/manifest.ts
-      │              763 entries, each with a globally unique id
+      │              836 entries, each with a globally unique id
       │
 lib/models.ts        one geometry builder per scale, handed `ModelTools`.
       │              Builders attach geometry to concept ids via add()
@@ -206,7 +206,7 @@ state.
 
 ## The scale tree
 
-75 scales, 763 concepts. `physical` scales are lit like hardware and keep real
+78 scales, 836 concepts. `physical` scales are lit like hardware and keep real
 size relationships in the inventory; `logical` scales are block diagrams and are
 lit flat.
 
@@ -216,6 +216,9 @@ lit flat.
 | `motherboard` | `pc` | Motherboard | physical | 24 |
 | `z890` | `pc` | Motherboard | physical | 25 |
 | `b650m` | `pc` | Motherboard | physical | 25 |
+| `tomahawk` | `pc` | Motherboard | physical | 24 |
+| `aorus` | `pc` | Motherboard | physical | 24 |
+| `b850m` | `pc` | Motherboard | physical | 25 |
 | `ryzen` | `motherboard` | Processor · Ryzen 9 9950X | logical | 6 |
 | `ryzenio` | `ryzen` | Processor · Ryzen 9 9950X | logical | 5 |
 | `corei9` | `motherboard` | Processor · Core Ultra 9 285K | logical | 9 |
@@ -266,13 +269,14 @@ cards end at the card, with no chip scales under them. The Memory menu does the 
 generations, the installed DDR5 module and a DDR4 one from the same product
 line. The Power supply menu lists its five models directly, smallest first
 (650 W to 1200 W, all from the TUF Gaming family), and the Motherboard
-menu lists the three boards and nothing else. The processors are a Processor
+menu lists six boards from four makers (three ASUS TUF boards, and an MSI,
+a GIGABYTE and an ASRock one) and nothing else. The processors are a Processor
 menu of their own, with a dropdown each like the cards, but their parent is
 still the board: the package sits in its socket, so the CPU on the board opens
 it and the breadcrumb runs back through the board, the way the M.2 drive is in
 the Storage menu but opens from the board.
 
-Thirteen scales are marked `alternative: true`: the second processor, the two
+Sixteen scales are marked `alternative: true`: the second processor, the five
 other boards, the liquid cooler, the four other graphics cards, the four
 supplies the tower does not carry and the DDR4 module the board's DDR5 slots
 cannot take. Only one board fits the tray, only one cooler bolts to one socket, only
@@ -281,7 +285,7 @@ and a slot is keyed for one generation —
 so these are real scales with real content that simply have nothing to click on
 at the scale above. They are reached from their subsystem menu instead. The flag
 is what keeps the "every scale is reachable" test honest without forcing the
-machine to carry three boards, two coolers and five cards at once. The build
+machine to carry six boards, two coolers and five cards at once. The build
 workspace is where they go into the tower.
 
 Each `LevelDef` also declares `phases` — the named stops along the 0–100
@@ -303,7 +307,7 @@ subsystems stop touching.
 | `lib/hardware.ts` | `ModelTools`, the interface every builder is handed, and the RTX 5090 card assembly. |
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
-| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds all five TUF Gaming supplies from one illustrative conversion chain, each from its `SupplyModel` in `concepts/psu.ts` (rating, efficiency class, and a socket panel or fixed leads); `supplyConcepts` writes each model's catalogue from the 850W Gold's. `mainboard.ts` builds all three TUF boards from one layout: the X670E, the Z890 with Intel's LGA 1851 socket and package, and the B650M cut to micro-ATX (`microAtx` says where its lower slots, drive socket and headers go). It fits the processor and modules the build chooses, or leaves the socket's cover on and the slots empty. |
+| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds all five TUF Gaming supplies from one illustrative conversion chain, each from its `SupplyModel` in `concepts/psu.ts` (rating, efficiency class, and a socket panel or fixed leads); `supplyConcepts` writes each model's catalogue from the 850W Gold's. `mainboard.ts` builds all six boards from one layout, ATX or micro-ATX (`microAtx` says where the smaller board's lower slots, drive socket and headers go): the TUF X670E, the TUF Z890 with Intel's LGA 1851 socket and package, the TUF B650M, and MSI's, GIGABYTE's and ASRock's boards. Each wears its maker's design (`designs`): the armour's finish and trim, the power-delivery fins (TUF's blades, slats or a grooved block), the printed marks, the chipset heatsink's shape, and its own list of full-length and short slots. It fits the processor and modules the build chooses, or leaves the socket's cover on and the slots empty. |
 | `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies and, for each generation, one bank and one mat of cells; the DDR4 bank and cell concepts are the DDR5 ones under `ddr4` ids with the numbers that differ swapped in. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts`, `compact-card.ts` | The five graphics cards. `card-kit.ts` holds the millimetre-scale parts they share. `compact-card.ts` builds the two small NVIDIA cards from one description each: the ASUS Dual RTX 5060 Ti over heat pipes, the MSI RTX 5060 INSPIRE ITX over a copper-cored radial heatsink, and `compactMount` says where each meets the slot. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
@@ -343,7 +347,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 165 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 166 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -601,7 +605,11 @@ cooler, card and supply open into them, and each is in the comparison
 workbench. The case is fixed; there is one.
 
 - **Boards:** the TUF GAMING X670E-PLUS WIFI the machine is built on, the
-  Z890-PLUS WIFI for the Core Ultra, and the micro-ATX B650M-PLUS WIFI.
+  Z890-PLUS WIFI for the Core Ultra and the micro-ATX B650M-PLUS WIFI, and
+  three from other makers: MSI's MAG X870 TOMAHAWK WIFI, GIGABYTE's Z890
+  AORUS ELITE WIFI7 (LGA 1851) and ASRock's micro-ATX B850M Pro RS WiFi. The
+  Motherboard slot's options are tagged and filtered by their maker; a
+  processor's or a card's by whose silicon it is.
 - **Cards:** the RTX 5090, RX 9070 XT and Arc B580, and two small cards for the
   other end of the range: the 229 mm ASUS Dual RTX 5060 Ti and the 145 mm MSI
   RTX 5060 INSPIRE ITX.
@@ -807,7 +815,7 @@ one uniform millimetre conversion on every axis declares it as
 ## Sourcing rules
 
 Every technical claim points at an entry in `lib/sources.ts`. Standards bodies
-and vendor documentation first. All 763 concepts currently cite at least one
+and vendor documentation first. All 836 concepts currently cite at least one
 source, and `docs/component-references.md` is the generated index of which.
 
 `concept()` fills in a default when an entry names no sources — `specs` for a
@@ -828,7 +836,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-165 tests, all through Node's built-in runner.
+166 tests, all through Node's built-in runner.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -851,7 +859,7 @@ with Node.js 22.
   equivalence with and without geometry bounding boxes.
 - `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
   coalescing, disposal, and hidden/collapsed rotor behavior.
-- `tests/gpus.test.ts` (11) — the five-card menu structure and the three boards
+- `tests/gpus.test.ts` (11) — the five-card menu structure and the six boards
   in the Motherboard menu, published hierarchy counts multiplying out to
   published totals, diagram blocks not overlapping, each card's published
   construction and envelope (the small cards' fan counts, four memory
@@ -898,7 +906,7 @@ with Node.js 22.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/build.test.ts` (26) — the build workspace's checks: what fails,
+- `tests/build.test.ts` (27) — the build workspace's checks: what fails,
   what warns, the socket each board takes, the micro-ATX outline, the memory
   speed rated for two modules and four, the picker's toned facts and meters,
   the adapter's lead count, a card too long for the case and the
@@ -912,7 +920,8 @@ with Node.js 22.
   on the slot at true length, clear of the case and the cooler, both coolers
   clear of four modules, the loop clear of the memory, the measured room matching the
   checks, and fed by a loom that ends on the card. Also where the supply range
-  lands against each card maker's figure.
+  lands against each card maker's figure, and each maker's board in its own
+  design: its slots, its socket, its heatsinks' finish and its maker's tag.
 
 - `tests/discovery.test.ts` (12) — every scale and every part surviving a
   round trip through a link, instances, disassembly, the build and the build

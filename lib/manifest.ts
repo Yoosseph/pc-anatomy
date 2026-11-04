@@ -9,7 +9,13 @@ import { gpuConcepts } from './concepts/gpu.ts';
 import { radeonConcepts } from './concepts/radeon.ts';
 import { arcConcepts } from './concepts/arc.ts';
 import { motherboardConcepts } from './concepts/motherboard.ts';
-import { b650mConcepts, z890Concepts } from './concepts/boards.ts';
+import {
+  aorusConcepts,
+  b650mConcepts,
+  b850mConcepts,
+  tomahawkConcepts,
+  z890Concepts,
+} from './concepts/boards.ts';
 import { dualCardConcepts, itxCardConcepts } from './concepts/compact-cards.ts';
 import { ramConcepts } from './concepts/ram.ts';
 import { pcConcepts } from './concepts/pc.ts';
@@ -55,6 +61,9 @@ export const manifest: Concept[] = [
   ...motherboardConcepts,
   ...z890Concepts,
   ...b650mConcepts,
+  ...tomahawkConcepts,
+  ...aorusConcepts,
+  ...b850mConcepts,
   ...ramConcepts,
   ...psuConcepts,
   ...bronzePsuConcepts,

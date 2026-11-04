@@ -5,6 +5,9 @@
   <url><loc>https://pc-anatomy.com/?scale=motherboard</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=z890</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=b650m</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ryzen</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=ryzenio</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=corei9</loc></url>
@@ -336,6 +339,76 @@
   <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650msuperio</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mmobofanheader</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mfrontheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkmoboboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawksocket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkcpu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkdimmslot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkchipset</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkuefi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkcmos</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkpcie16</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkm2slot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawknvme</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkm2heatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkcpuvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkvrmheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkatx24</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkeps8</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawksataport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkreario</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawklan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkaudiocodec</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawksuperio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkmobofanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=tomahawk&amp;part=tomahawkfrontheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusmoboboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorussocket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruscpu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusdimmslot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruschipset</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusuefi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruscmos</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruspcie16</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusm2slot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusnvme</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusm2heatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruscpuvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusvrmheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusatx24</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruseps8</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorussataport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusreario</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aoruslan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusaudiocodec</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorussuperio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusmobofanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=aorus&amp;part=aorusfrontheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mmoboboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850msocket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mcpu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mdimmslot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mchipset</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850muefi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mcmos</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mpcie16</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mpcie1</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mm2slot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mnvme</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mm2heatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mcpuvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mvrmheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850matx24</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850meps8</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850msataport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mreario</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mlan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850maudiocodec</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850msuperio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mmobofanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b850m&amp;part=b850mfrontheader</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dimmboard</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dramchip</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dimmspd</loc></url>

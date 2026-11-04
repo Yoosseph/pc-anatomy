@@ -125,7 +125,7 @@ try {
   await ready('legioncpu:ryzen');
   let dialog = await openPicker('A');
   await clearFilters(dialog);
-  assert.equal(await dialog.locator('button[data-level]').count(), 75);
+  assert.equal(await dialog.locator('button[data-level]').count(), 78);
   assert.equal(
     await dialog.locator('button[data-level="ryzen"]').isDisabled(),
     true,

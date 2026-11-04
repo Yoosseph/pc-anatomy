@@ -111,7 +111,14 @@ await test('the new cards are extra cards, not replacements for the installed 50
   // The board menu lists the two other boards beside the installed one, and
   // only boards: the processors have their own menu.
   const boards = branches().find((b) => b.label === 'Motherboard')!;
-  assert.deepEqual(boards.levels, ['motherboard', 'z890', 'b650m']);
+  assert.deepEqual(boards.levels, [
+    'motherboard',
+    'z890',
+    'b650m',
+    'tomahawk',
+    'aorus',
+    'b850m',
+  ]);
   for (const id of ['z890', 'b650m'] as const)
     assert.equal(levels[id].alternative, true);
   // Each card opens its own chip from both the package and the bare die.

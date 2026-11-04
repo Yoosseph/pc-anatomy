@@ -47,7 +47,10 @@ Desktop PC
 ├── Motherboard
 │   ├── ASUS TUF GAMING X670E-PLUS WIFI
 │   ├── ASUS TUF GAMING Z890-PLUS WIFI
-│   └── ASUS TUF GAMING B650M-PLUS WIFI
+│   ├── ASUS TUF GAMING B650M-PLUS WIFI
+│   ├── MSI MAG X870 TOMAHAWK WIFI
+│   ├── GIGABYTE Z890 AORUS ELITE WIFI7
+│   └── ASRock B850M Pro RS WiFi
 ├── Processor (in the board's socket: the CPU on the board opens it too)
 │   ├── Ryzen 9 9950X
 │   │   └── Ryzen I/O die
@@ -128,7 +131,9 @@ match:
 
 - the Ryzen 9 9950X or Core Ultra 9 285K in the socket, or the socket's cover
   when the processor does not fit the board;
-- the ATX X670E or Z890 board, or the shorter micro-ATX B650M;
+- one of six boards from four makers: ASUS's TUF X670E, Z890 or micro-ATX
+  B650M, MSI's X870 Tomahawk, GIGABYTE's Z890 AORUS Elite or ASRock's
+  micro-ATX B850M Pro RS, each in its maker's finish with its own slots;
 - two memory modules, four, or none when they do not fit;
 - the RTX 5090, Radeon RX 9070 XT, Arc B580, RTX 5060 Ti (ASUS Dual, 229 mm)
   or RTX 5060 (MSI INSPIRE ITX, 145 mm) seated in the slot at its own length,
@@ -215,7 +220,7 @@ Read it before the first edit. It is kept current with the code, and a change th
 
 ## Accuracy and sources
 
-The machine follows published ATX dimensions where those dimensions are standardized. Fourteen products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, ASUS Dual GeForce RTX 5060 Ti, MSI GeForce RTX 5060 INSPIRE ITX, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF GAMING Z890-PLUS WIFI, ASUS TUF GAMING B650M-PLUS WIFI, and five ASUS TUF Gaming supplies: the 650W and 750W Bronze and the 850W, 1000W and 1200W Gold. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+), the Arc (Intel Limited Edition) and the two small cards are complete alternative cards opened from the GPU menu. The X670E board is the one installed; the Z890 and B650M boards open from the Motherboard menu, built on the same layout with their own socket, outline and slot counts. The 850W Gold is the supply installed in the tower; the other four open from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
+The machine follows published ATX dimensions where those dimensions are standardized. Seventeen products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, ASUS Dual GeForce RTX 5060 Ti, MSI GeForce RTX 5060 INSPIRE ITX, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF GAMING Z890-PLUS WIFI, ASUS TUF GAMING B650M-PLUS WIFI, MSI MAG X870 TOMAHAWK WIFI, GIGABYTE Z890 AORUS ELITE WIFI7, ASRock B850M Pro RS WiFi, and five ASUS TUF Gaming supplies: the 650W and 750W Bronze and the 850W, 1000W and 1200W Gold. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+), the Arc (Intel Limited Edition) and the two small cards are complete alternative cards opened from the GPU menu. The X670E board is the one installed; the other five open from the Motherboard menu, built on the same ATX or micro-ATX layout with their own socket, outline, slots and their maker's finish. The 850W Gold is the supply installed in the tower; the other four open from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
 
 Processor and GPU floorplans are explanatory diagrams of documented logical architecture. They are not semiconductor mask layouts and do not claim exact transistor-level placement. See [SOURCES.md](SOURCES.md) for standards, product documentation, architecture references, and the scope of each source.
 

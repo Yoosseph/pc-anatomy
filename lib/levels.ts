@@ -15,6 +15,9 @@ export type LevelId =
   | 'motherboard'
   | 'z890'
   | 'b650m'
+  | 'tomahawk'
+  | 'aorus'
+  | 'b850m'
   | 'ryzen'
   | 'ryzenio'
   | 'corei9'
@@ -199,6 +202,58 @@ export const levels: Record<LevelId, LevelDef> = {
     kind: 'physical',
     branchLabel: 'Motherboard',
     concept: 'b650mboard',
+    spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  // Boards from other makers, on the same two layouts as the ASUS ones.
+  tomahawk: {
+    id: 'tomahawk',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
+    parent: 'pc',
+    alternative: true,
+    name: 'MSI X870 Tomahawk · AM5',
+    title: 'An MSI board.',
+    caption: 'MSI MAG X870 TOMAHAWK WIFI',
+    summary: 'MSI · AM5 · ATX',
+    kind: 'physical',
+    branchLabel: 'Motherboard',
+    concept: 'tomahawkboard',
+    spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  aorus: {
+    id: 'aorus',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
+    parent: 'pc',
+    alternative: true,
+    name: 'AORUS Z890 Elite · LGA 1851',
+    title: 'A GIGABYTE board.',
+    caption: 'GIGABYTE Z890 AORUS ELITE WIFI7',
+    summary: 'GIGABYTE · LGA 1851 · ATX',
+    kind: 'physical',
+    branchLabel: 'Motherboard',
+    concept: 'aorusboard',
+    spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  b850m: {
+    id: 'b850m',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
+    parent: 'pc',
+    alternative: true,
+    name: 'ASRock B850M Pro RS · micro-ATX',
+    title: 'An ASRock board.',
+    caption: 'ASROCK B850M PRO RS WIFI',
+    summary: 'ASRock · AM5 · micro-ATX',
+    kind: 'physical',
+    branchLabel: 'Motherboard',
+    concept: 'b850mboard',
     spread: 1.7,
     phases: dissectionPhases,
     detailed: true,

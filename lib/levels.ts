@@ -135,6 +135,48 @@ const dissectionPhases = [
   ['Inventory', 100],
 ] as const;
 
+type LevelText = Pick<LevelDef, 'name' | 'title' | 'caption' | 'summary'>;
+
+/**
+ * A board the build workspace can fit instead of the one the tower carries:
+ * a whole scale of its own, opened from the Motherboard menu, its catalogue
+ * rooted at `<id>board`.
+ */
+const otherBoard = (id: LevelId, text: LevelText): LevelDef => ({
+  id,
+  comparisonCategory: 'boards',
+  millimetersPerUnit: 22,
+  parent: 'pc',
+  alternative: true,
+  ...text,
+  kind: 'physical',
+  branchLabel: 'Motherboard',
+  concept: `${id}board`,
+  spread: 1.7,
+  phases: dissectionPhases,
+  detailed: true,
+});
+
+/** The same for a supply, opened from the Power supply menu. */
+const otherSupply = (
+  id: LevelId,
+  concept: string,
+  text: LevelText,
+): LevelDef => ({
+  id,
+  comparisonCategory: 'power',
+  millimetersPerUnit: 12,
+  parent: 'pc',
+  alternative: true,
+  ...text,
+  kind: 'physical',
+  branchLabel: 'Power supply',
+  concept,
+  spread: 1.9,
+  phases: dissectionPhases,
+  detailed: true,
+});
+
 export const levels: Record<LevelId, LevelDef> = {
   pc: {
     id: 'pc',
@@ -169,95 +211,40 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  z890: {
-    id: 'z890',
-    comparisonCategory: 'boards',
-    millimetersPerUnit: 22,
-    parent: 'pc',
-    // One board is screwed to one tray. The Intel board is a complete second
-    // board you can take apart from the Motherboard menu, and the build
-    // workspace can fit it, but the machine as modelled carries the X670E.
-    alternative: true,
+  // One board is screwed to one tray. The Intel board is a complete second
+  // board you can take apart from the Motherboard menu, and the build
+  // workspace can fit it, but the machine as modelled carries the X670E.
+  z890: otherBoard('z890', {
     name: 'Z890 · LGA 1851',
     title: 'An Intel board.',
     caption: 'ASUS TUF GAMING Z890-PLUS WIFI',
     summary: 'ASUS · LGA 1851 · ATX',
-    kind: 'physical',
-    branchLabel: 'Motherboard',
-    concept: 'z890board',
-    spread: 1.7,
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  b650m: {
-    id: 'b650m',
-    comparisonCategory: 'boards',
-    millimetersPerUnit: 22,
-    parent: 'pc',
-    alternative: true,
+  }),
+  b650m: otherBoard('b650m', {
     name: 'B650M · micro-ATX',
     title: 'A micro-ATX board.',
     caption: 'ASUS TUF GAMING B650M-PLUS WIFI',
     summary: 'ASUS · AM5 · micro-ATX',
-    kind: 'physical',
-    branchLabel: 'Motherboard',
-    concept: 'b650mboard',
-    spread: 1.7,
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  }),
   // Boards from other makers, on the same two layouts as the ASUS ones.
-  tomahawk: {
-    id: 'tomahawk',
-    comparisonCategory: 'boards',
-    millimetersPerUnit: 22,
-    parent: 'pc',
-    alternative: true,
+  tomahawk: otherBoard('tomahawk', {
     name: 'MSI X870 Tomahawk · AM5',
     title: 'An MSI board.',
     caption: 'MSI MAG X870 TOMAHAWK WIFI',
     summary: 'MSI · AM5 · ATX',
-    kind: 'physical',
-    branchLabel: 'Motherboard',
-    concept: 'tomahawkboard',
-    spread: 1.7,
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  aorus: {
-    id: 'aorus',
-    comparisonCategory: 'boards',
-    millimetersPerUnit: 22,
-    parent: 'pc',
-    alternative: true,
+  }),
+  aorus: otherBoard('aorus', {
     name: 'AORUS Z890 Elite · LGA 1851',
     title: 'A GIGABYTE board.',
     caption: 'GIGABYTE Z890 AORUS ELITE WIFI7',
     summary: 'GIGABYTE · LGA 1851 · ATX',
-    kind: 'physical',
-    branchLabel: 'Motherboard',
-    concept: 'aorusboard',
-    spread: 1.7,
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  b850m: {
-    id: 'b850m',
-    comparisonCategory: 'boards',
-    millimetersPerUnit: 22,
-    parent: 'pc',
-    alternative: true,
+  }),
+  b850m: otherBoard('b850m', {
     name: 'ASRock B850M Pro RS · micro-ATX',
     title: 'An ASRock board.',
     caption: 'ASROCK B850M PRO RS WIFI',
     summary: 'ASRock · AM5 · micro-ATX',
-    kind: 'physical',
-    branchLabel: 'Motherboard',
-    concept: 'b850mboard',
-    spread: 1.7,
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  }),
   // The processors are a menu of their own, beside the boards rather than
   // inside them, but their parent is still the board: the package sits in its
   // socket, so opening the CPU on the board dives into it, and the breadcrumb
@@ -459,40 +446,18 @@ export const levels: Record<LevelId, LevelDef> = {
   // The supplies, smallest first. One is in the tower; the others are whole
   // supplies of their own from the same TUF Gaming family, reached from the
   // Power supply menu, that the build workspace can fit in its place.
-  psu650: {
-    id: 'psu650',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
-    alternative: true,
+  psu650: otherSupply('psu650', 'tuf650psucase', {
     name: 'Non-modular · TUF Gaming 650W Bronze',
     title: 'A smaller fixed-cable supply.',
     caption: 'ASUS TUF GAMING 650W BRONZE',
     summary: 'ASUS · 650 W · 80 PLUS Bronze',
-    kind: 'physical',
-    branchLabel: 'Power supply',
-    concept: 'tuf650psucase',
-    spread: 1.9,
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  psubronze: {
-    id: 'psubronze',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
-    alternative: true,
+  }),
+  psubronze: otherSupply('psubronze', 'bronzepsucase', {
     name: 'Non-modular · TUF Gaming 750W Bronze',
     title: 'Inside a fixed-cable power supply.',
     caption: 'ASUS TUF GAMING 750W BRONZE',
     summary: 'ASUS · 750 W · 80 PLUS Bronze',
-    kind: 'physical',
-    branchLabel: 'Power supply',
-    concept: 'bronzepsucase',
-    spread: 1.9,
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  }),
   psu: {
     id: 'psu',
     comparisonCategory: 'power',
@@ -509,40 +474,18 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  psu1000: {
-    id: 'psu1000',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
-    alternative: true,
+  psu1000: otherSupply('psu1000', 'tuf1000psucase', {
     name: 'Modular · TUF Gaming 1000W Gold',
     title: 'A thousand watts, fully modular.',
     caption: 'ASUS TUF GAMING 1000W GOLD',
     summary: 'ASUS · 1000 W · 80 PLUS Gold',
-    kind: 'physical',
-    branchLabel: 'Power supply',
-    concept: 'tuf1000psucase',
-    spread: 1.9,
-    phases: dissectionPhases,
-    detailed: true,
-  },
-  psu1200: {
-    id: 'psu1200',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
-    alternative: true,
+  }),
+  psu1200: otherSupply('psu1200', 'tuf1200psucase', {
     name: 'Modular · TUF Gaming 1200W Gold',
     title: 'Twelve hundred watts, two 16-pin leads.',
     caption: 'ASUS TUF GAMING 1200W GOLD',
     summary: 'ASUS · 1200 W · 80 PLUS Gold',
-    kind: 'physical',
-    branchLabel: 'Power supply',
-    concept: 'tuf1200psucase',
-    spread: 1.9,
-    phases: dissectionPhases,
-    detailed: true,
-  },
+  }),
   fan: {
     id: 'fan',
     comparisonCategory: 'cooling',

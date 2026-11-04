@@ -98,7 +98,7 @@ Descending into a part rebuilds it at its own scale with its own timeline, so th
 
 ## The interface
 
-The rail on the left carries the scale tree and per-system visibility. The GPU menu holds three cards, the RTX 5090, Radeon RX 9070 XT and Arc B580, each with its own dropdown of scales. The Memory menu holds the installed DDR5 module and a DDR4 module from the same line, so the two generations can be taken apart side by side or compared in the comparison workbench. The Power supply menu lists two TUF Gaming units directly: an 850W Gold with modular sockets and a 750W Bronze with fixed cables. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. On a touch screen, a tap shows the component's card and its **Take apart** button opens it. At 100% every laid-out part carries its name, and tapping a name describes it. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen. The address bar follows you: a link such as `https://pc-anatomy.com/?scale=sm` opens straight on the RTX 5090's streaming multiprocessor, `&part=` describes a part, `&open=` sets the disassembly, and the back button climbs back out.
+The rail on the left carries the scale tree and per-system visibility. The GPU menu holds five cards, the RTX 5090, Radeon RX 9070 XT, Arc B580, RTX 5060 Ti and RTX 5060, each with its own dropdown of scales. The Memory menu holds the installed DDR5 module and a DDR4 module from the same line, so the two generations can be taken apart side by side or compared in the comparison workbench. The Power supply menu lists two TUF Gaming units directly: an 850W Gold with modular sockets and a 750W Bronze with fixed cables. The bar along the bottom is the disassembly timeline, with the **Auto** key at its left-hand end, the named phases above the slider, and a reset on the right. Left-click an explorable component to open it; right-click to inspect it and use the detail, hide, isolate and focus controls. On a touch screen, a tap shows the component's card and its **Take apart** button opens it. At 100% every laid-out part carries its name, and tapping a name describes it. Hidden components remain available from the stage tracker until they are restored, the scale changes, or the explorer is reset. The **Airflow** switch beside the camera views draws the path the air takes, cool where it enters and warm where it leaves, and it fades as soon as the disassembly slider moves. It starts on wherever there are fans except on the complete machine, where the case is closed and the switch is there to turn it on. The corner expand control toggles browser fullscreen. The address bar follows you: a link such as `https://pc-anatomy.com/?scale=sm` opens straight on the RTX 5090's streaming multiprocessor, `&part=` describes a part, `&open=` sets the disassembly, and the back button climbs back out.
 
 | Workbench                                                                                                              | On a phone                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -117,30 +117,45 @@ shows direction rather than measured speed or watts.
 ## Build your own PC
 
 Press **Build your own PC** under Compare to open the build workspace: the
-parts on one side, the tower in the middle, and on the other side whether the
-parts work together. Choose the processor, CPU cooler, memory, graphics card,
-storage and power supply, and the tower changes to match:
+parts list on one side, the tower in the middle, and on the other side whether
+the parts work together. Choose the processor, CPU cooler, motherboard,
+memory, storage, graphics card and power supply, and the tower changes to
+match:
 
-- the RTX 5090, Radeon RX 9070 XT or Arc B580 is seated in the slot at its own
-  length, with its power cable on its own socket;
+- the Ryzen 9 9950X or Core Ultra 9 285K in the socket, or the socket's cover
+  when the processor does not fit the board;
+- the ATX X670E or Z890 board, or the shorter micro-ATX B650M;
+- two memory modules, four, or none when they do not fit;
+- the RTX 5090, Radeon RX 9070 XT, Arc B580, RTX 5060 Ti (ASUS Dual, 229 mm)
+  or RTX 5060 (MSI INSPIRE ITX, 145 mm) seated in the slot at its own length,
+  with its power cable on its own socket;
 - the tower air cooler, or a 360 mm liquid cooler with its pump on the socket
   and its radiator behind the front fans;
 - the M.2 drive alone, or with a 2.5-inch SATA SSD and its cable in the cage;
 - the 850W modular or 750W fixed-cable supply under the shroud.
 
-Every figure the checks use is cited: whether the processor fits the AM5
-socket, whether the cooler fits the case, whether the memory fits the DDR5
-slots, whether the card fits in front of the fans or the radiator, whether the
-supply meets the card maker's minimum or recommendation and has the leads the
-card and the drives take, and the processor's and card's rated power against
-the supply. A part that cannot physically fit is reported and left out of the
-tower. The board and case are the same in every build.
+Each slot is a row in its own colour with its part and its result; open one to
+see every part it takes, filtered by maker if you like. Each option shows the
+facts the checks compare, green where they agree with the rest of the build
+and red where they do not, a meter for a card's length against the case and a
+supply's rating against the draw, and why it would not work if it would not.
+Either panel folds away to a rail to give the tower the room.
 
-The build is written into the address, so **Copy link** shares it. On a phone
-the tower sits on top and the parts and the checks are two tabs underneath.
-The installed parts can still be inspected and taken apart from the explorer.
+Every figure the checks use is cited: whether the processor fits the board's
+socket, whether the cooler and the board fit the case, whether the memory fits
+the DDR5 slots and how fast the processor's maker rates two modules or four,
+whether the card fits in front of the fans or the radiator, whether the supply
+meets the card maker's minimum or recommendation and has the leads the card
+and the drives take, and the processor's and card's rated power against the
+supply. The case is the same in every build.
 
-![The build workspace: the parts on the left, the tower with a liquid cooler in the middle, and the checks on the right](docs/screenshots/build-mode.png)
+The build is written into the address, so **Share your build** copies a link
+to it. On a phone the tower sits on top and the parts and the checks are two
+tabs underneath, which drop away to give the tower the screen. Every part on
+offer is a scale of its own: it can be taken apart from the explorer and set
+beside another in the comparison workbench.
+
+![The build workspace: the colour-coded parts list on the left with the graphics card slot open, the tower with the Z890 board, four memory modules and an RTX 5060 Ti in the middle, and the checks on the right](docs/screenshots/build-mode.png)
 
 ## Quick start
 
@@ -182,7 +197,7 @@ Read it before the first edit. It is kept current with the code, and a change th
 
 ## Accuracy and sources
 
-The machine follows published ATX dimensions where those dimensions are standardized. Seven products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF Gaming 850W Gold and ASUS TUF Gaming 750W Bronze. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+) and the Arc (Intel Limited Edition) are complete alternative cards opened from the GPU menu. The modular PSU is the one installed in the tower; the fixed-cable model opens from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
+The machine follows published ATX dimensions where those dimensions are standardized. Eleven products are named and modeled as specific subjects: the GeForce RTX 5090, AMD Radeon RX 9070 XT, Intel Arc B580, ASUS Dual GeForce RTX 5060 Ti, MSI GeForce RTX 5060 INSPIRE ITX, AMD Ryzen 9 9950X, Intel Core Ultra 9 285K, ASUS TUF GAMING Z890-PLUS WIFI, ASUS TUF GAMING B650M-PLUS WIFI, ASUS TUF Gaming 850W Gold and ASUS TUF Gaming 750W Bronze. The RTX 5090 is the card installed in the tower; the Radeon (after the Sapphire NITRO+), the Arc (Intel Limited Edition) and the two small cards are complete alternative cards opened from the GPU menu. The X670E board is the one installed; the Z890 and B650M boards open from the Motherboard menu, built on the same layout with their own socket, outline and slot counts. The modular PSU is the one installed in the tower; the fixed-cable model opens from the Power supply menu. The rest is an illustrative desktop build that explains representative construction and relationships rather than reproducing a particular bill of materials.
 
 Processor and GPU floorplans are explanatory diagrams of documented logical architecture. They are not semiconductor mask layouts and do not claim exact transistor-level placement. See [SOURCES.md](SOURCES.md) for standards, product documentation, architecture references, and the scope of each source.
 

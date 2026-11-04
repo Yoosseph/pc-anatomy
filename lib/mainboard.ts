@@ -3,6 +3,12 @@ import type { ModelTools } from './hardware.ts';
 import type { Vec3 } from './layout.ts';
 import { keyCenter, MODULE } from './memory-module.ts';
 import {
+  defaultBuild,
+  fittedParts,
+  type BoardChoice,
+  type DesktopBuild,
+} from './desktop-build.ts';
+import {
   buildCapacitor,
   buildChip,
   buildChoke,
@@ -17,8 +23,75 @@ import {
 const mm = (n: number) => n / 22;
 const vector = (x: number, y: number, z: number): Vec3 => [mm(x), mm(y), mm(z)];
 
-export function buildMotherboard(tools: ModelTools, root: T.Group) {
+/**
+ * Where the micro-ATX board puts what the ATX board has below the second
+ * slot. The two share the top edge, the socket, the memory, the primary slot
+ * and the top two rows of mounting holes; micro-ATX stops 61 mm sooner, so
+ * everything under the primary slot is packed into what is left.
+ */
+const microAtx = {
+  /** The board's far edge, millimetres below its centre line. */
+  bottom: 91.5,
+  mounts: [
+    [-113, -145],
+    [43, -145],
+    [114, -145],
+    [-113, 10],
+    [114, 10],
+    [-113, 85],
+    [24, 85],
+    [114, 85],
+  ],
+  pcie16: [32, 78],
+  pcie1: [48],
+  m2: [
+    [11, -10, 122, 20],
+    [55, -19, 100, 20],
+  ],
+  frontheaders: [
+    [-75, 5],
+    [-33, 5],
+    [9, 4],
+    [47, 4],
+  ],
+  frontZ: 87,
+  fanheaders: [
+    [68, -141],
+    [87, -141],
+    [114, -90],
+    [88, 87],
+  ],
+};
+
+/**
+ * One of three ASUS TUF boards. `motherboard` is the X670E board the machine
+ * is built on; `z890` swaps in Intel's LGA 1851 socket; `b650m` is the AM5
+ * board cut to micro-ATX. The other two prefix their part ids with their
+ * own scale, as the fixed-cable supply does.
+ *
+ * The processor and modules it carries come from the build when the tower
+ * fits this board, and are left out when they cannot seat: the socket keeps
+ * its cover and the slots stay empty. Opened on its own, each board carries
+ * the processor it is made for.
+ */
+export function buildMotherboard(
+  tools: ModelTools,
+  root: T.Group,
+  variant: BoardChoice = 'motherboard',
+) {
   const { pcb, material, label } = tools;
+  const micro = variant === 'b650m',
+    intel = variant === 'z890';
+  const name = (id: string) => (variant === 'motherboard' ? id : variant + id);
+  const build: DesktopBuild =
+    tools.build.board === variant
+      ? tools.build
+      : {
+          ...defaultBuild,
+          board: variant,
+          processor: intel ? 'corei9' : 'ryzen',
+        };
+  const fitted = fittedParts(build);
   const occupied: T.Box3[] = [];
   const put = (g: T.Group, o: T.Object3D, x = 0, y = 0, z = 0) => {
     o.position.set(...vector(x, y, z));
@@ -33,7 +106,7 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     z: number,
     delta: Vec3 = [0, 1.4, 0],
   ) => {
-    const p = tools.add(id, o, vector(x, y, z), delta, 0);
+    const p = tools.add(name(id), o, vector(x, y, z), delta, 0);
     if (id !== 'moboboard')
       occupied.push(new T.Box3().setFromObject(o).expandByScalar(mm(1.2)));
     return p;
@@ -135,17 +208,28 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     put(g, mesh, 0, y, 0);
   };
   const board = new T.Group();
-  put(board, pcb(vector(244, 1.6, 305), 'motherboard'));
-  const mounts = [
-    [-113, -145],
-    [43, -145],
-    [114, -145],
-    [-113, 10],
-    [114, 10],
-    [-113, 141],
-    [42, 141],
-    [114, 141],
-  ];
+  // Micro-ATX keeps ATX's top edge and loses 61 mm off the bottom, so the
+  // laminate moves up rather than shrinking about its centre.
+  const bottom = micro ? microAtx.bottom : 152.5;
+  put(
+    board,
+    pcb(vector(244, 1.6, 152.5 + bottom), 'motherboard'),
+    0,
+    0,
+    (bottom - 152.5) / 2,
+  );
+  const mounts = micro
+    ? microAtx.mounts
+    : [
+        [-113, -145],
+        [43, -145],
+        [114, -145],
+        [-113, 10],
+        [114, 10],
+        [-113, 141],
+        [42, 141],
+        [114, 141],
+      ];
   for (const [x, z] of mounts) {
     const ring = new T.Mesh(
       new T.TorusGeometry(mm(3.5), mm(0.75), 6, 20),
@@ -167,7 +251,7 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
       ),
     );
   }
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < (micro ? 0 : 6); i++) {
     const mark = block(
       1.8,
       0.25,
@@ -178,66 +262,144 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     put(board, mark, 119, 1, 81 + i * 4);
   }
 
-  // AM5 load frame, square package, cam lever and cooler mounting rails.
   const sx = 8,
     sz = -64;
   const socket = new T.Group();
   put(socket, block(58, 3, 72, material('#25272a', 0.14)));
   const pinGeo = new T.BoxGeometry(mm(0.5), mm(0.35), mm(0.5));
   const pinMat = material('#958667', 0.75, 0.65);
-  for (let x = 0; x < 40; x++)
-    for (let z = 0; z < 40; z++) {
-      if (x > 14 && x < 25 && z > 14 && z < 25) continue;
-      put(socket, new T.Mesh(pinGeo, pinMat), x - 19.5, 1.7, z - 19.5);
+  // The cover a board ships with, left on when the build's processor cannot
+  // seat in this socket.
+  const cover = (w: number, d: number) => {
+    const cap = new T.Group();
+    put(cap, block(w, 1.6, d, material('#121416', 0.08, 0.7)), 0, 5.6, 0);
+    put(cap, block(w * 0.5, 0.4, 6, material('#22262a', 0.08, 0.7)), 0, 6.5, 0);
+    label(cap, 'PnP CAP', vector(0, 6.75, d * 0.28), mm(w * 0.42), '#5c6266');
+    put(socket, cap);
+  };
+  if (!intel) {
+    // AM5 load frame, square package, cam lever and cooler mounting rails.
+    for (let x = 0; x < 40; x++)
+      for (let z = 0; z < 40; z++) {
+        if (x > 14 && x < 25 && z > 14 && z < 25) continue;
+        put(socket, new T.Mesh(pinGeo, pinMat), x - 19.5, 1.7, z - 19.5);
+      }
+    for (const side of [-1, 1]) {
+      put(socket, block(4, 2.4, 66, metal), side * 26, 4.1, 0);
+      put(socket, block(48, 2.4, 8, metal), 0, 4.1, side * 29);
+      put(socket, block(62, 5, 8), 0, 1, side * 45);
+      for (const x of [-24, 24]) screw(socket, x, 5.5, side * 29, 2.6);
+      for (const x of [-27, 27]) screw(socket, x, 4.4, side * 45, 3.2);
     }
-  for (const side of [-1, 1]) {
-    put(socket, block(4, 2.4, 66, metal), side * 26, 4.1, 0);
-    put(socket, block(48, 2.4, 8, metal), 0, 4.1, side * 29);
-    put(socket, block(62, 5, 8), 0, 1, side * 45);
-    for (const x of [-24, 24]) screw(socket, x, 5.5, side * 29, 2.6);
-    for (const x of [-27, 27]) screw(socket, x, 4.4, side * 45, 3.2);
+    const leverCurve = new T.CatmullRomCurve3(
+      [
+        [31, 4, -31],
+        [34, 4, -24],
+        [34, 4, 26],
+        [30, 4, 32],
+      ].map(([x, y, z]) => new T.Vector3(...vector(x, y, z))),
+    );
+    socket.add(
+      new T.Mesh(new T.TubeGeometry(leverCurve, 28, mm(1), 8, false), metal),
+    );
+    label(socket, 'AM5', vector(0, 5.5, 29), mm(16), '#53595c');
+    if (!fitted.processor) cover(46, 46);
+  } else {
+    // LGA 1851: a rectangular field of spring contacts with an open centre,
+    // under Intel's loading mechanism. A hinged steel plate frames the
+    // package's long sides and is held down by a lever along one of them.
+    for (let x = 0; x < 36; x++)
+      for (let z = 0; z < 43; z++) {
+        if (x > 11 && x < 24 && z > 13 && z < 29) continue;
+        put(socket, new T.Mesh(pinGeo, pinMat), x - 17.5, 1.7, z - 21);
+      }
+    // The load plate: two long rails over the package edge, joined by a
+    // hinge end and a tongue the lever catches.
+    for (const side of [-1, 1])
+      put(socket, block(5, 1.4, 54, metal), side * 21.5, 4.4, 0);
+    put(socket, block(48, 1.4, 6, metal), 0, 4.4, -27);
+    put(socket, block(30, 1.4, 6, metal), 0, 4.4, 27);
+    put(socket, block(10, 1.2, 5, metal), 0, 4.4, 31.5);
+    // Hinge pins at the far end, and the four screws holding the frame.
+    for (const x of [-18, 18]) {
+      const hinge = new T.Mesh(
+        new T.CylinderGeometry(mm(1.6), mm(1.6), mm(8), 10),
+        metal,
+      );
+      hinge.rotation.z = Math.PI / 2;
+      put(socket, hinge, x, 4.6, -32);
+    }
+    for (const x of [-25, 25])
+      for (const z of [-31, 31]) screw(socket, x, 3.6, z, 2.4);
+    // The lever, down the right-hand side, its hook over the tongue.
+    const leverCurve = new T.CatmullRomCurve3(
+      [
+        [27.5, 4.2, -30],
+        [27.5, 4.2, 26],
+        [24, 4.4, 32],
+        [5, 4.6, 33],
+      ].map(([x, y, z]) => new T.Vector3(...vector(x, y, z))),
+    );
+    socket.add(
+      new T.Mesh(new T.TubeGeometry(leverCurve, 28, mm(1), 8, false), metal),
+    );
+    label(socket, 'LGA1851', vector(-12, 3.4, 33), mm(14), '#53595c');
+    if (!fitted.processor) cover(36, 44);
   }
-  const leverCurve = new T.CatmullRomCurve3(
-    [
-      [31, 4, -31],
-      [34, 4, -24],
-      [34, 4, 26],
-      [30, 4, 32],
-    ].map(([x, y, z]) => new T.Vector3(...vector(x, y, z))),
-  );
-  socket.add(
-    new T.Mesh(new T.TubeGeometry(leverCurve, 28, mm(1), 8, false), metal),
-  );
-  label(socket, 'AM5', vector(0, 5.5, 29), mm(16), '#53595c');
   add('socket', socket, sx, 2.4, sz);
-  const cpu = new T.Group();
-  put(cpu, block(40, 1.5, 40, material('#244234', 0.2)));
-  const ihs: [number, number][] = [
-    [-18, -18],
-    [-8, -18],
-    [-8, -14],
-    [8, -14],
-    [8, -18],
-    [18, -18],
-    [18, -8],
-    [14, -8],
-    [14, 8],
-    [18, 8],
-    [18, 18],
-    [8, 18],
-    [8, 14],
-    [-8, 14],
-    [-8, 18],
-    [-18, 18],
-    [-18, 8],
-    [-14, 8],
-    [-14, -8],
-    [-18, -8],
-  ];
-  put(cpu, plate(ihs, 2.2, metal), 0, 0.9, 0);
-  label(cpu, 'AMD RYZEN', vector(0, 3.4, -3), mm(27), '#53585b');
-  label(cpu, 'AM5', vector(0, 3.4, 6), mm(10), '#61676a');
-  add('cpu', cpu, sx, 5.2, sz, [0, 2.6, 0]);
+  if (fitted.processor) {
+    const cpu = new T.Group();
+    if (!intel) {
+      put(cpu, block(40, 1.5, 40, material('#244234', 0.2)));
+      const ihs: [number, number][] = [
+        [-18, -18],
+        [-8, -18],
+        [-8, -14],
+        [8, -14],
+        [8, -18],
+        [18, -18],
+        [18, -8],
+        [14, -8],
+        [14, 8],
+        [18, 8],
+        [18, 18],
+        [8, 18],
+        [8, 14],
+        [-8, 14],
+        [-8, 18],
+        [-18, 18],
+        [-18, 8],
+        [-14, 8],
+        [-14, -8],
+        [-18, -8],
+      ];
+      put(cpu, plate(ihs, 2.2, metal), 0, 0.9, 0);
+      label(cpu, 'AMD RYZEN', vector(0, 3.4, -3), mm(27), '#53585b');
+      label(cpu, 'AM5', vector(0, 3.4, 6), mm(10), '#61676a');
+    } else {
+      // The 37.5 × 45 mm package, its long side down the board, under a
+      // heat spreader with the loading plate's notches in its long edges.
+      put(cpu, block(37.5, 1.5, 45, material('#244234', 0.2)));
+      const ihs: [number, number][] = [
+        [-15, -19],
+        [15, -19],
+        [15, -9],
+        [17, -9],
+        [17, 9],
+        [15, 9],
+        [15, 19],
+        [-15, 19],
+        [-15, 9],
+        [-17, 9],
+        [-17, -9],
+        [-15, -9],
+      ];
+      put(cpu, plate(ihs, 2.2, metal), 0, 0.9, 0);
+      label(cpu, 'intel CORE ULTRA 9', vector(0, 3.4, -4), mm(26), '#53585b');
+      label(cpu, '285K', vector(0, 3.4, 6), mm(10), '#61676a');
+    }
+    add('cpu', cpu, sx, 5.2, sz, [0, 2.6, 0]);
+  }
 
   for (const x of [63, 73, 83, 93]) {
     const slot = buildSlot(material, mm(133), '#1d2023', {
@@ -252,8 +414,16 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     add('dimmslot', slot, x, 4, -58, [0, 1, 0]);
   }
   // The installed modules are the complete DDR5 model, stood on its contact
-  // edge: its length runs along the slot, its component face toward +X.
-  for (const x of [73, 93]) {
+  // edge: its length runs along the slot, its component face toward +X. Two
+  // go in the second slot of each channel, as the manual asks; four fill
+  // every slot; modules that cannot seat leave the slots empty.
+  const modules =
+    fitted.memory === null
+      ? []
+      : fitted.memory === 'dimm4'
+        ? [63, 73, 83, 93]
+        : [73, 93];
+  for (const x of modules) {
     const ram = new T.Group();
     const dimm = tools.assembly('dimm');
     dimm.scale.setScalar(6 / 22);
@@ -289,7 +459,7 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
   // Reserve individual VRM devices, preserving the empty L-shaped centre.
   for (const child of vrm.children)
     occupied.push(new T.Box3().setFromObject(child).expandByScalar(mm(1)));
-  tools.add('cpuvrm', vrm, [0, 0, 0], [0, 1.2, -0.6], 0);
+  tools.add(name('cpuvrm'), vrm, [0, 0, 0], [0, 1.2, -0.6], 0);
   const topSink = new T.Group();
   put(topSink, block(96, 5, 28), 0, 2.5, 0);
   for (let i = 0; i < 5; i++) {
@@ -318,23 +488,40 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     put(sideSink, block(32, 10, 20), 0, 10, -45 + i * 23);
   add('vrmheatsink', sideSink, -67, 7.8, -69, [-0.7, 2.4, -0.2]);
 
-  // Broad angular chipset armour is the dominant panel in the reference.
+  // Broad angular chipset armour is the dominant panel in the reference. The
+  // micro-ATX board has room only for a short plate beside its second slot.
   const chipset = new T.Group();
-  put(chipset, block(28, 2, 28, material('#202326', 0.12)), 54, 1, 0);
+  put(
+    chipset,
+    block(28, 2, 28, material('#202326', 0.12)),
+    micro ? 0 : 54,
+    1,
+    0,
+  );
   put(
     chipset,
     plate(
-      [
-        [-90, -19],
-        [91, -19],
-        [95, -15],
-        [95, 11],
-        [85, 15],
-        [-23, 15],
-        [-34, 27],
-        [-73, 27],
-        [-90, 13],
-      ],
+      micro
+        ? [
+            [-34, -19],
+            [34, -19],
+            [36, -17],
+            [36, 15],
+            [28, 19],
+            [-26, 19],
+            [-34, 11],
+          ]
+        : [
+            [-90, -19],
+            [91, -19],
+            [95, -15],
+            [95, 11],
+            [85, 15],
+            [-23, 15],
+            [-34, 27],
+            [-73, 27],
+            [-90, 13],
+          ],
       5,
     ),
     0,
@@ -342,11 +529,12 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     0,
   );
   const graphic = new T.Group();
-  branding(graphic, 171, 25, 9.35);
-  put(chipset, graphic, 1, 0, -2);
-  screw(chipset, -80, 10, -13, 2);
-  screw(chipset, 87, 10, 9, 2);
-  add('chipset', chipset, 6, 1.2, 65, [0.6, 1.4, 0.6]);
+  branding(graphic, micro ? 64 : 171, micro ? 22 : 25, 9.35);
+  put(chipset, graphic, micro ? 0 : 1, 0, -2);
+  screw(chipset, micro ? -28 : -80, 10, -13, 2);
+  screw(chipset, micro ? 30 : 87, 10, 9, 2);
+  if (micro) add('chipset', chipset, 70, 1.2, 65, [0.6, 1.4, 0.6]);
+  else add('chipset', chipset, 6, 1.2, 65, [0.6, 1.4, 0.6]);
 
   const controller = (
     id: string,
@@ -362,20 +550,24 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
   };
   controller('uefi', 'UEFI', 102, 28, 7);
   controller('lan', 'LAN', -109, 30, 10);
-  controller('superio', 'IO', 92, 135, 11);
+  if (micro) controller('superio', 'IO', 86, 30, 11);
+  else controller('superio', 'IO', 92, 135, 11);
+  // The codec and its audio capacitors in their own corner; the micro-ATX
+  // board fits one row of capacitors under it rather than three.
   const audio = new T.Group();
-  put(audio, buildChip(material, vector(12, 2, 12), 7, true), 0, 1, -10);
-  for (let row = 0; row < 3; row++)
+  const codecZ = micro ? -6 : -10;
+  put(audio, buildChip(material, vector(12, 2, 12), 7, true), 0, 1, codecZ);
+  for (let row = 0; row < (micro ? 1 : 3); row++)
     for (const x of [-5, 3])
       put(
         audio,
         buildCapacitor(material, mm(2.8), mm(7), '#a78b4c'),
         x,
         4,
-        10 + row * 8,
+        (micro ? 8 : 10) + row * 8,
       );
-  label(audio, 'AUDIO', vector(0, 2.3, -10), mm(10), '#939991');
-  add('audiocodec', audio, -108, 1, 119, [-1, 1.2, 0.6]);
+  label(audio, 'AUDIO', vector(0, 2.3, codecZ), mm(10), '#939991');
+  add('audiocodec', audio, -108, 1, micro ? 68 : 119, [-1, 1.2, 0.6]);
   const battery = new T.Group();
   put(
     battery,
@@ -390,11 +582,12 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
   );
   put(battery, block(4, 0.8, 4, metal), -8.5, 2.7, 0);
   label(battery, '+  CR2032', vector(0, 2.55, 0), mm(17), '#53595d');
-  add('cmos', battery, -89, 3, 113, [-1.2, 1, 0.6]);
+  add('cmos', battery, micro ? -82 : -89, 3, micro ? 52 : 113, [-1.2, 1, 0.6]);
 
+  const [slot1, slot2] = micro ? microAtx.pcie16 : [32, 134];
   for (const [z, primary] of [
-    [32, true],
-    [134, false],
+    [slot1, true],
+    [slot2, false],
   ] as const) {
     const slot = buildSlot(material, mm(100), '#202326', {
       width: mm(7.5),
@@ -407,7 +600,7 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     });
     add('pcie16', slot, -31, 5, z, [0, 1.1, 0]);
   }
-  for (const z of [59, 84])
+  for (const z of micro ? microAtx.pcie1 : [59, 84])
     add(
       'pcie1',
       buildSlot(material, mm(20), '#202326', {
@@ -421,10 +614,12 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
       [0, 1.1, 0],
     );
 
-  for (const [z, x, w, d] of [
-    [11, -10, 122, 20],
-    [114, 19, 174, 22],
-  ]) {
+  for (const [z, x, w, d] of micro
+    ? microAtx.m2
+    : [
+        [11, -10, 122, 20],
+        [114, 19, 174, 22],
+      ]) {
     const socketM2 = new T.Group();
     // Connector spans the 22 mm width along Z, perpendicular to the drive.
     put(socketM2, block(4, 3, 22), -41, 0, 0);
@@ -499,28 +694,32 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
     put(sata, block(0.25, 0.6, 4, pinMat), 6.75, -1.2, 0);
     add('sataport', sata, 114, 5.5, 43 + i * 9, [1.4, 0.8, 0]);
   }
-  for (const [x, count] of [
-    [-71, 5],
-    [-27, 5],
-    [19, 4],
-    [76, 4],
-  ])
+  for (const [x, count] of micro
+    ? microAtx.frontheaders
+    : [
+        [-71, 5],
+        [-27, 5],
+        [19, 4],
+        [76, 4],
+      ])
     add(
       'frontheader',
       buildHeader(material, count, 2, mm(2.54), '#202326', mm(6)),
       x,
       4,
-      147,
+      micro ? microAtx.frontZ : 147,
       [0.3, 0.8, 1.3],
     );
-  for (const [x, z] of [
-    [68, -141],
-    [87, -141],
-    [114, -90],
-    [113, 95],
-    [-49, 147],
-    [48, 149],
-  ])
+  for (const [x, z] of micro
+    ? microAtx.fanheaders
+    : [
+        [68, -141],
+        [87, -141],
+        [114, -90],
+        [113, 95],
+        [-49, 147],
+        [48, 149],
+      ])
     add(
       'mobofanheader',
       buildHeader(material, 4, 1, mm(2.54), '#292c2e', mm(6)),
@@ -704,7 +903,8 @@ export function buildMotherboard(tools: ModelTools, root: T.Group) {
   // Derive passive keep-outs from actual component bounds, including sockets,
   // connectors and screw holes. This stays correct when large parts move.
   const free = (x: number, z: number, pad = 1) => {
-    if (Math.abs(x) > 119 - pad || Math.abs(z) > 150 - pad) return false;
+    if (Math.abs(x) > 119 - pad || z < -150 + pad || z > bottom - 2.5 - pad)
+      return false;
     return !occupied.some(
       (b) =>
         x + pad > b.min.x * 22 &&

@@ -16,8 +16,12 @@ export type ModelTools = {
    * other scale is built one way.
    */
   build: DesktopBuild;
-  /** Reuse a detailed scale as a single installed, selectable assembly. */
-  assembly: (level: LevelId) => T.Group;
+  /**
+   * Reuse a detailed scale as a single installed, selectable assembly. The
+   * tower passes its build on to the board, so the board carries the
+   * processor and modules the build chose.
+   */
+  assembly: (level: LevelId, build?: DesktopBuild) => T.Group;
   /**
    * Where this build moves air, drawn as chevrons marching along the path.
    * Scenery rather than a part: never selected, never named, never pointed

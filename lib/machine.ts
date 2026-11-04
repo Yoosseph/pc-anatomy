@@ -14,9 +14,11 @@ import {
 } from './parts.ts';
 import { buildChassis, plateWithHoles, type CaseShell } from './chassis.ts';
 import { cardStack } from './graphics-card.ts';
+import { compactMount, dual5060ti, inspire5060 } from './compact-card.ts';
 import { finishes, type Finish } from './materials.ts';
 import { roundedBox } from './geometry-cache.ts';
 import {
+  boardOptions,
   coolerOptions,
   powerOptions,
   radiator360,
@@ -114,9 +116,12 @@ const RAD_Y = INTAKE_Y[1];
 /** The radiator's inner face, which a fitted card has to stop short of. */
 const RAD_FACE = RAD_X - RAD_T / 2;
 
-/** The inspection model installed vertically at the tower's physical scale. */
-export function buildMotherboardAssembly(tools: ModelTools) {
-  const board = tools.assembly('motherboard');
+/**
+ * The chosen board's inspection model, installed vertically at the tower's
+ * physical scale, carrying the processor and modules the build fits.
+ */
+function buildMotherboardAssembly(tools: ModelTools) {
+  const board = tools.assembly(tools.build.board, tools.build);
   board.scale.setScalar(22 / 35);
   board.rotation.x = Math.PI / 2;
   const group = new T.Group();
@@ -167,6 +172,10 @@ const cardMounts: Record<
     faces: 'edge',
     fan: 31.5,
   },
+  // The two small cards come from one builder, which says where its own
+  // edge and socket are.
+  rtx5060ti: compactMount(dual5060ti),
+  rtx5060: compactMount(inspire5060),
 };
 
 export function buildMachine(tools: ModelTools, root: T.Group) {
@@ -258,9 +267,13 @@ export function buildMachine(tools: ModelTools, root: T.Group) {
   };
   buildChassis(tools, finish, shell);
 
+  // The standoffs under the board's mounting holes. A micro-ATX board uses
+  // the top two rows of an ATX board's holes, and its own bottom row 61 mm
+  // higher, so the tray's lowest row moves up with it.
+  const micro = boardOptions[build.board].formFactor === 'Micro-ATX';
   const standoffs: Vec3[] = [];
   for (const gx of [-mm(100), mm(6), mm(112)])
-    for (const gy of [-mm(130), mm(0), mm(132)])
+    for (const gy of [micro ? -mm(82) : -mm(130), mm(0), mm(132)])
       standoffs.push([BOARD_X + gx, BOARD_Y + gy, TRAY + 0.1]);
   instances('boardstandoff', standoffs, [0.14, 0.14, 0.2], 0, '#9ba3a7');
 

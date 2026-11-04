@@ -7,6 +7,7 @@ import { buildGpuArchitecture } from './gpu-architecture.ts';
 import { buildRadeonCard } from './radeon-card.ts';
 import { buildRadeonArchitecture } from './radeon-architecture.ts';
 import { buildArcCard } from './arc-card.ts';
+import { buildCompactCard, dual5060ti, inspire5060 } from './compact-card.ts';
 import { buildArcArchitecture } from './arc-architecture.ts';
 import { buildMachine } from './machine.ts';
 import { buildMotherboard } from './mainboard.ts';
@@ -109,6 +110,8 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   ...notebookBuilders,
   pc: buildMachine,
   motherboard: buildMotherboard,
+  z890: (tools, root) => buildMotherboard(tools, root, 'z890'),
+  b650m: (tools, root) => buildMotherboard(tools, root, 'b650m'),
   dimm: buildDimm,
   dram: buildDram,
   banks: (tools, root) => buildRamArchitecture('banks', tools, root),
@@ -145,6 +148,8 @@ const builders: Record<LevelId, (tools: ModelTools, root: T.Group) => void> = {
   xeslice: (tools, root) => buildArcArchitecture('xeslice', tools, root),
   xecore: (tools, root) => buildArcArchitecture('xecore', tools, root),
   xve: (tools, root) => buildArcArchitecture('xve', tools, root),
+  rtx5060ti: (tools) => buildCompactCard(tools, dual5060ti),
+  rtx5060: (tools) => buildCompactCard(tools, inspire5060),
 };
 
 /**
@@ -332,6 +337,13 @@ export function buildModel(
         'arcgddr6',
         'arcvrm',
         'arcpowerstage',
+        // The two small NVIDIA cards
+        'dualgddr7',
+        'dualvrm',
+        'dualpowerstage',
+        'itxgddr7',
+        'itxvrm',
+        'itxpowerstage',
         // Memory
         'drambank',
         'ddr4bank',
@@ -427,8 +439,8 @@ export function buildModel(
     root.add(group);
     return group;
   };
-  const assembly: ModelTools['assembly'] = (level) => {
-    const model = buildModel(level);
+  const assembly: ModelTools['assembly'] = (level, fitted) => {
+    const model = buildModel(level, fitted);
     // Freeze all instances at their assembled positions before handing the
     // model to the parent scale. Only the parent owns picking and animation.
     for (const piece of model.pieces) {

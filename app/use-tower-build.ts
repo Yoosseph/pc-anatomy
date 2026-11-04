@@ -9,9 +9,9 @@ import { towerKey, type DesktopBuild } from '@/lib/desktop-build';
  * Run from the click itself it would hold back the pressed option, the checks
  * and the verdict until it finished, so the page would feel stuck. Instead the
  * choice renders first, the browser paints it, and only then does the tower
- * follow. Several choices inside that frame are one rebuild, for the last. A
- * change the tower does not show (the processor, the memory) goes straight
- * through.
+ * follow. Several choices inside that frame are one rebuild, for the last.
+ * Every slot changes the tower now, but a choice that ends on the tower
+ * already shown (there and back inside one frame) builds nothing.
  *
  * `fitting` stays true until the viewer has taken the new build: this hook's
  * effects run after the viewer's, which is a child of the component using it,

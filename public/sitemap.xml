@@ -3,6 +3,8 @@
   <url><loc>https://pc-anatomy.com/</loc></url>
   <url><loc>https://pc-anatomy.com/guide/</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=motherboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dram</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=banks</loc></url>
@@ -39,6 +41,8 @@
   <url><loc>https://pc-anatomy.com/?scale=xeslice</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=xecore</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=xve</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legion</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legionboard</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=legioncpu</loc></url>
@@ -280,6 +284,54 @@
   <url><loc>https://pc-anatomy.com/?scale=motherboard&amp;part=superio</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=motherboard&amp;part=mobofanheader</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=motherboard&amp;part=frontheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890moboboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890socket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890cpu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890dimmslot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890ram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890chipset</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890uefi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890cmos</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890pcie16</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890pcie1</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890m2slot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890nvme</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890m2heatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890cpuvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890vrmheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890atx24</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890eps8</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890sataport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890reario</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890lan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890audiocodec</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890superio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890mobofanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=z890&amp;part=z890frontheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mmoboboard</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650msocket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mcpu</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mdimmslot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mram</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mchipset</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650muefi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mcmos</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mpcie16</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mpcie1</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mm2slot</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mnvme</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mm2heatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mcpuvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mvrmheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650matx24</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650meps8</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650msataport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mreario</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mlan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650maudiocodec</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650msuperio</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mmobofanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=b650m&amp;part=b650mfrontheader</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dimmboard</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dramchip</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=dimm&amp;part=dimmspd</loc></url>
@@ -646,4 +698,70 @@
   <url><loc>https://pc-anatomy.com/?scale=xve&amp;part=arcregister</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=xve&amp;part=arcem</loc></url>
   <url><loc>https://pc-anatomy.com/?scale=xve&amp;part=arccoissue</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualshroud</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualfan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualfanmotor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualcoldplate</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualheatpipe</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualbackplate</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualbracket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualfastener</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualthermalpad</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualtim</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualretention</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualstandoff</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpcb</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpackage</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualsilicon</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualbga</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualgddr7</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpowerstage</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpwm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualcapacitor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualmlcc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualresistor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpcie</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualpower</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualbios</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualdisplayport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualhdmi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualfanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualfancable</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualesd</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060ti&amp;part=dualcrystal</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxshroud</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfan</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfanmotor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxheatsink</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxcore</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxbackplate</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxbracket</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfastener</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxthermalpad</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxtim</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxretention</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxstandoff</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpcb</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpackage</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxsilicon</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxbga</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxgddr7</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxvrm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpowerstage</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpwm</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxcapacitor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxmlcc</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxresistor</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpcie</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxpower</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxbios</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxdisplayport</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxhdmi</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfanheader</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfancable</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxesd</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxcrystal</loc></url>
+  <url><loc>https://pc-anatomy.com/?scale=rtx5060&amp;part=itxfuse</loc></url>
 </urlset>

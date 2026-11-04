@@ -64,6 +64,8 @@ const levelIcon: Record<LevelId, typeof Box> = {
   macdisplay: Monitor,
   pc: PcCase,
   motherboard: CircuitBoard,
+  z890: CircuitBoard,
+  b650m: CircuitBoard,
   dimm: MemoryStick,
   dram: Box,
   banks: Layers3,
@@ -99,6 +101,8 @@ const levelIcon: Record<LevelId, typeof Box> = {
   bmg: Cpu,
   xeslice: Layers3,
   xecore: Layers3,
+  rtx5060ti: Box,
+  rtx5060: Box,
   xve: Microscope,
 };
 

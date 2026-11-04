@@ -26,6 +26,8 @@ export const airflowLevels: readonly LevelId[] = [
   'card',
   'rx9070',
   'arcb580',
+  'rtx5060ti',
+  'rtx5060',
 ];
 
 export function hasAirflow(level: LevelId) {

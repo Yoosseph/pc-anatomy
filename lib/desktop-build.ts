@@ -8,8 +8,8 @@ import type { SourceId } from './sources.ts';
  * `build-checks.ts`.
  *
  * The choices are parts the project already models, so every option opens
- * into the same detailed part the explorer shows. The board and the case stay
- * fixed: there is one of each.
+ * into the same detailed part the explorer shows, and every one of them is
+ * drawn in the tower when it is chosen. The case stays fixed: there is one.
  *
  * No three.js here. The build workspace asks these questions before the
  * engine has loaded, and the tests import this file directly.
@@ -20,17 +20,24 @@ import type { SourceId } from './sources.ts';
 
 export type ProcessorChoice = 'ryzen' | 'corei9';
 export type CoolerChoice = 'cooler' | 'liquid';
-export type MemoryChoice = 'dimm' | 'ddr4';
-export type GraphicsChoice = 'card' | 'rx9070' | 'arcb580';
+export type BoardChoice = 'motherboard' | 'z890' | 'b650m';
+export type MemoryChoice = 'dimm' | 'dimm4' | 'ddr4';
+export type GraphicsChoice =
+  | 'card'
+  | 'rx9070'
+  | 'arcb580'
+  | 'rtx5060ti'
+  | 'rtx5060';
 export type StorageChoice = 'nvmesata' | 'nvme';
 export type PowerChoice = 'psu' | 'psubronze';
 
 export interface DesktopBuild {
   processor: ProcessorChoice;
   cooler: CoolerChoice;
+  board: BoardChoice;
   memory: MemoryChoice;
-  graphics: GraphicsChoice;
   storage: StorageChoice;
+  graphics: GraphicsChoice;
   power: PowerChoice;
 }
 export type BuildSlot = keyof DesktopBuild;
@@ -39,17 +46,11 @@ export type BuildSlot = keyof DesktopBuild;
 export const defaultBuild: DesktopBuild = {
   processor: 'ryzen',
   cooler: 'cooler',
+  board: 'motherboard',
   memory: 'dimm',
-  graphics: 'card',
   storage: 'nvmesata',
+  graphics: 'card',
   power: 'psu',
-};
-
-/** What the fixed motherboard accepts. */
-export const board = {
-  socket: 'AM5',
-  memory: 'DDR5',
-  sources: ['mainboardmanual'] as SourceId[],
 };
 
 /**
@@ -67,6 +68,16 @@ export const caseRoom = {
   roof: 26,
   /** 120 mm fan positions behind the front panel. */
   frontFans: 3,
+  /** The board outlines the tray has standoffs for. */
+  boards: ['ATX', 'Micro-ATX'] as const,
+};
+
+/** Whose silicon a part carries, for the picker's colour and its filter. */
+export type Brand = 'amd' | 'intel' | 'nvidia';
+export const brandName: Record<Brand, string> = {
+  amd: 'AMD',
+  intel: 'Intel',
+  nvidia: 'NVIDIA',
 };
 
 interface Option {
@@ -74,12 +85,19 @@ interface Option {
   /** One line under the name in the picker. */
   summary: string;
   sources: SourceId[];
+  brand?: Brand;
 }
 export interface ProcessorOption extends Option {
-  socket: string;
+  socket: 'AM5' | 'LGA 1851';
   /** The power figure the maker publishes, and what it measures. */
   watts: number;
   wattsLabel: string;
+  /**
+   * The fastest DDR5 the maker supports, by how many single-rank modules are
+   * fitted. Absent where the maker publishes no separate figure.
+   */
+  memorySpeed: { 2: number; 4?: number };
+  brand: Brand;
 }
 /** A radiator's length and thickness, millimetres, and the 120 mm fans it takes. */
 export interface Radiator {
@@ -92,8 +110,21 @@ export interface CoolerOption extends Option {
   height?: number;
   radiator?: Radiator;
 }
+export interface BoardOption extends Option {
+  socket: ProcessorOption['socket'];
+  chipset: string;
+  memory: 'DDR5';
+  formFactor: (typeof caseRoom.boards)[number];
+  /** Outline: along the rear panel, then front to back, millimetres. */
+  size: [height: number, depth: number];
+  brand: Brand;
+}
 export interface MemoryOption extends Option {
   generation: 'DDR5' | 'DDR4';
+  /** Modules fitted, each 16 GB single rank. */
+  modules: 2 | 4;
+  /** The kit's rated data rate, MT/s, with its XMP or EXPO profile. */
+  speed: number;
 }
 export interface GraphicsOption extends Option {
   watts: number;
@@ -106,6 +137,7 @@ export interface GraphicsOption extends Option {
   adapter?: { name: string; leads: number };
   /** Overall length, millimetres. */
   length: number;
+  brand: Brand;
 }
 export interface StorageOption extends Option {
   /** Whether a 2.5-inch SATA drive is fitted beside the M.2 drive. */
@@ -132,6 +164,8 @@ export const processorOptions: Record<ProcessorChoice, ProcessorOption> = {
     // and comes from an independent review.
     watts: 200,
     wattsLabel: 'socket power limit (PPT)',
+    memorySpeed: { 2: 5600, 4: 3600 },
+    brand: 'amd',
     sources: ['ryzen', 'fpsreview9950x'],
   },
   corei9: {
@@ -140,6 +174,8 @@ export const processorOptions: Record<ProcessorChoice, ProcessorOption> = {
     socket: 'LGA 1851',
     watts: 250,
     wattsLabel: 'maximum turbo power',
+    memorySpeed: { 2: 6400 },
+    brand: 'intel',
     sources: ['corei9'],
   },
 };
@@ -166,17 +202,70 @@ export const coolerOptions: Record<CoolerChoice, CoolerOption> = {
   },
 };
 
+/**
+ * Three ASUS TUF boards: the one the machine is built on, the same family's
+ * Intel board, and its smaller AM5 sibling. All three take DDR5 only.
+ */
+export const boardOptions: Record<BoardChoice, BoardOption> = {
+  motherboard: {
+    name: 'ASUS TUF GAMING X670E-PLUS WIFI',
+    summary: 'AM5 · X670E · ATX',
+    socket: 'AM5',
+    chipset: 'AMD X670E',
+    memory: 'DDR5',
+    formFactor: 'ATX',
+    size: [305, 244],
+    brand: 'amd',
+    sources: ['mainboardmanual'],
+  },
+  z890: {
+    name: 'ASUS TUF GAMING Z890-PLUS WIFI',
+    summary: 'LGA 1851 · Z890 · ATX',
+    socket: 'LGA 1851',
+    chipset: 'Intel Z890',
+    memory: 'DDR5',
+    formFactor: 'ATX',
+    size: [305, 244],
+    brand: 'intel',
+    sources: ['tufz890'],
+  },
+  b650m: {
+    name: 'ASUS TUF GAMING B650M-PLUS WIFI',
+    summary: 'AM5 · B650 · micro-ATX',
+    socket: 'AM5',
+    chipset: 'AMD B650',
+    memory: 'DDR5',
+    formFactor: 'Micro-ATX',
+    size: [244, 244],
+    brand: 'amd',
+    sources: ['tufb650m'],
+  },
+};
+
 export const memoryOptions: Record<MemoryChoice, MemoryOption> = {
   dimm: {
     name: 'Kingston FURY Beast DDR5-6000',
     summary: '2 × 16 GB · DDR5',
     generation: 'DDR5',
+    modules: 2,
+    speed: 6000,
+    sources: ['kf560', 'ddr5architecture'],
+  },
+  // The same module, twice over: every slot on the board filled.
+  dimm4: {
+    name: 'Kingston FURY Beast DDR5-6000 × 4',
+    summary: '4 × 16 GB · every slot filled',
+    generation: 'DDR5',
+    modules: 4,
+    speed: 6000,
     sources: ['kf560', 'ddr5architecture'],
   },
   ddr4: {
     name: 'Kingston FURY Beast DDR4-3200',
     summary: '2 × 16 GB · DDR4',
     generation: 'DDR4',
+    modules: 2,
+    speed: 3200,
     sources: ['kf432', 'jedecmo329'],
   },
 };
@@ -184,18 +273,19 @@ export const memoryOptions: Record<MemoryChoice, MemoryOption> = {
 export const graphicsOptions: Record<GraphicsChoice, GraphicsOption> = {
   card: {
     name: 'GeForce RTX 5090',
-    summary: '575 W · 348 mm',
+    summary: 'ASUS TUF · 575 W · 348 mm',
     watts: 575,
     psu: 1000,
     psuKind: 'recommended',
     psuSource: 'ASUS',
     connector: '12V-2x6',
     length: 348,
+    brand: 'nvidia',
     sources: ['specs', 'tuf5090specs'],
   },
   rx9070: {
     name: 'Radeon RX 9070 XT',
-    summary: '330 W · 331 mm',
+    summary: 'Sapphire NITRO+ · 330 W · 331 mm',
     watts: 330,
     psu: 850,
     psuKind: 'minimum',
@@ -203,18 +293,45 @@ export const graphicsOptions: Record<GraphicsChoice, GraphicsOption> = {
     connector: '12V-2x6',
     adapter: { name: '3 × 8-pin', leads: 3 },
     length: 330.8,
+    brand: 'amd',
     sources: ['nitro9070'],
   },
   arcb580: {
     name: 'Intel Arc B580',
-    summary: '190 W · 272 mm',
+    summary: 'Limited Edition · 190 W · 272 mm',
     watts: 190,
     psu: 600,
     psuKind: 'recommended',
     psuSource: 'Intel',
     connector: '8-pin',
     length: 272,
+    brand: 'intel',
     sources: ['arcb580'],
+  },
+  rtx5060ti: {
+    name: 'GeForce RTX 5060 Ti',
+    summary: 'ASUS Dual · 180 W · 229 mm',
+    // NVIDIA's total graphics power; ASUS's recommendation for its own card.
+    watts: 180,
+    psu: 550,
+    psuKind: 'recommended',
+    psuSource: 'ASUS',
+    connector: '8-pin',
+    length: 229,
+    brand: 'nvidia',
+    sources: ['dual5060ti', 'rtx5060family'],
+  },
+  rtx5060: {
+    name: 'GeForce RTX 5060',
+    summary: 'MSI INSPIRE ITX · 145 W · 145 mm',
+    watts: 145,
+    psu: 550,
+    psuKind: 'recommended',
+    psuSource: 'MSI',
+    connector: '8-pin',
+    length: 145,
+    brand: 'nvidia',
+    sources: ['inspire5060', 'rtx5060family'],
   },
 };
 
@@ -257,22 +374,25 @@ export const powerOptions: Record<PowerChoice, PowerOption> = {
   },
 };
 
-/** The slots, in the order a builder fits them. */
+/** The slots, in the order a builder chooses them. */
 export const slots: { id: BuildSlot; label: string }[] = [
   { id: 'processor', label: 'Processor' },
   { id: 'cooler', label: 'CPU cooler' },
+  { id: 'board', label: 'Motherboard' },
   { id: 'memory', label: 'Memory' },
-  { id: 'graphics', label: 'Graphics card' },
   { id: 'storage', label: 'Storage' },
+  { id: 'graphics', label: 'Graphics card' },
   { id: 'power', label: 'Power supply' },
 ];
 
+export type AnyOption = Option & { id: string };
 const optionTables: { [S in BuildSlot]: Record<DesktopBuild[S], Option> } = {
   processor: processorOptions,
   cooler: coolerOptions,
+  board: boardOptions,
   memory: memoryOptions,
-  graphics: graphicsOptions,
   storage: storageOptions,
+  graphics: graphicsOptions,
   power: powerOptions,
 };
 
@@ -295,38 +415,49 @@ export function partName<S extends BuildSlot>(build: DesktopBuild, slot: S) {
 export const plural = (n: number, thing: string) =>
   `${n} ${thing}${n === 1 ? '' : 's'}`;
 
-/** Whether a part can physically go into the fixed board. */
-export const socketFits = (cpu: ProcessorOption) => cpu.socket === board.socket;
-export const memoryFits = (ram: MemoryOption) =>
+/** Whether a part can physically go into the chosen board. */
+export const socketFits = (cpu: ProcessorOption, board: BoardOption) =>
+  cpu.socket === board.socket;
+export const memoryFits = (ram: MemoryOption, board: BoardOption) =>
   ram.generation === board.memory;
 
-/** Whether any slot holds something other than the original part. */
-export const isCustomBuild = (build: DesktopBuild) =>
-  slots.some(({ id }) => build[id] !== defaultBuild[id]);
+/** How many slots hold something other than the original part. */
+export const changedParts = (build: DesktopBuild) =>
+  slots.filter(({ id }) => build[id] !== defaultBuild[id]).length;
+export const isCustomBuild = (build: DesktopBuild) => changedParts(build) > 0;
 
 /**
- * The parts that are actually in the tower. A part that cannot seat stays in
- * the box, and the board keeps the one it was built with.
+ * What is actually on the board. A part that cannot seat stays in its box:
+ * the socket keeps its cover, the slots stay empty.
  */
-export function installedBuild(build: DesktopBuild): DesktopBuild {
+export function fittedParts(build: DesktopBuild) {
+  const board = boardOptions[build.board];
   return {
-    ...build,
-    processor: socketFits(processorOptions[build.processor])
+    processor: socketFits(processorOptions[build.processor], board)
       ? build.processor
-      : defaultBuild.processor,
-    memory: memoryFits(memoryOptions[build.memory])
+      : null,
+    memory: memoryFits(memoryOptions[build.memory], board)
       ? build.memory
-      : defaultBuild.memory,
+      : null,
   };
 }
 
 /**
- * Which tower model a build needs. The processor and memory sit inside the
- * board assembly, so only the cooler, the card, the drives and the supply
- * change the geometry.
+ * Which tower model a build needs. Every slot changes the geometry: the
+ * board's outline and socket, the processor in it or its empty cover, two
+ * modules or four or none, and the parts bolted around them.
  */
 export function towerKey(build: DesktopBuild) {
-  return [build.cooler, build.graphics, build.storage, build.power].join('+');
+  const fitted = fittedParts(build);
+  return [
+    build.board,
+    fitted.processor ?? 'none',
+    fitted.memory ?? 'none',
+    build.cooler,
+    build.graphics,
+    build.storage,
+    build.power,
+  ].join('+');
 }
 
 /**
@@ -336,8 +467,9 @@ export function towerKey(build: DesktopBuild) {
  * the hidden list and the selection all hold onto them. What the reader is
  * shown, and where opening the piece leads, follow the part in the slot.
  */
-const towerPieces = new Map<string, 'cooler' | 'graphics' | 'power'>([
+const towerPieces = new Map<string, 'cooler' | 'board' | 'graphics' | 'power'>([
   ['cpucooler', 'cooler'],
+  ['motherboard', 'board'],
   ['graphicscard', 'graphics'],
   ['psu', 'power'],
 ]);

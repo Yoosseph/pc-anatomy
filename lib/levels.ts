@@ -13,6 +13,8 @@ export type LevelId =
   | NotebookLevel
   | 'pc'
   | 'motherboard'
+  | 'z890'
+  | 'b650m'
   | 'dimm'
   | 'dram'
   | 'banks'
@@ -48,7 +50,9 @@ export type LevelId =
   | 'bmg'
   | 'xeslice'
   | 'xecore'
-  | 'xve';
+  | 'xve'
+  | 'rtx5060ti'
+  | 'rtx5060';
 
 export interface LevelDef {
   id: LevelId;
@@ -152,6 +156,43 @@ export const levels: Record<LevelId, LevelDef> = {
     kind: 'physical',
     branchLabel: 'Motherboard',
     concept: 'motherboard',
+    spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  z890: {
+    id: 'z890',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
+    parent: 'pc',
+    // One board is screwed to one tray. The Intel board is a complete second
+    // board you can take apart from the Motherboard menu, and the build
+    // workspace can fit it, but the machine as modelled carries the X670E.
+    alternative: true,
+    name: 'Z890 · LGA 1851',
+    title: 'An Intel board.',
+    caption: 'ASUS TUF GAMING Z890-PLUS WIFI',
+    summary: 'ASUS · LGA 1851 · ATX',
+    kind: 'physical',
+    branchLabel: 'Motherboard',
+    concept: 'z890board',
+    spread: 1.7,
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  b650m: {
+    id: 'b650m',
+    comparisonCategory: 'boards',
+    millimetersPerUnit: 22,
+    parent: 'pc',
+    alternative: true,
+    name: 'B650M · micro-ATX',
+    title: 'A micro-ATX board.',
+    caption: 'ASUS TUF GAMING B650M-PLUS WIFI',
+    summary: 'ASUS · AM5 · micro-ATX',
+    kind: 'physical',
+    branchLabel: 'Motherboard',
+    concept: 'b650mboard',
     spread: 1.7,
     phases: dissectionPhases,
     detailed: true,
@@ -659,6 +700,44 @@ export const levels: Record<LevelId, LevelDef> = {
     summary: 'Inside an Xe2 vector engine',
     kind: 'logical',
     concept: 'xve',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  rtx5060ti: {
+    id: 'rtx5060ti',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
+    parent: 'pc',
+    // Like the Radeon and the Arc, a complete card listed under GPU that the
+    // build workspace can fit, not a part the machine carries as modelled.
+    alternative: true,
+    name: 'RTX 5060 Ti',
+    title: 'A compact two-fan card.',
+    caption: 'ASUS DUAL · RTX 5060 TI 16GB',
+    summary: 'The whole graphics card',
+    kind: 'physical',
+    branchLabel: 'GPU',
+    submenu: 'RTX 5060 Ti',
+    submenuNote: 'ASUS Dual · 229 mm',
+    concept: 'dualcard',
+    phases: dissectionPhases,
+    detailed: true,
+  },
+  rtx5060: {
+    id: 'rtx5060',
+    comparisonCategory: 'graphics',
+    millimetersPerUnit: 348 / 8.93,
+    parent: 'pc',
+    alternative: true,
+    name: 'RTX 5060',
+    title: 'A one-fan ITX card.',
+    caption: 'MSI INSPIRE ITX · RTX 5060 8G',
+    summary: 'The whole graphics card',
+    kind: 'physical',
+    branchLabel: 'GPU',
+    submenu: 'RTX 5060',
+    submenuNote: 'MSI INSPIRE ITX · 145 mm',
+    concept: 'itxcard',
     phases: dissectionPhases,
     detailed: true,
   },

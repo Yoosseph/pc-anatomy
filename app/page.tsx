@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import { airflowShown } from '@/lib/airflow-policy';
 import { levelPath } from '@/lib/levels';
@@ -19,7 +19,15 @@ import SearchDialog from './search-dialog';
 import DetailPanel from './detail-panel';
 import AboutDialog from './about-dialog';
 import ComparisonWorkbench from './comparison-workbench';
-import BuildWorkspace from './build-workspace';
+
+/**
+ * The build workspace is its own download: most visits never open it, and
+ * its parts list, checks and stylesheet would otherwise ride in the first
+ * one. It is fetched once the explorer has drawn and the page is idle, so
+ * opening it does not wait on the network.
+ */
+const loadBuildWorkspace = () => import('./build-workspace');
+const BuildWorkspace = lazy(loadBuildWorkspace);
 
 export default function Home() {
   const explorer = useExplorer();
@@ -37,6 +45,16 @@ export default function Home() {
   const building = state.workspace === 'build';
   const workspace = useBuildWorkspace(explorer);
   const { pointAt } = workspace;
+  const drawn = count !== null;
+  useEffect(() => {
+    if (!drawn) return;
+    if (typeof requestIdleCallback === 'undefined') {
+      const timer = setTimeout(loadBuildWorkspace, 1500);
+      return () => clearTimeout(timer);
+    }
+    const idle = requestIdleCallback(loadBuildWorkspace, { timeout: 4000 });
+    return () => cancelIdleCallback(idle);
+  }, [drawn]);
 
   const { hint, dismissHint } = useFirstVisitHint(
     state,
@@ -123,25 +141,27 @@ export default function Home() {
       }
     >
       {building ? (
-        <BuildWorkspace
-          build={state.build}
-          fitting={workspace.fitting}
-          focus={workspace.focus}
-          airflow={airflowShown(state.airflow, state.level)}
-          power={state.power}
-          onSetPart={workspace.choosePart}
-          onRestore={explorer.restoreBuild}
-          onExit={() => {
-            workspace.leave();
-            requestAnimationFrame(() =>
-              document
-                .querySelector<HTMLButtonElement>('.build-button')
-                ?.focus(),
-            );
-          }}
-          onToggleAirflow={explorer.toggleAirflow}
-          onTogglePower={explorer.togglePower}
-        />
+        <Suspense fallback={null}>
+          <BuildWorkspace
+            build={state.build}
+            fitting={workspace.fitting}
+            focus={workspace.focus}
+            airflow={airflowShown(state.airflow, state.level)}
+            power={state.power}
+            onSetPart={workspace.choosePart}
+            onRestore={explorer.restoreBuild}
+            onExit={() => {
+              workspace.leave();
+              requestAnimationFrame(() =>
+                document
+                  .querySelector<HTMLButtonElement>('.build-button')
+                  ?.focus(),
+              );
+            }}
+            onToggleAirflow={explorer.toggleAirflow}
+            onTogglePower={explorer.togglePower}
+          />
+        </Suspense>
       ) : (
         <>
           <Topbar

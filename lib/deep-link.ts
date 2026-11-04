@@ -58,6 +58,7 @@ export type Place = {
 const buildParams: Record<BuildSlot, string> = {
   processor: 'cpu',
   cooler: 'cooler',
+  board: 'board',
   memory: 'ram',
   graphics: 'gpu',
   storage: 'storage',

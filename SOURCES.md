@@ -236,6 +236,67 @@ is one block. No die area or transistor count is quoted, because neither
 appears in the cited Intel documents. As with the other cards, board layout,
 pipe routing and passive population are original approximations.
 
+## Two small cards and two more boards · November 4, 2026
+
+Added so the build workspace has cards at the small end of the range and a
+board for each processor. Each is a scale of its own, with an exploded view and
+a place in the comparison workbench.
+
+### ASUS Dual GeForce RTX 5060 Ti 16GB GDDR7 OC Edition
+
+- [ASUS specifications](https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/techspec/):
+  229 × 120 × 50 mm, 2.5 slots, 16 GB GDDR7 on a 128-bit bus at 28 Gbps,
+  PCI Express 5.0, three DisplayPort 2.1b and one HDMI 2.1b output, one 8-pin
+  connector and a 550 W recommended supply.
+- [ASUS product page](https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/):
+  two Axial-tech fans with a small hub, longer blades and a barrier ring, dual
+  ball bearings, a stop mode below 50 °C, a heat pipe layout under the shroud,
+  and a vented backplate that stiffens the board.
+- [NVIDIA's RTX 5060 family specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5060-family/):
+  4,608 CUDA cores, 180 W total graphics power, a 128-bit interface, one
+  8-pin PCIe connector.
+
+### MSI GeForce RTX 5060 8G INSPIRE ITX
+
+- [MSI data sheet](https://storage-asset.msi.com/datasheet/vga/global/GeForce-RTX-5060-8G-INSPIRE-ITX.pdf):
+  145 × 120 × 45 mm, 8 GB GDDR7 on a 128-bit bus at 28 Gbps, PCI Express
+  Gen 5 ×16 using ×8, three DisplayPort 2.1b and one HDMI 2.1b output, 145 W
+  power consumption and a 550 W recommended supply; a STORMFORCE fan with seven
+  blades, a reinforcing backplate with a flow-through design, DrMOS power
+  stages and fuses on the board.
+- [HotHardware's report](https://hothardware.com/news/msi-unveils-an-itx-geforce-rtx-5060),
+  an **independent report** of MSI's announcement, for the cooler: a
+  copper-core "sunflower" heatsink of extruded aluminium fins, the fan's
+  claw-textured blades, a vented backplate, one 8-pin connector and 581 g.
+- NVIDIA's family page gives the RTX 5060's 3,840 CUDA cores.
+
+**Limits.** Neither maker publishes its board layout, phase count, heat pipe
+count or fin pitch, so those are drawn to be consistent and labelled as not
+published. Both cards are drawn with four GDDR7 packages, one per 32-bit
+channel; the RTX 5060 Ti's 16 GB is twice what four 2 GB packages hold, and how
+ASUS splits it between the faces of its board is not modelled. Neither card has
+chip scales under it.
+
+### ASUS TUF GAMING Z890-PLUS WIFI and B650M-PLUS WIFI
+
+- [ASUS Z890-PLUS WIFI specifications](https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-z890-plus-wifi/techspec/):
+  ATX, 30.5 × 24.4 cm, LGA 1851 for Core Ultra (Series 2), Intel Z890, four
+  DDR5 slots up to 256 GB, one PCIe 5.0 ×16 slot from the processor and one
+  PCIe 4.0 ×16 at ×4 from the chipset, a PCIe 4.0 ×4 and two ×1 slots, four
+  M.2 slots and four SATA ports.
+- [ASUS B650M-PLUS WIFI specifications](https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b650m-plus-wifi/techspec/):
+  micro-ATX, 24.4 × 24.4 cm, AM5, AMD B650, four DDR5 slots up to 256 GB, one
+  PCIe 4.0 ×16 slot from the processor, one PCIe 4.0 ×16 at ×4 and one ×1 from
+  the chipset, two M.2 slots (the first PCIe 5.0 ×4 with a Ryzen 9000) and four
+  SATA ports.
+
+**Limits.** Both are built on the X670E board's layout, which follows its own
+manual. The socket, the chipset, the outline and the slot counts are each
+board's; component positions, routing and the rear I/O are representative.
+The Z890 board's PCIe 4.0 ×4 slot and its third and fourth M.2 slots are not
+modelled, and say so. The LGA 1851 socket and loading mechanism are
+illustrative, around the 37.5 × 45 mm package.
+
 ## Build workspace figures · November 3, 2026
 
 The build workspace adds the processor's and the card's power against the
@@ -264,7 +325,20 @@ socket is allowed to draw.
   to Samsung's 990 PRO and 870 EVO data sheets and the board manual for the
   M.2 slot and SATA ports.
 - The DDR4 option is two of the 16 GB modules in Kingston's KF432C16BB/16 data
-  sheet.
+  sheet. The four-module option is four of the 16 GB single-rank DDR5 modules
+  already cited.
+- Memory speed by module count: AMD's 9950X page rates DDR5-5600 with two
+  single-rank or dual-rank modules and DDR5-3600 with four. Intel's 285K page
+  gives "up to DDR5 6400 MT/s" and no separate figure for four modules, so the
+  check says that rather than inventing one. Kingston's data sheet gives the
+  kit's DDR5-6000 XMP and EXPO profile.
+- The small cards' supply figures are their makers' recommendations: 550 W
+  from ASUS for the Dual RTX 5060 Ti and 550 W from MSI for the INSPIRE ITX.
+  The draw uses NVIDIA's 180 W total graphics power for the RTX 5060 Ti and
+  MSI's 145 W for its RTX 5060.
+- The case's standoffs take ATX and micro-ATX boards. The micro-ATX board
+  uses the top two rows of the ATX holes and its own bottom row; the model
+  moves the tray's lowest standoffs up to meet it.
 
 ## Architecture and specifications
 

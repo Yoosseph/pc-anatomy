@@ -12,22 +12,28 @@ import {
 } from '../lib/power-flow-policy.ts';
 import { levels } from '../lib/levels.ts';
 import {
+  boardCheck,
   buildStatus,
   cardClearance,
   checkBuild,
+  checkSlots,
   conflicts,
   coolerCheck,
   lengthCheck,
+  optionFit,
   ratedDraw,
   slotStatus,
 } from '../lib/build-checks.ts';
+import { partFacts } from '../lib/part-facts.ts';
 import {
+  boardOptions,
   caseRoom,
+  changedParts,
   coolerOptions,
   defaultBuild,
+  fittedParts,
   graphicsFeed,
   graphicsOptions,
-  installedBuild,
   isCustomBuild,
   opensTo,
   slotForPiece,
@@ -80,9 +86,38 @@ const tower = (build: DesktopBuild) => towers.get(towerKey(build))!;
 const cards = new Map(graphics.map((id) => [id, buildModel(id)] as const));
 const board = buildModel('motherboard');
 board.root.updateMatrixWorld(true);
+/**
+ * Boards built for a build, as the tower installs them, and each alternative
+ * board on its own. Built up front with everything else.
+ */
+const boardBuilds: DesktopBuild[] = [
+  defaultBuild,
+  { ...defaultBuild, processor: 'corei9' },
+  { ...defaultBuild, memory: 'ddr4' },
+  { ...defaultBuild, memory: 'dimm4' },
+  { ...defaultBuild, memory: 'dimm4', cooler: 'liquid' },
+  { ...defaultBuild, board: 'z890' },
+  { ...defaultBuild, board: 'z890', processor: 'corei9' },
+  { ...defaultBuild, board: 'b650m' },
+];
+const boards = new Map(
+  boardBuilds.map((build) => {
+    const model = buildModel(build.board, build);
+    model.root.updateMatrixWorld(true);
+    return [towerKey(build), model] as const;
+  }),
+);
+const boardFor = (build: DesktopBuild) => boards.get(towerKey(build))!;
+const alone = new Map(
+  (['z890', 'b650m'] as const).map((id) => [id, buildModel(id)] as const),
+);
+const parts = (model: { pieces: Piece[] }, concept: string) =>
+  model.pieces.filter((p) => p.concept === concept);
 after(() => {
   towers.forEach(disposeModelResources);
   cards.forEach(disposeModelResources);
+  boards.forEach(disposeModelResources);
+  alone.forEach(disposeModelResources);
   disposeModelResources(board);
   globalThis.document = previousDocument;
 });
@@ -110,9 +145,11 @@ await test('every slot offers the scales the project models, and every option is
     const options = slotOptions(id);
     assert.ok(options.length >= 2, id);
     for (const option of options) {
-      // Each option is a scale the explorer can open, except the drives,
-      // which choose what is fitted rather than one part to open.
-      if (id !== 'storage') assert.ok(option.id in levels, option.id);
+      // Each option is a scale the explorer can open, except the drives and
+      // the four-module kit, which choose how much of a part is fitted
+      // rather than one part to open.
+      if (id !== 'storage' && option.id !== 'dimm4')
+        assert.ok(option.id in levels, option.id);
       assert.ok(option.sources.length > 0, option.id);
       for (const source of option.sources) assert.ok(source in sources, source);
     }
@@ -122,17 +159,104 @@ await test('every slot offers the scales the project models, and every option is
       for (const source of c.sources) assert.ok(source in sources, source);
 });
 
-await test('parts that cannot physically seat fail, and stay out of the tower', () => {
+await test('parts that cannot physically seat fail, and leave their socket or slots empty', () => {
   const intel = { ...defaultBuild, processor: 'corei9' } as const;
   assert.equal(check(intel, 'socket').status, 'fail');
   assert.match(check(intel, 'socket').detail, /LGA 1851/);
-  assert.equal(installedBuild(intel).processor, 'ryzen');
+  assert.match(check(intel, 'socket').detail, /keeps its cover/);
+  assert.equal(fittedParts(intel).processor, null);
+  assert.equal(parts(boardFor(intel), 'cpu').length, 0);
   const ddr4 = { ...defaultBuild, memory: 'ddr4' } as const;
   assert.equal(check(ddr4, 'memory').status, 'fail');
-  assert.equal(installedBuild(ddr4).memory, 'dimm');
-  // Neither changes the tower, so neither rebuilds it.
-  assert.equal(towerKey(intel), towerKey(defaultBuild));
-  assert.equal(towerKey(ddr4), towerKey(defaultBuild));
+  assert.equal(fittedParts(ddr4).memory, null);
+  assert.equal(parts(boardFor(ddr4), 'ram').length, 0);
+  // The speed check is only asked of modules that fit.
+  assert.equal(check(ddr4, 'speed'), undefined);
+  // Both change what the tower shows, so both rebuild it.
+  assert.notEqual(towerKey(intel), towerKey(defaultBuild));
+  assert.notEqual(towerKey(ddr4), towerKey(defaultBuild));
+});
+
+await test('the board decides the socket: the Intel board takes the Core Ultra, the AM5 boards the Ryzen', () => {
+  const z890 = { ...defaultBuild, board: 'z890', processor: 'corei9' } as const;
+  assert.equal(check(z890, 'socket').status, 'ok');
+  assert.equal(fittedParts(z890).processor, 'corei9');
+  assert.equal(parts(boardFor(z890), 'z890cpu').length, 1);
+  // The Intel package is the rectangular 37.5 × 45 mm one, long side down.
+  const pkg = parts(boardFor(z890), 'z890cpu')[0].extent;
+  assert.ok(Math.abs((pkg.z / pkg.x) * 37.5 - 45) < 2, 'LGA 1851 package');
+  assert.ok(
+    Math.abs(
+      parts(boardFor(defaultBuild), 'cpu')[0].extent.z /
+        parts(boardFor(defaultBuild), 'cpu')[0].extent.x -
+        1,
+    ) < 0.05,
+    'AM5 is square',
+  );
+  const ryzenOnIntel = { ...defaultBuild, board: 'z890' } as const;
+  assert.equal(check(ryzenOnIntel, 'socket').status, 'fail');
+  assert.equal(parts(boardFor(ryzenOnIntel), 'z890cpu').length, 0);
+  assert.equal(conflicts(defaultBuild, 'board', 'z890'), true);
+  assert.equal(conflicts(intel(), 'board', 'z890'), false);
+  for (const b of ['motherboard', 'b650m'] as const)
+    assert.equal(check({ ...defaultBuild, board: b }, 'socket').status, 'ok');
+  // Opened on its own, each board carries the processor it is made for.
+  assert.equal(parts(alone.get('z890')!, 'z890cpu').length, 1);
+  assert.equal(parts(alone.get('b650m')!, 'b650mcpu').length, 1);
+  function intel() {
+    return { ...defaultBuild, processor: 'corei9' } as const;
+  }
+});
+
+await test('the micro-ATX board is 61 mm shorter, keeps the top edge, and fits the case', () => {
+  const atx = tower(defaultBuild),
+    micro = tower({ ...defaultBuild, board: 'b650m', graphics: 'rtx5060' });
+  const a = box(piece(atx, 'motherboard')),
+    m = box(piece(micro, 'motherboard'));
+  assert.ok(Math.abs(a.max.y - m.max.y) < 0.05, 'same top edge');
+  const lost = (m.min.y - a.min.y) * 35;
+  assert.ok(Math.abs(lost - 61) < 6, `${lost.toFixed(0)} mm shorter`);
+  // The laminate itself is the micro-ATX outline.
+  const pcb = parts(
+    boardFor({ ...defaultBuild, board: 'b650m' }),
+    'b650mmoboboard',
+  )
+    .map((p) => p.extent)
+    .reduce((big, e) => (e.z > big.z ? e : big));
+  assert.ok(
+    Math.abs(pcb.z * 22 - 244) < 2,
+    `board is ${(pcb.z * 22).toFixed(0)} mm`,
+  );
+  for (const b of Object.keys(boardOptions) as (keyof typeof boardOptions)[])
+    assert.equal(check({ ...defaultBuild, board: b }, 'board').status, 'ok');
+  const eatx = { ...boardOptions.motherboard, formFactor: 'E-ATX' as 'ATX' };
+  assert.equal(boardCheck(eatx).status, 'fail');
+  // One slot fewer below the card than the ATX board, and the card sits on
+  // the same primary slot.
+  assert.equal(
+    parts(boardFor({ ...defaultBuild, board: 'b650m' }), 'b650mpcie1').length,
+    1,
+  );
+  assert.equal(parts(board, 'pcie1').length, 2);
+});
+
+await test('two modules or four, and four on a Ryzen are rated slower', () => {
+  assert.equal(parts(boardFor(defaultBuild), 'ram').length, 2);
+  const four = { ...defaultBuild, memory: 'dimm4' } as const;
+  assert.equal(parts(boardFor(four), 'ram').length, 4);
+  assert.equal(check(defaultBuild, 'speed').status, 'ok');
+  assert.equal(check(four, 'speed').status, 'warn');
+  assert.match(check(four, 'speed').detail, /DDR5-3600 with four/);
+  // Intel publishes no separate four-module figure on its page, so there is
+  // nothing to warn against.
+  const intelFour = {
+    ...four,
+    board: 'z890',
+    processor: 'corei9',
+  } as const;
+  assert.equal(check(intelFour, 'speed').status, 'ok');
+  assert.match(check(intelFour, 'speed').detail, /no separate figure/);
+  assert.deepEqual(checkSlots('speed'), ['processor', 'memory']);
 });
 
 await test('a maker’s minimum is a failure; a recommendation is a warning', () => {
@@ -260,11 +384,66 @@ await test('only a part involved in a failure is marked as the problem', () => {
   assert.equal(conflicts(build, 'memory', 'dimm'), false);
   assert.equal(conflicts(build, 'processor', 'corei9'), true);
   assert.equal(conflicts(build, 'memory', 'ddr4'), true);
+  // A warning names its reason, so the picker can say it.
+  assert.deepEqual(optionFit(defaultBuild, 'memory', 'dimm4'), {
+    status: 'warn',
+    reason: 'Four modules run slower',
+  });
+  assert.equal(optionFit(defaultBuild, 'graphics', 'arcb580').status, 'ok');
   // A slot's marker is the worst of its own checks.
   const checks = checkBuild(build);
   assert.equal(slotStatus(checks, 'graphics'), 'fail');
   assert.equal(slotStatus(checks, 'cooler'), 'ok');
   assert.equal(slotStatus(checks, 'storage'), 'ok');
+});
+
+await test('the picker colours what agrees with the build', () => {
+  const socket = (build: DesktopBuild, cpu: 'ryzen' | 'corei9') =>
+    partFacts(build, 'processor', cpu).facts[0];
+  assert.deepEqual(socket(defaultBuild, 'ryzen'), {
+    text: 'AM5',
+    tone: 'match',
+  });
+  assert.deepEqual(socket(defaultBuild, 'corei9'), {
+    text: 'LGA 1851',
+    tone: 'clash',
+  });
+  const z890 = { ...defaultBuild, board: 'z890' } as const;
+  assert.equal(socket(z890, 'corei9').tone, 'match');
+  assert.equal(
+    partFacts(defaultBuild, 'memory', 'ddr4').facts[0].tone,
+    'clash',
+  );
+  // The card's length against the room in front of it, the supply's rating
+  // against what the processor and card draw.
+  const length = partFacts(defaultBuild, 'graphics', 'rtx5060').meter!;
+  assert.equal(length.label, '145 of 420 mm');
+  assert.equal(length.tone, 'ok');
+  const liquid = partFacts(
+    { ...defaultBuild, cooler: 'liquid' },
+    'graphics',
+    'card',
+  ).meter!;
+  assert.equal(liquid.label, '348 of 393 mm');
+  const bronze = partFacts(defaultBuild, 'power', 'psubronze').meter!;
+  assert.equal(bronze.tone, 'fail');
+  assert.equal(partFacts(defaultBuild, 'power', 'psu').meter!.tone, 'warn');
+});
+
+await test('every slot changes the tower, and only a change rebuilds it', () => {
+  for (const { id } of slots)
+    for (const { id: other } of slotOptions(id))
+      if (other !== defaultBuild[id])
+        assert.notEqual(
+          towerKey({ ...defaultBuild, [id]: other }),
+          towerKey(defaultBuild),
+          `${id}: ${other}`,
+        );
+  assert.equal(changedParts(defaultBuild), 0);
+  assert.equal(
+    changedParts({ ...defaultBuild, board: 'b650m', memory: 'dimm4' }),
+    2,
+  );
 });
 
 await test('the tower is rebuilt only for the parts it shows', () => {
@@ -342,6 +521,10 @@ await test('installed pieces keep their ids and describe what is actually in the
   assert.equal(byId[standIn('graphicscard', radeon)].level, 'rx9070');
   assert.equal(byId[standIn('psu', radeon)].level, 'psubronze');
   assert.equal(standIn('motherboard', radeon), 'motherboard');
+  const intelBoard = { ...defaultBuild, board: 'z890' } as const;
+  assert.equal(standIn('motherboard', intelBoard), 'z890board');
+  assert.equal(opensTo('motherboard', intelBoard), 'z890');
+  assert.equal(slotForPiece('motherboard'), 'board');
   assert.equal(opensTo('graphicscard', defaultBuild), 'card');
   assert.equal(opensTo('graphicscard', radeon), 'rx9070');
   assert.equal(opensTo('psu', radeon), 'psubronze');
@@ -351,12 +534,13 @@ await test('installed pieces keep their ids and describe what is actually in the
   assert.equal(standIn('cpucooler', liquid), 'aio');
   assert.equal(opensTo('cpucooler', defaultBuild), 'cooler');
   assert.equal(opensTo('cpucooler', liquid), 'liquid');
-  // Each slot points at the piece its part went into, and back.
+  // Each slot points at the piece its part went into, and back. The
+  // processor and the memory go into the board, which is the board's slot.
   for (const { id } of slots) {
     const target = pieceForSlot(id, defaultBuild);
     assert.ok(piece(tower(defaultBuild), target), id);
     const back = slotForPiece(target);
-    if (back) assert.equal(back, id);
+    if (back && target !== 'motherboard') assert.equal(back, id);
   }
   assert.equal(
     pieceForSlot('storage', { ...defaultBuild, storage: 'nvme' }),
@@ -378,7 +562,13 @@ await test('every card seats on the same slot, at its true length', () => {
       'graphicscard',
     );
     const detailed = installed.object.children[0];
-    const id = { card: 'pcie', rx9070: 'rxpcie', arcb580: 'arcpcie' }[g];
+    const id = {
+      card: 'pcie',
+      rx9070: 'rxpcie',
+      arcb580: 'arcpcie',
+      rtx5060ti: 'dualpcie',
+      rtx5060: 'itxpcie',
+    }[g];
     return piece(cards.get(g)!, id)
       .base.clone()
       .applyMatrix4(detailed.matrixWorld);
@@ -482,6 +672,24 @@ await test('the liquid loop fits: radiator inside the intakes and clear of the d
     );
 });
 
+await test('with every memory slot filled, neither cooler runs into a module', () => {
+  for (const c of coolers) {
+    const build = { ...defaultBuild, memory: 'dimm4', cooler: c } as const;
+    const model = tower(build);
+    const installed = piece(model, 'motherboard').object.children[0];
+    installed.updateMatrixWorld(true);
+    const modules = parts(boardFor(build), 'ram').map((p) =>
+      new T.Box3().setFromObject(p.object).applyMatrix4(installed.matrixWorld),
+    );
+    assert.equal(modules.length, 4);
+    const cooler = vertices(piece(model, 'cpucooler'));
+    for (const m of modules) {
+      const inside = cooler.filter((v) => m.containsPoint(v)).length;
+      assert.equal(inside, 0, `${c} runs into a module`);
+    }
+  }
+});
+
 await test('without a SATA drive the cage is empty, and no SATA lead or route is drawn', () => {
   const both = tower(defaultBuild),
     m2 = tower({ ...defaultBuild, storage: 'nvme' });
@@ -553,6 +761,12 @@ function* allBuilds(): Generator<DesktopBuild> {
     storage: 'nvme',
     power: 'psubronze',
   };
+  // The other boards, and the modules: four of them, or none that fit.
+  yield { ...defaultBuild, board: 'z890', processor: 'corei9' };
+  yield { ...defaultBuild, board: 'b650m', graphics: 'rtx5060' };
+  yield { ...defaultBuild, memory: 'dimm4' };
+  yield { ...defaultBuild, memory: 'dimm4', cooler: 'liquid' };
+  yield { ...defaultBuild, memory: 'ddr4', processor: 'corei9' };
 }
 
 /** Every vertex of a piece, in case coordinates. */

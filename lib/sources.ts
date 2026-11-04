@@ -364,6 +364,34 @@ export const sources = {
     name: 'KitGuru (independent review) · Arc B580 Limited Edition cooler and board',
     url: 'https://www.kitguru.net/components/graphic-cards/dominic-moass/intel-arc-b580-limited-edition-review/all/1/',
   },
+  tufz890: {
+    name: 'ASUS · TUF GAMING Z890-PLUS WIFI specifications',
+    url: 'https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-z890-plus-wifi/techspec/',
+  },
+  tufb650m: {
+    name: 'ASUS · TUF GAMING B650M-PLUS WIFI specifications',
+    url: 'https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b650m-plus-wifi/techspec/',
+  },
+  dual5060ti: {
+    name: 'ASUS · Dual GeForce RTX 5060 Ti 16GB GDDR7 OC Edition specifications',
+    url: 'https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/techspec/',
+  },
+  dual5060tidesign: {
+    name: 'ASUS · Dual GeForce RTX 5060 Ti 16GB cooling and construction',
+    url: 'https://www.asus.com/us/motherboards-components/graphics-cards/dual/dual-rtx5060ti-o16g/',
+  },
+  rtx5060family: {
+    name: 'NVIDIA · GeForce RTX 5060 family specifications',
+    url: 'https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5060-family/',
+  },
+  inspire5060: {
+    name: 'MSI · GeForce RTX 5060 8G INSPIRE ITX data sheet',
+    url: 'https://storage-asset.msi.com/datasheet/vga/global/GeForce-RTX-5060-8G-INSPIRE-ITX.pdf',
+  },
+  inspirecooler: {
+    name: 'HotHardware (independent report) · RTX 5060 INSPIRE ITX cooler and power',
+    url: 'https://hothardware.com/news/msi-unveils-an-itx-geforce-rtx-5060',
+  },
 } as const;
 
 export type SourceId = keyof typeof sources;

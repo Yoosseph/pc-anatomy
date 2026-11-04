@@ -1,5 +1,5 @@
 import {
-  board,
+  boardOptions,
   caseRoom,
   coolerOptions,
   graphicsOptions,
@@ -10,6 +10,7 @@ import {
   processorOptions,
   socketFits,
   storageOptions,
+  type BoardOption,
   type BuildSlot,
   type CoolerOption,
   type DesktopBuild,
@@ -46,7 +47,9 @@ export type CheckStatus = 'ok' | 'warn' | 'fail';
 type CheckId =
   | 'socket'
   | 'cooler'
+  | 'board'
   | 'memory'
+  | 'speed'
   | 'length'
   | 'supply'
   | 'connector'
@@ -72,18 +75,18 @@ const checkOf =
     sources: [...new Set(sources)],
   });
 
-function socketCheck(cpu: ProcessorOption) {
+function socketCheck(cpu: ProcessorOption, board: BoardOption) {
   const result = checkOf('socket', [...cpu.sources, ...board.sources]);
-  return socketFits(cpu)
+  return socketFits(cpu, board)
     ? result(
         'ok',
         'Processor fits the socket',
-        `The ${cpu.name} is an ${cpu.socket} processor, and the board has an ${board.socket} socket.`,
+        `The ${cpu.name} is an ${cpu.socket} processor, and the ${board.name} has an ${board.socket} socket.`,
       )
     : result(
         'fail',
         'Processor does not fit the socket',
-        `The ${cpu.name} needs an ${cpu.socket} socket. This board has ${board.socket}, so the processor is not installed.`,
+        `The ${cpu.name} needs an ${cpu.socket} socket. The ${board.name} has ${board.socket}, so the processor stays in its box and the socket keeps its cover.`,
       );
 }
 
@@ -109,12 +112,29 @@ export function coolerCheck(cooler: CoolerOption) {
     : result('fail', 'Cooler is too tall for the case', detail);
 }
 
-function memoryCheck(ram: MemoryOption) {
-  if (memoryFits(ram))
+/**
+ * Exported so the tests can try an outline the case has no standoffs for.
+ * The tray takes an ATX board and the micro-ATX one, which uses a subset of
+ * the same mounting holes.
+ */
+export function boardCheck(
+  board: Pick<BoardOption, 'name' | 'formFactor' | 'size' | 'sources'>,
+) {
+  const result = checkOf('board', board.sources);
+  const [height, depth] = board.size;
+  const article = board.formFactor === 'ATX' ? 'an' : 'a';
+  const detail = `The ${board.name} is ${article} ${board.formFactor} board, ${height} × ${depth} mm, and the case has standoffs for ${caseRoom.boards.join(' and ')} boards.`;
+  return (caseRoom.boards as readonly string[]).includes(board.formFactor)
+    ? result('ok', 'Board fits the case', detail)
+    : result('fail', 'Board does not fit the case', detail);
+}
+
+function memoryCheck(ram: MemoryOption, board: BoardOption) {
+  if (memoryFits(ram, board))
     return checkOf('memory', [...ram.sources, ...board.sources])(
       'ok',
       'Memory fits the slots',
-      `${ram.generation} modules in ${board.memory} slots.`,
+      `${plural(ram.modules, `${ram.generation} module`)} in the board’s four ${board.memory} slots.`,
     );
   // The failure rests on the key positions, which the module's own sources
   // do not describe.
@@ -125,8 +145,37 @@ function memoryCheck(ram: MemoryOption) {
   ])(
     'fail',
     'Memory does not fit the slots',
-    `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot's, so it cannot be pushed in. The modules are not installed.`,
+    `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot’s, so it cannot be pushed in. The slots stay empty.`,
   );
+}
+
+/**
+ * How fast the memory can run, against the processor maker's rating for that
+ * many modules. A kit's XMP or EXPO speed is an overclock on top of the
+ * rating, so two modules above it are normal; four, where the maker rates the
+ * memory controller far lower, are worth knowing about before buying. Only
+ * asked once the modules fit the board.
+ */
+function speedCheck(cpu: ProcessorOption, ram: MemoryOption) {
+  const result = checkOf('speed', [...cpu.sources, ...ram.sources]);
+  const maker = cpu.brand === 'amd' ? 'AMD' : 'Intel';
+  const rated = cpu.memorySpeed[ram.modules];
+  const profile = `The kit reaches DDR5-${ram.speed} through its XMP or EXPO profile, which runs it past the processor’s rating.`;
+  if (rated === undefined)
+    return result(
+      'ok',
+      'Memory speed is within the published rating',
+      `${maker} rates the ${cpu.name} for up to DDR5-${cpu.memorySpeed[2]} and publishes no separate figure for ${ram.modules} modules. ${profile}`,
+    );
+  const four = cpu.memorySpeed[4];
+  const detail = `${maker} rates the ${cpu.name} at DDR5-${cpu.memorySpeed[2]} with two single-rank modules${four ? ` and DDR5-${four} with four` : ''}. ${profile}`;
+  return ram.modules === 4 && rated < cpu.memorySpeed[2]
+    ? result(
+        'warn',
+        'Four modules run slower',
+        `${detail} With every slot filled that profile is unlikely to hold, so expect the memory to run nearer DDR5-${rated}.`,
+      )
+    : result('ok', 'Memory speed is within reach', detail);
 }
 
 /** Exported so the tests can try a card longer than any on offer. */
@@ -210,7 +259,11 @@ function connectorCheck(gpu: GraphicsOption, psu: PowerOption) {
  * The M.2 drive takes its power through the slot it sits in; a SATA drive
  * needs a data cable to the board and a power lead from the supply.
  */
-function storageCheck(drives: StorageOption, psu: PowerOption) {
+function storageCheck(
+  drives: StorageOption,
+  psu: PowerOption,
+  board: BoardOption,
+) {
   const m2 =
     'The M.2 drive sits in the board’s M.2 slot and takes its power through it.';
   if (!drives.sata)
@@ -241,6 +294,7 @@ function budgetCheck(
   cpu: ProcessorOption,
   gpu: GraphicsOption,
   psu: PowerOption,
+  board: BoardOption,
 ) {
   const result = checkOf('budget', [
     ...cpu.sources,
@@ -250,7 +304,7 @@ function budgetCheck(
   const draw = cpu.watts + gpu.watts;
   // The figure is for the parts chosen, so it still answers whether this
   // supply would carry them when the processor cannot go into this board.
-  const unseated = socketFits(cpu)
+  const unseated = socketFits(cpu, board)
     ? ''
     : ` The ${cpu.name} is counted as chosen, though it does not fit this board.`;
   const detail = `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.${unseated}`;
@@ -271,52 +325,44 @@ export function ratedDraw(build: DesktopBuild) {
   );
 }
 
-/** Every check, in the order a builder would meet them. */
+/**
+ * Every check, in the order a builder would meet them. The memory speed is
+ * only asked of modules that fit the board.
+ */
 export function checkBuild(build: DesktopBuild): BuildCheck[] {
   const cpu = processorOptions[build.processor],
     cooler = coolerOptions[build.cooler],
+    board = boardOptions[build.board],
     ram = memoryOptions[build.memory],
     gpu = graphicsOptions[build.graphics],
     drives = storageOptions[build.storage],
     psu = powerOptions[build.power];
   return [
-    socketCheck(cpu),
+    socketCheck(cpu, board),
     coolerCheck(cooler),
-    memoryCheck(ram),
+    boardCheck(board),
+    memoryCheck(ram, board),
+    ...(memoryFits(ram, board) ? [speedCheck(cpu, ram)] : []),
     lengthCheck(gpu, cooler),
     supplyCheck(gpu, psu),
     connectorCheck(gpu, psu),
-    storageCheck(drives, psu),
-    budgetCheck(cpu, gpu, psu),
+    storageCheck(drives, psu, board),
+    budgetCheck(cpu, gpu, psu, board),
   ];
 }
 
 /** The checks each slot's part takes part in. */
 const slotChecks: Record<BuildSlot, CheckId[]> = {
-  processor: ['socket', 'budget'],
+  processor: ['socket', 'speed', 'budget'],
   cooler: ['cooler', 'length'],
-  memory: ['memory'],
-  graphics: ['length', 'supply', 'connector', 'budget'],
+  board: ['socket', 'board', 'memory', 'storage'],
+  memory: ['memory', 'speed'],
   storage: ['storage'],
+  graphics: ['length', 'supply', 'connector', 'budget'],
   power: ['supply', 'connector', 'storage', 'budget'],
 };
 
-/**
- * Whether putting this part in the slot, with the rest of the build as it is,
- * fails a check the part is involved in. A problem elsewhere in the build
- * does not mark every option in every slot.
- */
-export function conflicts<S extends BuildSlot>(
-  build: DesktopBuild,
-  slot: S,
-  part: DesktopBuild[S],
-) {
-  return checkBuild({ ...build, [slot]: part }).some(
-    (c) => c.status === 'fail' && slotChecks[slot].includes(c.id),
-  );
-}
-
-/** The worst result across every check. */
+/** The worst result among some checks. */
 export function buildStatus(checks: BuildCheck[]): CheckStatus {
   return checks.some((c) => c.status === 'fail')
     ? 'fail'
@@ -325,6 +371,40 @@ export function buildStatus(checks: BuildCheck[]): CheckStatus {
       : 'ok';
 }
 
+/**
+ * What putting this part in the slot, with the rest of the build as it is,
+ * does to the checks the part is involved in: the worst of them, and the
+ * first one that is not clean, so the picker can say why. A problem elsewhere
+ * in the build does not mark every option in every slot.
+ */
+export function optionFit<S extends BuildSlot>(
+  build: DesktopBuild,
+  slot: S,
+  part: DesktopBuild[S],
+) {
+  const own = checkBuild({ ...build, [slot]: part }).filter((c) =>
+    slotChecks[slot].includes(c.id),
+  );
+  const status = buildStatus(own);
+  return {
+    status,
+    reason: own.find((c) => c.status === status && status !== 'ok')?.title,
+  };
+}
+
+/** Whether a part fails a check it is involved in, with the rest as built. */
+export const conflicts = <S extends BuildSlot>(
+  build: DesktopBuild,
+  slot: S,
+  part: DesktopBuild[S],
+) => optionFit(build, slot, part).status === 'fail';
+
 /** The worst result among the checks one slot's part takes part in. */
 export const slotStatus = (checks: BuildCheck[], slot: BuildSlot) =>
   buildStatus(checks.filter((c) => slotChecks[slot].includes(c.id)));
+
+/** The slots whose parts a check compares, in slot order. */
+export const checkSlots = (id: CheckId) =>
+  (Object.keys(slotChecks) as BuildSlot[]).filter((slot) =>
+    slotChecks[slot].includes(id),
+  );

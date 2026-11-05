@@ -141,7 +141,7 @@ if three.js reappears in the entry chunk or it grows past its budget.
 
 ## Run it
 
-Node 22.13 or newer.
+Node 24.
 
 ```bash
 npm install
@@ -307,7 +307,7 @@ subsystems stop touching.
 | `lib/hardware.ts` | `ModelTools`, the interface every builder is handed, and the RTX 5090 card assembly. |
 | `lib/machine.ts` | The tower itself: ATX constants, what goes where inside the case, cable routing, the rear I/O shield, RGB palette. |
 | `lib/chassis.ts` | The case: corner columns and rails, the cut rear panel, tray, floor and roof, the glass side, the mesh front, the dust filters, the front I/O, and `plateWithHoles`, which cuts openings in a sheet. It is handed its openings as measurements from `machine.ts`. |
-| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds all five TUF Gaming supplies from one illustrative conversion chain, each from its `SupplyModel` in `concepts/psu.ts` (rating, efficiency class, and a socket panel or fixed leads); `supplyConcepts` writes each model's catalogue from the 850W Gold's. `mainboard.ts` builds all six boards from one layout, ATX or micro-ATX (`microAtx` says where the smaller board's lower slots, drive socket and headers go): the TUF X670E, the TUF Z890 with Intel's LGA 1851 socket and package, the TUF B650M, and MSI's, GIGABYTE's and ASRock's boards. Each wears its maker's design (`designs`): the armour's finish and trim, the power-delivery fins (TUF's blades, slats or a grooved block), the printed marks, the chipset heatsink's shape (one of `chipsetSinks`), and its own list of full-length and short slots. It fits the processor and modules the build chooses, or leaves the socket's cover on and the slots empty. |
+| `lib/mainboard.ts`, `power-supply.ts`, `fan-unit.ts`, `cooler.ts`, `liquid.ts`, `ssd.ts`, `nvme.ts`, `processor.ts`, `io-die.ts` | Builders for physical or logical scales. `power-supply.ts` builds all five TUF Gaming supplies from one illustrative conversion chain, each from its `SupplyModel` in `concepts/psu.ts` (rating, efficiency class, and a socket panel or fixed leads); `supplyConcepts` writes each model's catalogue from the 850W Gold's. The 1000W Gold is the one the tower carries (`installed` on its model): the tower's PSU opens it and a build starts on it, and the 850W is one of the four alternatives. `mainboard.ts` builds all six boards from one layout, ATX or micro-ATX (`microAtx` says where the smaller board's lower slots, drive socket and headers go): the TUF X670E, the TUF Z890 with Intel's LGA 1851 socket and package, the TUF B650M, and MSI's, GIGABYTE's and ASRock's boards. Each wears its maker's design (`designs`): the armour's finish and trim, the power-delivery fins (TUF's blades, slats or a grooved block), the printed marks, the chipset heatsink's shape (one of `chipsetSinks`), and its own list of full-length and short slots. It fits the processor and modules the build chooses, or leaves the socket's cover on and the slots empty. |
 | `lib/memory-module.ts`, `dram-package.ts`, `ram-architecture.ts` | The memory dive. `memory-module.ts` builds both UDIMMs from one set of JEDEC constants and a per-generation spec (key offset, edge curve, envelope, which parts exist) and exports `keyCenter`, which the motherboard's slots are keyed from. `dram-package.ts` builds the board-on-chip FBGA for either generation. `ram-architecture.ts` draws the two dies and, for each generation, one bank and one mat of cells; the DDR4 bank and cell concepts are the DDR5 ones under `ddr4` ids with the numbers that differ swapped in. |
 | `lib/graphics-card.ts`, `card-kit.ts`, `radeon-card.ts`, `arc-card.ts`, `compact-card.ts` | The five graphics cards. `card-kit.ts` holds the millimetre-scale parts they share. `compact-card.ts` builds the two small NVIDIA cards from one description each: the ASUS Dual RTX 5060 Ti over heat pipes, the MSI RTX 5060 INSPIRE ITX over a copper-cored radial heatsink, and `compactMount` says where each meets the slot. |
 | `lib/gpu-architecture.ts`, `radeon-architecture.ts`, `arc-architecture.ts` | The chip block diagrams. |
@@ -840,7 +840,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
-with Node.js 22.
+with Node.js 24, the version Vercel deploys with.
 
 - `tests/manifest.test.ts` (17) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,

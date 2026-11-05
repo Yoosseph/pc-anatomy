@@ -312,7 +312,7 @@ export const pcConcepts: Concept[] = [
     category: 'Power',
     parent: 'pc',
     level: 'pc',
-    open: 'psu',
+    open: 'psu1000',
     description:
       'Converts mains alternating current into the steady low-voltage direct current the machine runs on.',
     purpose:

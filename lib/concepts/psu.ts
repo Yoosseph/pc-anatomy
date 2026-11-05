@@ -20,7 +20,9 @@ export const psuConcepts: Concept[] = [
     name: 'TUF Gaming 850W Gold housing',
     shortName: '850W housing',
     category: 'Chassis',
-    parent: 'psu',
+    // An alternative to the 1000W the tower carries, so like the other
+    // alternatives it stands under the machine, not the tower's PSU.
+    parent: 'pc',
     level: 'psu',
     open: 'psu',
     description:
@@ -355,6 +357,11 @@ export interface SupplyModel {
   atx?: string;
   /** More for the housing: a claim the maker's pages do not make. */
   housing?: { sources: SourceId[]; note: string };
+  /**
+   * The supply the tower carries, and the one a build starts on: its housing
+   * hangs under the tower's PSU. The others stand under the machine.
+   */
+  installed?: true;
 }
 
 export const supplyModels = {
@@ -403,6 +410,7 @@ export const supplyModels = {
     outputs:
       '24-pin · 2 × CPU 4+4-pin · PCIe 16-pin · 4 × PCIe 8-pin · 5 × SATA',
     atx: 'ATX 3.1',
+    installed: true,
   },
   psu1200: {
     level: 'psu1200',
@@ -433,7 +441,7 @@ export function supplyConcepts(model: SupplyModel): Concept[] {
   // What a model says differently about each kind of part: its housing, its
   // cable face (a socket panel, or a fixed harness in its place) and its fan.
   const housing = (original: Concept): Partial<Concept> => ({
-    parent: 'pc',
+    parent: model.installed ? 'psu' : 'pc',
     open: model.level,
     name: `${name} housing`,
     shortName: `${model.watts}W housing`,

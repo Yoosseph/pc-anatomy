@@ -309,6 +309,11 @@ workbench.
   [product page](https://www.asus.com/motherboards-components/power-supply-units/tuf-gaming/tuf-gaming-1200g/)
   gives fully modular cables and the same fan.
 
+The tower carries the 1000W Gold: 1000 W is the supply ASUS recommends in its
+[TUF RTX 5090 specifications](https://www.asus.com/uk/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx5090-32g-gaming/techspec/),
+so the machine the explorer shows passes every check in the build workspace.
+The 850W Gold it carried before is still on offer, below that figure.
+
 **Limits.** The internal layout is the 850W Gold's illustrative conversion
 chain for all five; ASUS publishes no board layout for any of them. The model
 draws one modular socket panel for every Gold unit, so the 1200W's second

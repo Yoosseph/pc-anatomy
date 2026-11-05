@@ -18,7 +18,7 @@
     "gpu"
   ],
   "engines": {
-    "node": ">=22.13.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vite",

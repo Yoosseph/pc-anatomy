@@ -26,7 +26,7 @@ point.
 
 ## Setting up
 
-PC Anatomy requires Node.js 22.13 or newer.
+PC Anatomy requires Node.js 24.
 
 ```bash
 git clone https://github.com/Yoosseph/pc-anatomy.git
@@ -65,7 +65,7 @@ npm run size    # after the build: keeps three.js out of the first download
 ```
 
 Format with `npm run format`. GitHub Actions runs the same checks on every push
-and pull request with Node.js 22.
+and pull request with Node.js 24, the version Vercel deploys with.
 
 ## Pull requests
 

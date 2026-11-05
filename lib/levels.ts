@@ -458,15 +458,22 @@ export const levels: Record<LevelId, LevelDef> = {
     caption: 'ASUS TUF GAMING 750W BRONZE',
     summary: 'ASUS · 750 W · 80 PLUS Bronze',
   }),
-  psu: {
-    id: 'psu',
-    comparisonCategory: 'power',
-    millimetersPerUnit: 12,
-    parent: 'pc',
+  psu: otherSupply('psu', 'psucase', {
     name: 'Modular · TUF Gaming 850W Gold',
     title: 'Inside a modular power supply.',
     caption: 'ASUS TUF GAMING 850W GOLD',
     summary: 'ASUS · 850 W · 80 PLUS Gold',
+  }),
+  // The supply in the tower: ASUS's recommended figure for the RTX 5090.
+  psu1000: {
+    id: 'psu1000',
+    comparisonCategory: 'power',
+    millimetersPerUnit: 12,
+    parent: 'pc',
+    name: 'Modular · TUF Gaming 1000W Gold',
+    title: 'A thousand watts, fully modular.',
+    caption: 'ASUS TUF GAMING 1000W GOLD',
+    summary: 'ASUS · 1000 W · 80 PLUS Gold · installed',
     kind: 'physical',
     branchLabel: 'Power supply',
     concept: 'psu',
@@ -474,12 +481,6 @@ export const levels: Record<LevelId, LevelDef> = {
     phases: dissectionPhases,
     detailed: true,
   },
-  psu1000: otherSupply('psu1000', 'tuf1000psucase', {
-    name: 'Modular · TUF Gaming 1000W Gold',
-    title: 'A thousand watts, fully modular.',
-    caption: 'ASUS TUF GAMING 1000W GOLD',
-    summary: 'ASUS · 1000 W · 80 PLUS Gold',
-  }),
   psu1200: otherSupply('psu1200', 'tuf1200psucase', {
     name: 'Modular · TUF Gaming 1200W Gold',
     title: 'Twelve hundred watts, two 16-pin leads.',

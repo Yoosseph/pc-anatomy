@@ -187,7 +187,7 @@ beside another in the comparison workbench.
 
 ## Quick start
 
-PC Anatomy requires Node.js 22.13 or newer.
+PC Anatomy requires Node.js 24.
 
 ```bash
 git clone https://github.com/Yoosseph/pc-anatomy.git
@@ -242,7 +242,7 @@ npm test
 npm run build
 ```
 
-GitHub Actions runs these checks on every push and pull request using Node.js 22.
+GitHub Actions runs these checks on every push and pull request using Node.js 24, the version Vercel deploys with.
 
 ## AI disclaimer
 

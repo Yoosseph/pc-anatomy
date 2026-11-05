@@ -141,7 +141,7 @@ if three.js reappears in the entry chunk or it grows past its budget.
 
 ## Run it
 
-Node 22.13 or newer.
+Node 24.
 
 ```bash
 npm install
@@ -840,7 +840,7 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
-with Node.js 22.
+with Node.js 24, the version Vercel deploys with.
 
 - `tests/manifest.test.ts` (17) — unique ids, reciprocal parents, no cycles,
   source resolution, SKU counts against full-chip capacity, search behaviour,

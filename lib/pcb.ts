@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { markShared } from './geometry-cache.ts';
 
 /**
  * Printed circuit board faces, drawn rather than downloaded.
@@ -169,7 +170,7 @@ function motherboardTexture() {
     ['PANEL', 65, 142],
   ] as const)
     c.fillText(text, x, z);
-  const texture = new T.CanvasTexture(canvas);
+  const texture = markShared(new T.CanvasTexture(canvas));
   texture.colorSpace = T.SRGBColorSpace;
   texture.anisotropy = 8;
   return texture;
@@ -390,7 +391,7 @@ function genericPcbTexture(variant: BoardVariant) {
   ctx.fillText('ILLUSTRATIVE ROUTING, NOT A NETLIST', 34, H - 52);
   ctx.globalAlpha = 1;
 
-  const texture = new T.CanvasTexture(canvas);
+  const texture = markShared(new T.CanvasTexture(canvas));
   texture.colorSpace = T.SRGBColorSpace;
   texture.anisotropy = 8;
   cache.set(variant, texture);
@@ -419,7 +420,7 @@ export function pcbRoughness(variant: BoardVariant = 'motherboard') {
     img.data.set([v, v, v, 255], i * 4);
   }
   ctx.putImageData(img, 0, 0);
-  const texture = new T.CanvasTexture(canvas);
+  const texture = markShared(new T.CanvasTexture(canvas));
   texture.wrapS = texture.wrapT = T.RepeatWrapping;
   texture.repeat.set(6, 6);
   roughCache.set(variant, texture);

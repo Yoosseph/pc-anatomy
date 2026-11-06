@@ -83,6 +83,12 @@ export function useExplorer() {
     toggleAuto,
   } = useDisassemblyPlayback(state.explode, updateExplode);
 
+  /** Stop animations before the explorer's scene is replaced by comparison. */
+  const stopActivity = useCallback(() => {
+    stopDisassembly();
+    setState((s) => (s.diveInto ? { ...s, diveInto: null } : s));
+  }, [stopDisassembly]);
+
   const navigate = useCallback(
     (level: LevelId, selection: Selection | null = null) => {
       stopDisassembly();
@@ -447,7 +453,7 @@ export function useExplorer() {
     choose,
     selectConcept,
     setExplode,
-    stopDisassembly,
+    stopActivity,
     toggleAuto,
     toggleCategory,
     toggleAllCategories,

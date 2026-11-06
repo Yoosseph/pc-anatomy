@@ -8,7 +8,7 @@ import { accelerateRaycasts } from '../lib/raycast-acceleration.ts';
 import { levelIds } from '../lib/levels.ts';
 import { keyCenter } from '../lib/memory-module.ts';
 import { hardwareInventory, type Vec3 } from '../lib/layout.ts';
-import { roundedBox } from '../lib/geometry-cache.ts';
+import { isShared, roundedBox } from '../lib/geometry-cache.ts';
 import { surfaceTexture } from '../lib/surfaces.ts';
 import {
   ModelPoseCache,
@@ -23,7 +23,7 @@ import {
 // Geometry tests need the canvas texture API, but not a WebGL context. Browser
 // visual checks cover the real textures; this stub only records valid dimensions.
 const previousDocument = globalThis.document;
-globalThis.document = {
+const geometryDocument = {
   createElement: () => ({
     width: 0,
     height: 0,
@@ -41,6 +41,7 @@ globalThis.document = {
       ),
   }),
 } as unknown as Document;
+globalThis.document = geometryDocument;
 after(() => {
   globalThis.document = previousDocument;
 });
@@ -249,6 +250,73 @@ await test('disposing a model frees its own resources but not shared ones', () =
   assert.ok(freed.has(own) && freed.has(material));
   assert.ok(!freed.has(shared), 'shared geometry was disposed');
   assert.ok(!freed.has(surface), 'shared texture was disposed');
+});
+
+await test('merging a new model preserves shared geometry used by an existing model', () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = geometryDocument;
+  const active = models.get('dimm')!;
+  const shared = new Set<T.BufferGeometry>();
+  active.root.traverse((object) => {
+    if (object instanceof T.Mesh && isShared(object.geometry))
+      shared.add(object.geometry);
+  });
+  assert.ok(shared.size > 0);
+  const freed = new Set<T.BufferGeometry>();
+  const listeners = [...shared].map((geometry) => {
+    const onDispose = () => {
+      freed.add(geometry);
+    };
+    geometry.addEventListener('dispose', onDispose);
+    return () => geometry.removeEventListener('dispose', onDispose);
+  });
+  try {
+    // A board embeds a DIMM, merging some of the same cached geometries that
+    // the standalone DIMM still draws. Both can be alive in comparison mode.
+    const board = buildModel('motherboard');
+    disposeModelResources(board);
+    assert.equal(
+      freed.size,
+      0,
+      'building or disposing a board invalidated the active DIMM',
+    );
+  } finally {
+    listeners.forEach((remove) => remove());
+    globalThis.document = priorDocument;
+  }
+});
+
+await test('disposing another board preserves the cached textures on an active board', () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = geometryDocument;
+  const activeTextures = new Set<T.Texture>();
+  models.get('motherboard')!.root.traverse((object) => {
+    if (!(object instanceof T.Mesh)) return;
+    for (const material of [object.material].flat())
+      for (const value of Object.values(material))
+        if (value instanceof T.Texture) activeTextures.add(value);
+  });
+  assert.ok(activeTextures.size > 0);
+  const freed = new Set<T.Texture>();
+  const listeners = [...activeTextures].map((texture) => {
+    const onDispose = () => {
+      freed.add(texture);
+    };
+    texture.addEventListener('dispose', onDispose);
+    return () => texture.removeEventListener('dispose', onDispose);
+  });
+  try {
+    const otherBoard = buildModel('z890');
+    disposeModelResources(otherBoard);
+    assert.equal(
+      freed.size,
+      0,
+      'evicting another board freed textures on the active one',
+    );
+  } finally {
+    listeners.forEach((remove) => remove());
+    globalThis.document = priorDocument;
+  }
 });
 
 await test('the model shelf returns parked models and disposes only evictions', () => {

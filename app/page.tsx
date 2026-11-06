@@ -194,7 +194,7 @@ export default function Home() {
               onOpenSubmenu={explorer.showSubmenu}
               onNavigate={navigate}
               onCompare={() => {
-                explorer.stopDisassembly();
+                explorer.stopActivity();
                 setComparing(true);
               }}
               onBuild={explorer.openBuild}

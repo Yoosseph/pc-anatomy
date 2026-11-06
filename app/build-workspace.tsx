@@ -432,8 +432,8 @@ function ShareBuild({ build }: { build: DesktopBuild }) {
   }, [shared]);
 
   const copy = async () => {
-    // The address trails part choices by 250 ms. Serialize the chosen parts
-    // directly so sharing immediately after a swap cannot copy the old build.
+    // Serialize the chosen parts directly so sharing does not depend on when
+    // the address effect runs after a swap.
     const address = new URL(location.href);
     address.search = placeToSearch({
       level: 'pc',

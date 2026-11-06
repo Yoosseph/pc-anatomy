@@ -89,6 +89,73 @@ try {
   );
 
   await check(
+    'Back restores the latest parts after leaving Build immediately',
+    async () => {
+      await page.goto(`${base}/?scale=pc&mode=build`);
+      const slot = page.locator('.build-slot').filter({
+        has: page.locator('.build-slot-label', { hasText: 'Graphics card' }),
+      });
+      await slot.locator('.build-slot-head').evaluate((el) => el.click());
+      await slot
+        .locator('.build-option')
+        .filter({ hasText: 'Arc B580' })
+        .evaluate(async (el) => {
+          el.click();
+          await new Promise((resolve) => queueMicrotask(resolve));
+          document.querySelector('.build-back').click();
+        });
+      await page.locator('.build-topbar').waitFor({ state: 'detached' });
+      await page.goBack();
+      await page.locator('.build-topbar').waitFor();
+      assert.match(
+        await slot.locator('.build-slot-text strong').innerText(),
+        /Arc B580/,
+      );
+      assert.equal(new URL(page.url()).searchParams.get('gpu'), 'arcb580');
+    },
+  );
+
+  await check('Comparison cancels an interrupted explorer dive', async () => {
+    await page.goto(`${base}/?scale=pc&part=cpucooler`);
+    await page.locator('.open-component').evaluate((el) => el.click());
+    await click('Compare components');
+    await click('Back to explorer');
+    await page
+      .getByRole('heading', { name: 'Processor cooler', exact: true })
+      .waitFor({ timeout: 1000 });
+  });
+
+  await check(
+    'Pending edits do not overwrite Back and survive Forward',
+    async () => {
+      await page.goto(`${base}/?scale=pc`);
+      await click('Build your own PC');
+      const slot = page.locator('.build-slot').filter({
+        has: page.locator('.build-slot-label', { hasText: 'Graphics card' }),
+      });
+      await slot.locator('.build-slot-head').evaluate((el) => el.click());
+      await slot
+        .locator('.build-option')
+        .filter({ hasText: 'Arc B580' })
+        .evaluate(async (el) => {
+          el.click();
+          await new Promise((resolve) => queueMicrotask(resolve));
+          history.back();
+        });
+      await page.locator('.build-topbar').waitFor({ state: 'detached' });
+      await page.waitForTimeout(300);
+      assert.equal(new URL(page.url()).searchParams.get('mode'), null);
+      assert.equal(new URL(page.url()).searchParams.get('gpu'), null);
+      await page.goForward();
+      await page.locator('.build-topbar').waitFor();
+      assert.match(
+        await slot.locator('.build-slot-text strong').innerText(),
+        /Arc B580/,
+      );
+    },
+  );
+
+  await check(
     'Choosing a search result stops automatic disassembly',
     async () => {
       await page.goto(`${base}/?scale=sm`);

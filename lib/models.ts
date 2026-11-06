@@ -26,7 +26,7 @@ import { buildCoreIo, buildRyzenIo } from './io-die.ts';
 import { packageTexture, surfaceTexture } from './surfaces.ts';
 import { pcbRoughness, pcbTexture, type BoardVariant } from './pcb.ts';
 import * as T from 'three';
-import { roundedBox } from './geometry-cache.ts';
+import { isShared, roundedBox } from './geometry-cache.ts';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { byId, colors } from './manifest.ts';
 import type { LevelId } from './levels.ts';
@@ -527,7 +527,9 @@ export function buildModel(
       if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
     }
   });
-  retired.forEach((g) => g.dispose());
+  retired.forEach((g) => {
+    if (!isShared(g)) g.dispose();
+  });
   return { root, pieces };
 }
 

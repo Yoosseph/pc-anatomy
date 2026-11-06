@@ -117,19 +117,24 @@ export function createStageLoop(
 ) {
   let frameId = 0,
     remaining = 0,
-    lastTime = performance.now();
+    lastTime = performance.now(),
+    disposed = false;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function render(now: number) {
+    if (disposed) return;
     const delta = Math.min(1, (now - lastTime) / 1000);
     lastTime = now;
-    if (draw(now / 1000, delta, reducedMotion) || remaining) {
+    const moving = draw(now / 1000, delta, reducedMotion);
+    if (disposed) return;
+    if (moving || remaining) {
       remaining = Math.max(0, remaining - 1);
       frameId = requestAnimationFrame(render);
     } else frameId = 0;
   }
 
   function wake(frames = 2) {
+    if (disposed) return;
     remaining = Math.max(remaining, frames);
     if (!frameId) {
       // Time spent asleep is not animation time for the newly requested move.
@@ -149,7 +154,9 @@ export function createStageLoop(
   return {
     wake,
     dispose() {
+      disposed = true;
       cancelAnimationFrame(frameId);
+      frameId = 0;
       controls.removeEventListener('start', start);
       controls.removeEventListener('change', change);
     },

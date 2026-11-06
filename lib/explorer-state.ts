@@ -82,6 +82,8 @@ export function selectSearch(state: ExplorerState, id: string): ExplorerState {
     return {
       ...state,
       level: c.level,
+      diveInto: null,
+      workspace: 'explorer',
       explode: 0,
       selection: null,
       visible: [...categories],
@@ -94,6 +96,8 @@ export function selectSearch(state: ExplorerState, id: string): ExplorerState {
   return {
     ...state,
     level: c.level,
+    diveInto: null,
+    workspace: 'explorer',
     // Physical assemblies hide their internals, so part-way open is the only
     // position where a result inside one is actually visible.
     explode: isPhysical(c.level) ? 48 : 0,

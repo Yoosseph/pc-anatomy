@@ -22,6 +22,12 @@ after a model is on screen, and returns a cancel that model disposal must call.
 Trees are built in indirect mode, so GPU index buffers are never reordered, and
 they return the same intersections as the triangle scan they replace.
 
+Model disposal releases mesh and line geometry/materials, instance-owned GPU
+buffers, and each owned texture once. Shared geometry survives consolidation
+as well as disposal, and cached PCB textures are marked shared so replacing
+one board preserves another's maps. A disposed stage loop ignores late wake callbacks, including
+shader compilation finishing after the viewer has closed.
+
 Switching systems is mostly not rebuilding. Both viewers park the model they
 leave on a `createModelShelf` (two parked on desktop, one on touch devices) and
 take it back on return, so only a first visit builds. `exchange` takes before it
@@ -137,7 +143,9 @@ the entry chunk (1.2 MB, 340 KB gzipped) without any error. Questions the
 interface asks before the engine loads live in three-free modules
 (`airflow-policy.ts`, `deep-link.ts`, `pointer-intent.ts`,
 `inventory-labels.ts`), and `npm run size`, run in CI after the build, fails
-if three.js reappears in the entry chunk or it grows past its budget.
+if three.js reappears in any eagerly imported chunk or their total grows past
+its budget. The Vite build manifest supplies the complete static import graph;
+dynamic viewer imports stay outside the initial-download budget.
 
 ## Run it
 
@@ -152,7 +160,7 @@ npm run lint      # oxlint
 npm run format    # oxfmt
 npm test          # node --experimental-strip-types --test tests/*.test.ts
 npm run build     # tsc --noEmit && vite build
-npm run size      # after a build: entry chunk under budget, no three.js in it
+npm run size      # after a build: eager scripts under budget, no three.js in them
 npm start         # preview the production build
 ```
 
@@ -347,12 +355,12 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 166 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 176 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels, resource disposal and the engine staying out of the initial download. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
 | `scripts/build-smoke.mjs` | The build workspace in headless Edge: opens it on the explorer's scene, swaps every slot, filters a slot by maker, times each choice from click to next frame, folds both panels away and back, follows a shared link (checking the link Share shows is the address), leaves and comes back, opens the installed card, survives Reset, and checks phone widths with the sheet up and down. Screenshots go to `outputs/build`. |
-| `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
+| `scripts/check-bundle-size.mjs`, `bundle-size.ts` | `npm run size`. Traverses the build manifest's static imports, counts each eager script once, and fails if the initial download contains three.js or exceeds the gzip budget. |
 
 ## The interfaces you will touch
 
@@ -514,10 +522,16 @@ These interaction decisions are settled, and re-opening them has been tried:
   hidden parts and the airflow preference stay out: they are how one person is
   looking, not where. Scale changes and opening or leaving the workspace are
   history steps; selections, part swaps and slider moves replace the current
-  entry, the slider only once it has settled.
+  entry. Build choices are written immediately so quick Back/Forward keeps
+  them; the slider is written once settled. A pending selection or slider
+  update is flushed before pushing a new place and discarded on popstate.
 - **The detail panel is suppressed mid-dive.** `selected` is null while
   `diveInto` is set, or the outer component's panel flashes for a few hundred
   milliseconds before the deeper scale replaces it.
+- **Search cancels the previous interaction.** Selecting a result stops Auto,
+  clears any dive in flight, and leaves the build workspace. Entering comparison
+  stops playback and cancels an outgoing dive before the explorer's scene is
+  disposed, so returning cannot strand a transition in the replacement scene.
 - **Glass is see-through to the cursor.** `resolvePick` steps past transparent
   surfaces. Before it existed, the side panel answered for the whole machine and
   nothing inside the case could be hovered.
@@ -663,8 +677,9 @@ the liquid loop the card's room is 420 mm less the radiator's 27 mm
 (`cardClearance`). `tests/build.test.ts` measures every one of those
 numbers in the built tower.
 
-**Share your build** copies the address, which carries the build, and shows
-the link it copied under the button with a line on what it opens, so a reader
+**Share your build** serializes the current chosen parts directly, independently
+of the address effect's timing, and shows the link it copied under the
+button with a line on what it opens, so a reader
 who has never shared a page this way sees what is on their clipboard. Where
 the browser refuses the clipboard, the link is shown selected, to copy by
 hand. It goes after a few seconds, on a click elsewhere or on Escape, and
@@ -747,8 +762,10 @@ The tower keeps the piece ids `motherboard`, `cpucooler`, `graphicscard` and `ps
 whatever is installed, because power routes, the hidden list and selections
 hold onto them. `standIn` says which concept the piece describes (the
 installed part's own root concept), and `opensTo` says where opening it
-leads. The detail panel and the dive go through those two. `powerPanelState`
-names the installed card's own feed (`graphicsFeed`), so the Arc's route
+leads. The detail panel, page title and dive go through those two with the
+current scale: only tower pieces are substituted, so opening an original
+standalone part still describes that part when the build has a replacement.
+`powerPanelState` names the installed card's own feed (`graphicsFeed`), so the Arc's route
 reads 8-pin PCIe, and its explanation follows.
 
 `tests/build.test.ts` covers the rules and builds the tower with every card
@@ -836,7 +853,20 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-166 tests, all through Node's built-in runner.
+176 tests, all through Node's built-in runner.
+
+`tests/model-resources.test.ts` covers line and instance resource disposal,
+deduplication of owned textures, and preservation of shared resources.
+`scripts/ui-state-smoke.mjs` checks immediate build sharing, standalone part
+identity, history after quick part changes, and stopping Auto and dives on
+search and comparison. Run it against a dev or preview server with
+`UI_BASE_URL` and optionally `BROWSER_EXECUTABLE`. It disables WebGL to isolate
+UI state; it does not validate rendered geometry.
+`scripts/scene-lifecycle-smoke.mjs` uses real WebGL to check same-scale dive
+cancellation and preservation of incoming ramps. Run it against Vite dev with
+`SCENE_BASE_URL` and optionally `BROWSER_EXECUTABLE`.
+`tests/bundle-size.test.ts` verifies static dependency traversal, lazy viewer
+exclusion, shared chunks and cycles in the initial-download budget.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -849,7 +879,7 @@ with Node.js 24, the version Vercel deploys with.
   Motherboard and Processor menus, and the five supplies: in order, each
   opening its own scale with the figures the build checks against and a socket
   panel or a harness to match.
-- `tests/models.test.ts` (24) — geometry presence and identity for every scale,
+- `tests/models.test.ts` (26) — geometry presence and identity for every scale,
   ATX outline compliance, clearances between sockets, slots and armour, fits
   (M.2 packages under their covers, DDR5 notches), picking through glass,
   instanced pieces staying pickable after the layout moves them, and the rule
@@ -857,8 +887,8 @@ with Node.js 24, the version Vercel deploys with.
   processor together carry the whole board scale. Also checks pose-cache invalidation,
   unchanged instance-buffer versions, dive restoration, and precise picking
   equivalence with and without geometry bounding boxes.
-- `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
-  coalescing, disposal, and hidden/collapsed rotor behavior.
+- `tests/stage-loop.test.ts` (3) — idle sleep, animation continuation, wake-up
+  coalescing, disposal (including late callbacks), and hidden/collapsed rotor behavior.
 - `tests/gpus.test.ts` (11) — the five-card menu structure and the six boards
   in the Motherboard menu, published hierarchy counts multiplying out to
   published totals, diagram blocks not overlapping, each card's published
@@ -906,7 +936,7 @@ with Node.js 24, the version Vercel deploys with.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/build.test.ts` (27) — the build workspace's checks: what fails,
+- `tests/build.test.ts` (28) — the build workspace's checks: what fails,
   what warns, the socket each board takes, the micro-ATX outline, the memory
   speed rated for two modules and four, the picker's toned facts and meters,
   the adapter's lead count, a card too long for the case and the
@@ -923,7 +953,7 @@ with Node.js 24, the version Vercel deploys with.
   lands against each card maker's figure, and each maker's board in its own
   design: its slots, its socket, its heatsinks' finish and its maker's tag.
 
-- `tests/discovery.test.ts` (12) — every scale and every part surviving a
+- `tests/discovery.test.ts` (14) — every scale and every part surviving a
   round trip through a link, instances, disassembly, the build and the build
   workspace kept, nonsense links
   falling back to the nearest sensible place, titles, the committed sitemap

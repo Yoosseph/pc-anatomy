@@ -51,13 +51,13 @@
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "6.0.2",
-    "oxfmt": "0.61.0",
+    "oxfmt": "0.67.0",
     "oxlint": "1.76.0",
     "oxlint-tsgolint": "7.0.2001",
     "tailwindcss": "4.2.1",
     "tsx": "^4.23.13",
     "typescript": "5.9.3",
-    "vite": "8.0.13"
+    "vite": "8.1.6"
   },
   "type": "module"
 }

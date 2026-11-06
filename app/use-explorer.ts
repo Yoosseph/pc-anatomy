@@ -65,10 +65,10 @@ export function useExplorer() {
   // A tower piece describes the part the build put in its slot.
   const selected =
     state.selection && !state.diveInto
-      ? byId[standIn(state.selection.concept, state.build)]
+      ? byId[standIn(state.selection.concept, state.build, state.level)]
       : null;
   const opens = state.selection
-    ? opensTo(state.selection.concept, state.build)
+    ? opensTo(state.selection.concept, state.build, state.level)
     : null;
   const logical = !isPhysical(state.level);
   const updateExplode = useCallback(
@@ -82,6 +82,12 @@ export function useExplorer() {
     stop: stopDisassembly,
     toggleAuto,
   } = useDisassemblyPlayback(state.explode, updateExplode);
+
+  /** Stop animations before the explorer's scene is replaced by comparison. */
+  const stopActivity = useCallback(() => {
+    stopDisassembly();
+    setState((s) => (s.diveInto ? { ...s, diveInto: null } : s));
+  }, [stopDisassembly]);
 
   const navigate = useCallback(
     (level: LevelId, selection: Selection | null = null) => {
@@ -145,7 +151,7 @@ export function useExplorer() {
   // a dive in flight, so cancelling one is just clearing it.
   const dive = useCallback(
     (conceptId: string) => {
-      const target = opensTo(conceptId, state.build);
+      const target = opensTo(conceptId, state.build, state.level);
       if (!target) return false;
       // GPU diagrams open directly. The outgoing isolation animation selected
       // every repeated block and tinted the old scale green before replacing it.
@@ -173,19 +179,19 @@ export function useExplorer() {
       );
       return true;
     },
-    [navigate, state.build, stopDisassembly],
+    [navigate, state.build, state.level, stopDisassembly],
   );
 
   const arrive = useCallback(() => {
     const arrivedLevel = state.diveInto
-      ? opensTo(state.diveInto, state.build)
+      ? opensTo(state.diveInto, state.build, state.level)
       : null;
     if (!arrivedLevel) return;
     setHiddenMenuOpen(false);
     setOpenMenu(menuRoot(arrivedLevel));
     setOpenSubmenu(null);
     setState((s) => {
-      const target = s.diveInto ? opensTo(s.diveInto, s.build) : null;
+      const target = s.diveInto ? opensTo(s.diveInto, s.build, s.level) : null;
       if (!target || target !== arrivedLevel) return s;
       return {
         ...s,
@@ -202,7 +208,7 @@ export function useExplorer() {
         selection: { concept: levels[target].concept },
       };
     });
-  }, [state.build, state.diveInto]);
+  }, [state.build, state.diveInto, state.level]);
 
   const choose = useCallback(
     (selection: Selection | null, intent: 'open' | 'inspect' = 'inspect') => {
@@ -219,12 +225,17 @@ export function useExplorer() {
   );
 
   /** Jump to a component found by search, or named in another panel. */
-  const selectConcept = useCallback((id: string) => {
-    setOpenMenu(menuRoot(byId[id].level));
-    setOpenSubmenu(null);
-    setState((s) => selectSearch(s, id));
-    setLayers(false);
-  }, []);
+  const selectConcept = useCallback(
+    (id: string) => {
+      stopDisassembly();
+      setHiddenMenuOpen(false);
+      setOpenMenu(menuRoot(byId[id].level));
+      setOpenSubmenu(null);
+      setState((s) => selectSearch(s, id));
+      setLayers(false);
+    },
+    [stopDisassembly],
+  );
 
   const toggleCategory = (category: Category) =>
     setState((s) => ({
@@ -442,6 +453,7 @@ export function useExplorer() {
     choose,
     selectConcept,
     setExplode,
+    stopActivity,
     toggleAuto,
     toggleCategory,
     toggleAllCategories,

@@ -697,6 +697,9 @@ export function createViewer(
       hovered = null;
       callbacks.hover(null, 0, 0, false);
       const arriving = dive?.phase === 'out' && next.level !== state.level;
+      // Search or Reset can cancel a dive without replacing the current model.
+      // Incoming ramps belong to a completed navigation and must keep running.
+      if (dive?.phase === 'out' && !arriving && !next.diveInto) dive = null;
       if (next.diveRevision !== state.diveRevision && next.diveInto)
         dive = { concept: next.diveInto, t: 0, phase: 'out' };
       // A new scale, or the same tower with another card or supply in it.

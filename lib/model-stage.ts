@@ -237,9 +237,12 @@ export function commonModelBounds(
 
 export function disposeModelResources(model: BuiltModel) {
   const geometries = new Set<T.BufferGeometry>(),
-    materials = new Set<T.Material>();
+    materials = new Set<T.Material>(),
+    textures = new Set<T.Texture>();
   model.root.traverse((object) => {
-    if (!(object instanceof T.Mesh)) return;
+    if (!(object instanceof T.Mesh || object instanceof T.Line)) return;
+    // Instance attributes belong to the object, not its shared geometry.
+    if (object instanceof T.InstancedMesh) object.dispose();
     geometries.add(object.geometry);
     (Array.isArray(object.material)
       ? object.material
@@ -250,13 +253,12 @@ export function disposeModelResources(model: BuiltModel) {
     if (!isShared(geometry)) geometry.dispose();
   });
   materials.forEach((material) => {
-    if (
-      material instanceof T.MeshBasicMaterial ||
-      material instanceof T.MeshStandardMaterial
-    )
-      for (const value of Object.values(material))
-        if (value instanceof T.Texture && !isShared(value)) value.dispose();
+    for (const value of Object.values(material))
+      if (value instanceof T.Texture) textures.add(value);
     material.dispose();
+  });
+  textures.forEach((texture) => {
+    if (!isShared(texture)) texture.dispose();
   });
 }
 

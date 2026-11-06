@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { manifest, isLevelRoot } from '../lib/manifest.ts';
+import { byId, manifest, isLevelRoot } from '../lib/manifest.ts';
 import { isPhysical, levelIds, levels, rootLevel } from '../lib/levels.ts';
 import {
   homePlace,
@@ -10,7 +10,8 @@ import {
   searchToPlace,
   type Place,
 } from '../lib/deep-link.ts';
-import { defaultBuild } from '../lib/desktop-build.ts';
+import { defaultBuild, standIn, opensTo } from '../lib/desktop-build.ts';
+import { initialState, selectSearch } from '../lib/explorer-state.ts';
 import { tapIntent } from '../lib/pointer-intent.ts';
 import { labelWidth, placeLabels } from '../lib/inventory-labels.ts';
 import { sitemapUrls } from '../scripts/sitemap-urls.ts';
@@ -158,6 +159,58 @@ await test('a place is titled after what it shows', () => {
     placeTitle({ level, selection: null, explode: 0 }),
     `${levels[level].name} · PC Anatomy`,
   );
+});
+
+await test('tower titles name installed replacements without renaming standalone scales', () => {
+  const build = {
+    ...defaultBuild,
+    graphics: 'arcb580',
+    power: 'psubronze',
+    board: 'z890',
+    processor: 'corei9',
+    cooler: 'liquid',
+  } as const;
+  for (const concept of [
+    'graphicscard',
+    'psu',
+    'motherboard',
+    'processor',
+    'cpucooler',
+  ]) {
+    const place: Place = {
+      level: 'pc',
+      selection: { concept },
+      explode: 0,
+      build,
+    };
+    assert.equal(
+      placeTitle(place),
+      `${byId[standIn(concept, build)].name} · PC Anatomy`,
+    );
+    const level = byId[concept].open!;
+    assert.equal(standIn(concept, build, level), concept);
+    assert.equal(opensTo(concept, build, level), level);
+    assert.equal(
+      placeTitle({ ...place, level }),
+      `${byId[concept].name} · PC Anatomy`,
+    );
+  }
+});
+
+await test('search leaves the build workspace and cancels a previous dive', () => {
+  const state = {
+    ...initialState,
+    workspace: 'build',
+    diveInto: 'graphicscard',
+    diveRevision: 1,
+  } as const;
+  for (const id of ['nvmenand', 'pc']) {
+    const next = selectSearch(state, id);
+    assert.equal(next.diveInto, null, id);
+    assert.equal(next.workspace, 'explorer', id);
+    assert.equal(next.level, byId[id].level, id);
+    assert.equal(next.build, state.build, 'search preserves the chosen build');
+  }
 });
 
 await test('the sitemap lists every place a link can name, and is up to date', () => {

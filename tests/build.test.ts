@@ -266,7 +266,20 @@ await test('two modules or four, and four on a Ryzen are rated slower', () => {
   } as const;
   assert.equal(check(intelFour, 'speed').status, 'ok');
   assert.match(check(intelFour, 'speed').detail, /no separate figure/);
+  assert.doesNotMatch(check(intelFour, 'speed').title, /within.*rating/);
+  assert.doesNotMatch(check(intelFour, 'speed').detail, /past.*rating/);
   assert.deepEqual(checkSlots('speed'), ['processor', 'memory']);
+});
+
+await test('memory profiles are only described as exceeding a rating when they do', () => {
+  const intel = {
+    ...defaultBuild,
+    board: 'z890',
+    processor: 'corei9',
+  } as const;
+  assert.match(check(intel, 'speed').detail, /DDR5-6400/);
+  assert.doesNotMatch(check(intel, 'speed').detail, /past.*rating/);
+  assert.match(check(defaultBuild, 'speed').detail, /past.*rating/);
 });
 
 await test('a maker’s minimum is a failure; a recommendation is a warning', () => {
@@ -440,6 +453,13 @@ await test('the picker colours what agrees with the build', () => {
   const bronze = partFacts(defaultBuild, 'power', 'psubronze').meter!;
   assert.equal(bronze.tone, 'fail');
   assert.equal(partFacts(defaultBuild, 'power', 'psu').meter!.tone, 'warn');
+  // A supply can cover the CPU/GPU draw and still fail the card's minimum.
+  const radeon = { ...defaultBuild, graphics: 'rx9070' } as const;
+  assert.equal(
+    check({ ...radeon, power: 'psubronze' }, 'supply').status,
+    'fail',
+  );
+  assert.equal(partFacts(radeon, 'power', 'psubronze').meter!.tone, 'fail');
 });
 
 await test('every slot changes the tower, and only a change rebuilds it', () => {

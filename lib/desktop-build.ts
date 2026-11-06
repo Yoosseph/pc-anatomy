@@ -574,16 +574,24 @@ const towerPieces = new Map<
 ]);
 
 /** The concept a tower piece describes under this build. */
-export function standIn(id: string, build: DesktopBuild) {
-  const slot = towerPieces.get(id);
+export function standIn(
+  id: string,
+  build: DesktopBuild,
+  level: LevelId = 'pc',
+) {
+  const slot = level === 'pc' ? towerPieces.get(id) : undefined;
   return slot && build[slot] !== defaultBuild[slot]
     ? levels[build[slot]].concept
     : id;
 }
 
 /** Where opening a piece leads under this build. */
-export function opensTo(id: string, build: DesktopBuild): LevelId | null {
-  const slot = towerPieces.get(id);
+export function opensTo(
+  id: string,
+  build: DesktopBuild,
+  level: LevelId = 'pc',
+): LevelId | null {
+  const slot = level === 'pc' ? towerPieces.get(id) : undefined;
   return slot ? build[slot] : openLevel(id);
 }
 

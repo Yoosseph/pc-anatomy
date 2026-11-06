@@ -294,6 +294,12 @@ try {
   await click('Hide compatibility');
   await page.locator('.build-parts.collapsed .build-rail').waitFor();
   await page.locator('.build-report.collapsed .build-rail-verdict').waitFor();
+  await page.waitForFunction(
+    (width) =>
+      document.querySelector('.viewport').getBoundingClientRect().width >
+      width + 500,
+    wide.width,
+  );
   await ready();
   const wider = await stage();
   assert.ok(wider.width > wide.width + 500, 'the stage takes the room');
@@ -309,6 +315,13 @@ try {
     .locator('.build-rail-verdict')
     .evaluate((button) => button.click());
   await page.locator('.build-summary').waitFor();
+  await page.waitForFunction(
+    (width) =>
+      Math.round(
+        document.querySelector('.viewport').getBoundingClientRect().width,
+      ) === Math.round(width),
+    wide.width,
+  );
   await ready();
   assert.equal(Math.round((await stage()).width), Math.round(wide.width));
 
@@ -459,6 +472,14 @@ try {
       const short = await page.locator('.viewport').boundingBox();
       await click('Hide the panels');
       await page.locator('.build-panels.sheet-down').waitFor();
+      // The previous camera-settled flag can survive until ResizeObserver
+      // runs. Wait for the new layout before reading its height.
+      await page.waitForFunction(
+        (height) =>
+          document.querySelector('.viewport').getBoundingClientRect().height >
+          height + 200,
+        short.height,
+      );
       await ready();
       const tall = await page.locator('.viewport').boundingBox();
       assert.ok(tall.height > short.height + 200, 'the tower takes the sheet');

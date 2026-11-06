@@ -34,6 +34,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { sources } from '@/lib/manifest';
+import { placeToSearch } from '@/lib/deep-link';
 import {
   buildStatus,
   checkBuild,
@@ -184,7 +185,7 @@ export default function BuildWorkspace({
           </span>
           <h1>Build your PC</h1>
         </div>
-        <ShareBuild />
+        <ShareBuild build={build} />
       </header>
 
       <div
@@ -390,12 +391,12 @@ function PanelHead({
 }
 
 /**
- * Copies the address, which carries the build, so it can be sent on, and
+ * Copies a link to the current build, so it can be sent on, and
  * shows the link it copied: someone who has never shared a page this way sees
  * what is on their clipboard and what it will open. If the browser refuses
  * the clipboard, the link is selected instead, ready to copy by hand.
  */
-function ShareBuild() {
+function ShareBuild({ build }: { build: DesktopBuild }) {
   const [shared, setShared] = useState<{ url: string; copied: boolean }>();
   const [held, setHeld] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -431,7 +432,17 @@ function ShareBuild() {
   }, [shared]);
 
   const copy = async () => {
-    const url = location.href;
+    // The address trails part choices by 250 ms. Serialize the chosen parts
+    // directly so sharing immediately after a swap cannot copy the old build.
+    const address = new URL(location.href);
+    address.search = placeToSearch({
+      level: 'pc',
+      selection: null,
+      explode: 0,
+      workspace: 'build',
+      build,
+    });
+    const url = address.href;
     let copied = true;
     try {
       await navigator.clipboard.writeText(url);

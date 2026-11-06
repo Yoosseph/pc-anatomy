@@ -6,6 +6,7 @@ import {
   isCustomBuild,
   slotOptions,
   slots,
+  standIn,
   type BuildSlot,
   type DesktopBuild,
 } from './desktop-build.ts';
@@ -166,7 +167,13 @@ export function placeTitle(place: Place): string {
   if (place.workspace === 'build') return 'Build your PC · PC Anatomy';
   if (place.level === rootLevel && !place.selection) return 'PC Anatomy';
   const name = place.selection
-    ? byId[place.selection.concept]?.name
+    ? byId[
+        standIn(
+          place.selection.concept,
+          place.build ?? defaultBuild,
+          place.level,
+        )
+      ]?.name
     : levels[place.level].name;
   return name ? `${name} · PC Anatomy` : 'PC Anatomy';
 }

@@ -193,7 +193,10 @@ export default function Home() {
               onOpenMenu={explorer.showMenu}
               onOpenSubmenu={explorer.showSubmenu}
               onNavigate={navigate}
-              onCompare={() => setComparing(true)}
+              onCompare={() => {
+                explorer.stopDisassembly();
+                setComparing(true);
+              }}
               onBuild={explorer.openBuild}
               onClose={() => explorer.setLayers(false)}
             />

@@ -132,7 +132,13 @@ export function partFacts<S extends BuildSlot>(
         meter: {
           share: draw / psu.watts,
           label: `${draw} of ${psu.watts} W rated`,
-          tone: draw > psu.watts ? 'fail' : psu.watts < gpu.psu ? 'warn' : 'ok',
+          tone:
+            draw > psu.watts ||
+            (psu.watts < gpu.psu && gpu.psuKind === 'minimum')
+              ? 'fail'
+              : psu.watts < gpu.psu
+                ? 'warn'
+                : 'ok',
         },
       };
     }

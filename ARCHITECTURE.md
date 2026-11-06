@@ -22,6 +22,11 @@ after a model is on screen, and returns a cancel that model disposal must call.
 Trees are built in indirect mode, so GPU index buffers are never reordered, and
 they return the same intersections as the triangle scan they replace.
 
+Model disposal releases mesh and line geometry/materials, instance-owned GPU
+buffers, and each owned texture once. Shared geometry and textures survive for
+other models. A disposed stage loop ignores late wake callbacks, including
+shader compilation finishing after the viewer has closed.
+
 Switching systems is mostly not rebuilding. Both viewers park the model they
 leave on a `createModelShelf` (two parked on desktop, one on touch devices) and
 take it back on return, so only a first visit builds. `exchange` takes before it
@@ -347,7 +352,7 @@ subsystems stop touching.
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 166 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 172 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels, resource disposal and the engine staying out of the entry chunk. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -518,6 +523,9 @@ These interaction decisions are settled, and re-opening them has been tried:
 - **The detail panel is suppressed mid-dive.** `selected` is null while
   `diveInto` is set, or the outer component's panel flashes for a few hundred
   milliseconds before the deeper scale replaces it.
+- **Search cancels the previous interaction.** Selecting a result stops Auto,
+  clears any dive in flight, and leaves the build workspace. Entering comparison
+  also stops explorer playback so its hidden state and address stay still.
 - **Glass is see-through to the cursor.** `resolvePick` steps past transparent
   surfaces. Before it existed, the side panel answered for the whole machine and
   nothing inside the case could be hovered.
@@ -663,8 +671,9 @@ the liquid loop the card's room is 420 mm less the radiator's 27 mm
 (`cardClearance`). `tests/build.test.ts` measures every one of those
 numbers in the built tower.
 
-**Share your build** copies the address, which carries the build, and shows
-the link it copied under the button with a line on what it opens, so a reader
+**Share your build** serializes the current chosen parts directly, rather than
+waiting for the address bar's debounce, and shows the link it copied under the
+button with a line on what it opens, so a reader
 who has never shared a page this way sees what is on their clipboard. Where
 the browser refuses the clipboard, the link is shown selected, to copy by
 hand. It goes after a few seconds, on a click elsewhere or on Escape, and
@@ -747,8 +756,10 @@ The tower keeps the piece ids `motherboard`, `cpucooler`, `graphicscard` and `ps
 whatever is installed, because power routes, the hidden list and selections
 hold onto them. `standIn` says which concept the piece describes (the
 installed part's own root concept), and `opensTo` says where opening it
-leads. The detail panel and the dive go through those two. `powerPanelState`
-names the installed card's own feed (`graphicsFeed`), so the Arc's route
+leads. The detail panel, page title and dive go through those two with the
+current scale: only tower pieces are substituted, so opening an original
+standalone part still describes that part when the build has a replacement.
+`powerPanelState` names the installed card's own feed (`graphicsFeed`), so the Arc's route
 reads 8-pin PCIe, and its explanation follows.
 
 `tests/build.test.ts` covers the rules and builds the tower with every card
@@ -836,7 +847,17 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-166 tests, all through Node's built-in runner.
+172 tests, all through Node's built-in runner.
+
+`tests/model-resources.test.ts` covers line and instance resource disposal,
+deduplication of owned textures, and preservation of shared resources.
+`scripts/ui-state-smoke.mjs` checks immediate build sharing, standalone part
+identity, and stopping Auto on search and comparison. Run it against a dev or preview server with
+`UI_BASE_URL` and optionally `BROWSER_EXECUTABLE`. It disables WebGL to isolate
+UI state; it does not validate rendered geometry.
+`scripts/scene-lifecycle-smoke.mjs` uses real WebGL to check same-scale dive
+cancellation and preservation of incoming ramps. Run it against Vite dev with
+`SCENE_BASE_URL` and optionally `BROWSER_EXECUTABLE`.
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -857,8 +878,8 @@ with Node.js 24, the version Vercel deploys with.
   processor together carry the whole board scale. Also checks pose-cache invalidation,
   unchanged instance-buffer versions, dive restoration, and precise picking
   equivalence with and without geometry bounding boxes.
-- `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
-  coalescing, disposal, and hidden/collapsed rotor behavior.
+- `tests/stage-loop.test.ts` (3) — idle sleep, animation continuation, wake-up
+  coalescing, disposal (including late callbacks), and hidden/collapsed rotor behavior.
 - `tests/gpus.test.ts` (11) — the five-card menu structure and the six boards
   in the Motherboard menu, published hierarchy counts multiplying out to
   published totals, diagram blocks not overlapping, each card's published
@@ -906,7 +927,7 @@ with Node.js 24, the version Vercel deploys with.
   its empty centre columns, the package stack with the die face down over the
   slot, named geometry everywhere, and search reaching every memory scale.
 
-- `tests/build.test.ts` (27) — the build workspace's checks: what fails,
+- `tests/build.test.ts` (28) — the build workspace's checks: what fails,
   what warns, the socket each board takes, the micro-ATX outline, the memory
   speed rated for two modules and four, the picker's toned facts and meters,
   the adapter's lead count, a card too long for the case and the
@@ -923,7 +944,7 @@ with Node.js 24, the version Vercel deploys with.
   lands against each card maker's figure, and each maker's board in its own
   design: its slots, its socket, its heatsinks' finish and its maker's tag.
 
-- `tests/discovery.test.ts` (12) — every scale and every part surviving a
+- `tests/discovery.test.ts` (14) — every scale and every part surviving a
   round trip through a link, instances, disassembly, the build and the build
   workspace kept, nonsense links
   falling back to the nearest sensible place, titles, the committed sitemap

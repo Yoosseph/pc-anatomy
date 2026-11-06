@@ -160,11 +160,11 @@ function speedCheck(cpu: ProcessorOption, ram: MemoryOption) {
   const result = checkOf('speed', [...cpu.sources, ...ram.sources]);
   const maker = cpu.brand === 'amd' ? 'AMD' : 'Intel';
   const rated = cpu.memorySpeed[ram.modules];
-  const profile = `The kit reaches DDR5-${ram.speed} through its XMP or EXPO profile, which runs it past the processor’s rating.`;
+  const profile = `The kit reaches DDR5-${ram.speed} through its XMP or EXPO profile${rated !== undefined && ram.speed > rated ? ', which runs it past the processor’s rating' : ''}.`;
   if (rated === undefined)
     return result(
       'ok',
-      'Memory speed is within the published rating',
+      'Four-module speed is not specified',
       `${maker} rates the ${cpu.name} for up to DDR5-${cpu.memorySpeed[2]} and publishes no separate figure for ${ram.modules} modules. ${profile}`,
     );
   const four = cpu.memorySpeed[4];

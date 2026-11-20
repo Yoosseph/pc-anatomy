@@ -2,7 +2,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import { airflowShown } from '@/lib/airflow-policy';
-import { levelPath } from '@/lib/levels';
+import { levelPath, levels } from '@/lib/levels';
 import { useExplorer } from './use-explorer';
 import { useFirstVisitHint } from './use-first-visit-hint';
 import { useBuildWorkspace } from './use-build-workspace';
@@ -28,6 +28,8 @@ import ComparisonWorkbench from './comparison-workbench';
  */
 const loadBuildWorkspace = () => import('./build-workspace');
 const BuildWorkspace = lazy(loadBuildWorkspace);
+/** Off the first download too: most visits never open it. */
+const FeedbackDialog = lazy(() => import('./feedback-dialog'));
 
 export default function Home() {
   const explorer = useExplorer();
@@ -36,6 +38,9 @@ export default function Home() {
   const [search, setSearch] = useState(false),
     [query, setQuery] = useState(''),
     [about, setAbout] = useState(false),
+    // `null` until the form is first asked for, which is when it is fetched.
+    // After that it stays mounted, which is what keeps an unsent draft.
+    [feedback, setFeedback] = useState<boolean | null>(null),
     [comparing, setComparing] = useState(false),
     // `null` until the viewer has reported for the first time. Zero means the
     // viewer is running and nothing is switched on, which is a different thing
@@ -83,7 +88,7 @@ export default function Home() {
         el.closest('input,textarea,[contenteditable=true]')
       )
         return;
-      if (search || about) return;
+      if (search || about || feedback) return;
       if (building) {
         if (event.key === 'Escape') pointAt(null);
         return;
@@ -108,6 +113,7 @@ export default function Home() {
     building,
     choose,
     comparing,
+    feedback,
     navigate,
     pointAt,
     search,
@@ -170,6 +176,7 @@ export default function Home() {
             onToggleLayers={() => explorer.setLayers(!layers)}
             onSearch={() => setSearch(true)}
             onAbout={() => setAbout(true)}
+            onFeedback={() => setFeedback(true)}
           />
           <PerformanceTip ready={count !== null && count > 0} />
           {layers && (
@@ -292,6 +299,21 @@ export default function Home() {
         </>
       )}
       <AboutDialog open={about} onOpenChange={setAbout} />
+      {feedback !== null && (
+        <Suspense fallback={null}>
+          <FeedbackDialog
+            open={feedback}
+            onOpenChange={setFeedback}
+            context={() => ({
+              page: window.location.href,
+              selection: selected
+                ? `${selected.name} (${levels[state.level].name})`
+                : levels[state.level].name,
+              language: document.documentElement.lang || 'en',
+            })}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }

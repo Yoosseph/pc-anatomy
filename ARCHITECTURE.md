@@ -153,6 +153,7 @@ npm run format    # oxfmt
 npm test          # node --experimental-strip-types --test tests/*.test.ts
 npm run build     # tsc --noEmit && vite build
 npm run size      # after a build: entry chunk under budget, no three.js in it
+npm run test:e2e  # after a build: Playwright tests of the feedback form, desktop and phone
 npm start         # preview the production build
 ```
 
@@ -343,11 +344,12 @@ subsystems stop touching.
 | `app/use-disassembly-playback.ts` | Shared request-animation-frame playback for explorer and comparison disassembly controls. |
 | `app/build-workspace.tsx`, `build.css` | The build workspace: the parts list on one side, the verdict, the rated power and the cited checks on the other, the tower between them, either side folding to a rail, and on a phone the parts and checks as tabs under the tower. Loaded on its own, after the explorer has drawn. |
 | `app/use-build-workspace.ts`, `use-tower-build.ts` | What the workspace adds to the explorer: the tower a frame behind the chosen build, so a choice paints before the rebuild runs, and the link between a slot and the tower piece it fills. |
-| `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx` | One panel each. |
+| `app/topbar.tsx`, `scale-nav.tsx`, `systems-list.tsx`, `stage-heading.tsx`, `stage-tools.tsx`, `disassembly.tsx`, `search-dialog.tsx`, `detail-panel.tsx`, `about-dialog.tsx`, `feedback-dialog.tsx` | One panel each. |
+| `app/feedback.ts`, `api/contact.ts` | The feedback form. `feedback.ts` holds the form's rules without React (limits, payload, what each response means); `api/contact.ts` is the only server code, a Vercel Function that validates a message and emails it through Resend. It reads its key and inbox from environment variables and imports nothing from the project, so the two files each keep a copy of the limits and `tests/feedback.test.ts` checks they agree. |
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 166 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, and links, taps, labels and the engine staying out of the entry chunk. |
+| `tests/*.test.ts` | 193 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, links, taps, labels and the engine staying out of the entry chunk, and the feedback function and form. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
@@ -482,8 +484,8 @@ zero, heaped at the origin.
 
 `app/page.tsx` is composition and nothing else: it renders the panels in order
 and wires them to `useExplorer`. It holds only the state no panel owns — whether
-the comparison workbench is open, whether the search palette and about dialog
-are open, and the part count the viewer reports. Whether the build workspace is
+the comparison workbench is open, whether the search palette, about dialog
+and feedback form are open, and the part count the viewer reports. Whether the build workspace is
 open is explorer state (`workspace`), because it is part of the address and
 the back button leaves it.
 
@@ -836,7 +838,8 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-166 tests, all through Node's built-in runner.
+193 tests, all through Node's built-in runner, plus Playwright tests of the
+feedback form in `e2e/` (`npm run test:e2e`, not part of CI).
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request
@@ -857,6 +860,10 @@ with Node.js 24, the version Vercel deploys with.
   processor together carry the whole board scale. Also checks pose-cache invalidation,
   unchanged instance-buffer versions, dive restoration, and precise picking
   equivalence with and without geometry bounding boxes.
+- `tests/feedback.test.ts` (27) — the feedback function's validation, the
+  email it builds (labels, tags, one-line subject, escaped HTML), every status
+  it answers, the per-address limiter, how the form reads each response, and
+  that the form and the function agree on their limits.
 - `tests/stage-loop.test.ts` (2) — idle sleep, animation continuation, wake-up
   coalescing, disposal, and hidden/collapsed rotor behavior.
 - `tests/gpus.test.ts` (11) — the five-card menu structure and the six boards

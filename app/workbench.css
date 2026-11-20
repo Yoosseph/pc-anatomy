@@ -214,7 +214,11 @@ a {
   inset: 0 0 auto;
   height: 76px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* The outer columns size to their contents and the byline is centred in
+     the space between them, so a long first button pushes it aside rather
+     than running into it. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
@@ -278,6 +282,7 @@ a {
 }
 /* A centered, readable authorship link at every screen size. */
 .byline {
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3302,11 +3307,41 @@ a {
   }
 }
 
-/* Header chips at narrower widths. Feedback keeps its label everywhere: a
-   phone is where a mistake is most often spotted. The other chips give up
-   their labels first, then the GitHub byline gives up its words. */
+/* Header chips at narrower widths. Feedback always keeps a label (a phone
+   is where a mistake is most often spotted), shortened only on phones. The
+   other chips give up their labels first, then the GitHub byline gives up
+   its words. */
 .info-button.chip {
   color: #dde1e6;
+}
+@media (max-width: 900px) {
+  /* The long Feedback label needs the room: the byline becomes just the
+     GitHub mark, in a chip of its own. The words stay in the accessibility
+     tree, so the link keeps its name. */
+  .byline {
+    justify-self: start;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .byline > svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+  }
+  .byline-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* The full label on wide screens, a short one on phones. */
+.feedback-button .label-short {
+  display: none;
 }
 @media (max-width: 1100px) {
   .info-button.chip {
@@ -3331,31 +3366,15 @@ a {
     background: none;
     border-color: transparent;
   }
-  /* Just the GitHub mark, in a chip of its own. The words stay in the
-     accessibility tree, so the link keeps its name. */
-  .byline {
-    justify-self: start;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    justify-content: center;
+  .feedback-button .label-full {
+    display: none;
   }
-  .byline > svg {
-    display: block;
-    width: 15px;
-    height: 15px;
-  }
-  .byline-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .feedback-button .label-short {
+    display: inline;
   }
 }
-@media (max-width: 389px) {
-  /* No room for it beside "Give feedback"; the About panel links the source. */
+@media (max-width: 359px) {
+  /* No room for it beside Feedback; the About panel links the source. */
   .byline {
     display: none;
   }

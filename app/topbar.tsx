@@ -69,10 +69,13 @@ export default function Topbar({
         <button
           className="chip chip-accent feedback-button"
           onClick={onFeedback}
-          title="Report a mistake or suggest an idea"
+          title="Report a mistake, suggest an idea or get in touch about working together"
         >
           <MessageSquare size={15} />
-          <span>Give feedback</span>
+          {/* One of the two is hidden at a time, so the button's name is
+              always the label that is showing. */}
+          <span className="label-full">Feedback / Idea / Collaboration</span>
+          <span className="label-short">Feedback</span>
         </button>
         <a
           className="chip guide-link"

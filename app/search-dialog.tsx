@@ -17,6 +17,7 @@ import {
 import { byId, searchConcepts } from '@/lib/manifest';
 import { hueOfSystem, hueStyle } from '@/lib/palette';
 import { levels } from '@/lib/levels';
+import { t } from '@/lib/i18n/messages';
 
 /** What the palette offers before anything has been typed. */
 const suggested = [
@@ -48,22 +49,18 @@ export default function SearchDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal>
       <DialogContent className="search-dialog">
-        <DialogTitle>Find a component</DialogTitle>
-        <DialogDescription>
-          Jump to any hardware or architecture resource.
-        </DialogDescription>
+        <DialogTitle>{t.search.title}</DialogTitle>
+        <DialogDescription>{t.search.description}</DialogDescription>
         <Command shouldFilter={false}>
           <CommandInput
             value={query}
             onValueChange={onQueryChange}
-            placeholder="Try Tensor, GDDR7, L2 or SM…"
+            placeholder={t.search.placeholder}
           />
           <CommandList>
-            <CommandEmpty>
-              No matching components. Try “memory” or “CUDA”.
-            </CommandEmpty>
+            <CommandEmpty>{t.search.empty}</CommandEmpty>
             <CommandGroup
-              heading={query ? 'Matching structures' : 'Explore the specimen'}
+              heading={query ? t.search.matches : t.search.suggested}
             >
               {(query
                 ? searchConcepts(query)
@@ -81,10 +78,10 @@ export default function SearchDialog({
                     <small>
                       <span>{levels[c.level].name}</span>
                       <em>
-                        <b>{c.category}</b> ·{' '}
+                        <b>{t.categories[c.category]}</b> ·{' '}
                         {c.representationType === 'logical'
-                          ? 'Logical architecture'
-                          : 'Physical hardware'}
+                          ? t.search.logical
+                          : t.search.physical}
                       </em>
                     </small>
                   </div>
@@ -95,7 +92,7 @@ export default function SearchDialog({
           </CommandList>
         </Command>
         <div className="search-hint">
-          ↑ ↓ to browse <span>Enter to inspect</span>
+          {t.search.browse} <span>{t.search.inspect}</span>
         </div>
       </DialogContent>
     </Dialog>

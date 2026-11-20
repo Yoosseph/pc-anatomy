@@ -1,5 +1,7 @@
 import type { ComparisonCategoryId } from './comparison-catalogue.ts';
 import { notebookLevels, type NotebookLevel } from './notebook-levels.ts';
+import { translateLevel } from './i18n/content.ts';
+import { pack } from './i18n/pack.ts';
 /**
  * The exploration tree.
  *
@@ -812,6 +814,10 @@ export const levels: Record<LevelId, LevelDef> = {
   },
   ...notebookLevels,
 };
+
+// Written over with the visitor's language, when it is not English.
+for (const id of Object.keys(levels) as LevelId[])
+  levels[id] = translateLevel(levels[id], pack);
 
 export const levelIds = Object.keys(levels) as LevelId[];
 

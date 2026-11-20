@@ -17,6 +17,7 @@ import { byId, sources, type Concept } from '@/lib/manifest';
 import { hueOfLevel, hueOfSystem, hueStyle } from '@/lib/palette';
 import type { Selection } from '@/lib/explorer-state';
 import { levels, type LevelId } from '@/lib/levels';
+import { specLabel, t } from '@/lib/i18n/messages';
 
 type Props = {
   /** What the selected piece describes: in a custom build, the part installed. */
@@ -70,38 +71,40 @@ export default function DetailPanel({
             <div className="detail-top">
               <span className="detail-kind">
                 <i aria-hidden="true" />
-                {selected.category} /{' '}
+                {t.categories[selected.category]} /{' '}
                 {selected.representationType === 'logical'
-                  ? 'ARCHITECTURE'
-                  : 'HARDWARE'}
+                  ? t.detail.architecture
+                  : t.detail.hardware}
               </span>
-              <button aria-label="Close component details" onClick={onClose}>
+              <button aria-label={t.detail.close} onClick={onClose}>
                 <X size={17} />
               </button>
             </div>
             <SheetTitle>{selected.name}</SheetTitle>
             <div className="instance-label">
               {selection?.instance !== undefined
-                ? 'INSTANCE ' + String(selection.instance + 1).padStart(2, '0')
-                : 'COMPONENT GROUP'}
+                ? t.detail.instance(
+                    String(selection.instance + 1).padStart(2, '0'),
+                  )
+                : t.detail.group}
             </div>
             <SheetDescription>{selected.description}</SheetDescription>
             <div className="purpose">
-              <h3>What it does</h3>
+              <h3>{t.detail.purpose}</h3>
               <p>{selected.purpose}</p>
             </div>
             <div className="quantity">{selected.quantity}</div>
             <dl>
               {Object.entries(selected.specifications).map(([k, v]) => (
                 <div key={k}>
-                  <dt>{k}</dt>
+                  <dt>{specLabel(k)}</dt>
                   <dd>{v}</dd>
                 </div>
               ))}
             </dl>
             {selected.parent && (
               <div className="parent-link">
-                Part of{' '}
+                {t.detail.partOf}{' '}
                 <button onClick={() => onSelectConcept(selected.parent!)}>
                   {byId[selected.parent].shortName}
                   <ChevronRight size={12} />
@@ -114,32 +117,29 @@ export default function DetailPanel({
                 style={hueStyle(hueOfLevel(opens))}
                 onClick={() => onDive(piece!)}
               >
-                Take apart {levels[opens].name}
+                {t.detail.takeApart(levels[opens].name)}
                 <ChevronRight size={17} />
               </button>
             )}
             <div className="detail-actions">
               <button onClick={onIsolate}>
                 <Focus size={14} />
-                {isolated ? 'Show context' : 'Isolate'}
+                {isolated ? t.detail.showContext : t.detail.isolate}
               </button>
               <button onClick={onFocus}>
                 <Maximize size={14} />
-                Focus
+                {t.detail.focus}
               </button>
               <button onClick={() => onHide(piece!)}>
                 <EyeOff size={14} />
-                Hide
+                {t.detail.hide}
               </button>
             </div>
             <p className="accuracy">{selected.physicalAccuracy}</p>
             {selected.sources.length > 0 && (
               <div className="source-links">
-                <h3>References & architecture</h3>
-                <p>
-                  Manufacturer documents and standards explain this component
-                  family. Illustrative geometry is not a product schematic.
-                </p>
+                <h3>{t.detail.references}</h3>
+                <p>{t.detail.referencesNote}</p>
                 {selected.sources.map((s) => (
                   <a
                     key={s}

@@ -2,6 +2,7 @@
 import { Pause, Play, RotateCcw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { levels, type LevelId } from '@/lib/levels';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   level: LevelId;
@@ -25,9 +26,9 @@ export default function Disassembly({
   onToggleAuto,
   onSetExplode,
   onReset,
-  sectionLabel = 'Explosion control',
+  sectionLabel = t.disassembly.section,
   title,
-  sliderLabel = 'Disassemble the specimen',
+  sliderLabel = t.disassembly.slider,
   valueText,
 }: Props) {
   const phases = levels[level].phases,
@@ -43,18 +44,19 @@ export default function Disassembly({
           }
           onClick={onToggleAuto}
           aria-label={
-            playing
-              ? 'Pause automatic disassembly'
-              : 'Take it apart automatically'
+            playing ? t.disassembly.pauseAuto : t.disassembly.startAuto
           }
         >
           {playing ? <Pause size={23} /> : <Play size={23} />}
-          <span>{playing ? 'Pause' : 'Auto'}</span>
+          <span>{playing ? t.disassembly.pause : t.disassembly.auto}</span>
         </button>
         <div className="disassembly-label">
           <div>
-            <strong>{title ?? (logical ? 'Expand' : 'Disassemble')}</strong>
-            <span>DRAG OR PLAY</span>
+            <strong>
+              {title ??
+                (logical ? t.disassembly.expand : t.disassembly.disassemble)}
+            </strong>
+            <span>{t.disassembly.dragOrPlay}</span>
           </div>
         </div>
       </div>
@@ -76,7 +78,7 @@ export default function Disassembly({
             onSetExplode(Array.isArray(value) ? value[0] : value)
           }
           aria-label={sliderLabel}
-          aria-valuetext={valueText ?? `${explodePercent} percent`}
+          aria-valuetext={valueText ?? t.disassembly.percent(explodePercent)}
         />
         <div className="ruler" aria-hidden="true">
           {Array.from({ length: 41 }, (_, i) => (
@@ -88,11 +90,11 @@ export default function Disassembly({
         <output>{explodePercent}%</output>
         <button
           className="reset"
-          aria-label="Reset camera and assembly"
+          aria-label={t.disassembly.resetLabel}
           onClick={onReset}
         >
           <RotateCcw size={18} />
-          <span>Reset</span>
+          <span>{t.disassembly.reset}</span>
         </button>
       </div>
     </section>

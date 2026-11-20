@@ -35,6 +35,8 @@ import {
   type LevelId,
 } from './levels.ts';
 import { sources } from './sources.ts';
+import { translateConcept } from './i18n/content.ts';
+import { pack } from './i18n/pack.ts';
 
 export {
   categories,
@@ -53,7 +55,8 @@ export type Level = LevelId;
  * One catalogue assembled from per-subsystem files.
  *
  * Order matters only for presentation: the machine comes first, then the board
- * inside it, then the graphics card branch.
+ * inside it, then the graphics card branch. Each entry is translated here,
+ * once, when the visitor reads a language other than English.
  */
 export const manifest: Concept[] = [
   ...notebookConcepts,
@@ -81,7 +84,7 @@ export const manifest: Concept[] = [
   ...arcConcepts,
   ...dualCardConcepts,
   ...itxCardConcepts,
-];
+].map((c) => translateConcept(c, pack));
 
 export const byId = Object.fromEntries(
   manifest.map((c) => [c.id, c]),

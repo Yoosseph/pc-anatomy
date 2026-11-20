@@ -5,7 +5,6 @@ import {
   graphicsOptions,
   memoryFits,
   memoryOptions,
-  plural,
   powerOptions,
   processorOptions,
   socketFits,
@@ -21,6 +20,9 @@ import {
   type StorageOption,
 } from './desktop-build.ts';
 import type { SourceId } from './sources.ts';
+import { buildText } from './i18n/build-messages.ts';
+
+const text = buildText.checks;
 
 /**
  * Whether the parts of a build work together, one check at a time.
@@ -78,16 +80,8 @@ const checkOf =
 function socketCheck(cpu: ProcessorOption, board: BoardOption) {
   const result = checkOf('socket', [...cpu.sources, ...board.sources]);
   return socketFits(cpu, board)
-    ? result(
-        'ok',
-        'Processor fits the socket',
-        `The ${cpu.name} is an ${cpu.socket} processor, and the ${board.name} has an ${board.socket} socket.`,
-      )
-    : result(
-        'fail',
-        'Processor does not fit the socket',
-        `The ${cpu.name} needs an ${cpu.socket} socket. The ${board.name} has ${board.socket}, so the processor stays in its box and the socket keeps its cover.`,
-      );
+    ? result('ok', text.socketFits, text.socketFitsDetail(cpu, board))
+    : result('fail', text.socketMisfit, text.socketMisfitDetail(cpu, board));
 }
 
 /**
@@ -101,15 +95,15 @@ export function coolerCheck(cooler: CoolerOption) {
   const { radiator, height } = cooler;
   if (radiator) {
     const fits = radiator.fans <= caseRoom.frontFans;
-    const detail = `The ${radiator.length} mm radiator takes ${radiator.fans} 120 mm fans. The case has ${caseRoom.frontFans} behind the front panel, and ${caseRoom.roof} mm between the board and the roof, too little for a radiator and its fans.`;
+    const detail = text.radiatorDetail(radiator, caseRoom);
     return fits
-      ? result('ok', 'Radiator fits the front of the case', detail)
-      : result('fail', 'Radiator is too long for the case', detail);
+      ? result('ok', text.radiatorFits, detail)
+      : result('fail', text.radiatorTooLong, detail);
   }
-  const detail = `The tower stands ${height} mm off the board, and the case has about ${caseRoom.coolerHeight} mm to the side glass.`;
+  const detail = text.towerDetail(height ?? 0, caseRoom.coolerHeight);
   return (height ?? 0) <= caseRoom.coolerHeight
-    ? result('ok', 'Cooler fits under the side panel', detail)
-    : result('fail', 'Cooler is too tall for the case', detail);
+    ? result('ok', text.towerFits, detail)
+    : result('fail', text.towerTooTall, detail);
 }
 
 /**
@@ -121,20 +115,18 @@ export function boardCheck(
   board: Pick<BoardOption, 'name' | 'formFactor' | 'size' | 'sources'>,
 ) {
   const result = checkOf('board', board.sources);
-  const [height, depth] = board.size;
-  const article = board.formFactor === 'ATX' ? 'an' : 'a';
-  const detail = `The ${board.name} is ${article} ${board.formFactor} board, ${height} × ${depth} mm, and the case has standoffs for ${caseRoom.boards.join(' and ')} boards.`;
+  const detail = text.boardDetail(board, caseRoom.boards);
   return (caseRoom.boards as readonly string[]).includes(board.formFactor)
-    ? result('ok', 'Board fits the case', detail)
-    : result('fail', 'Board does not fit the case', detail);
+    ? result('ok', text.boardFits, detail)
+    : result('fail', text.boardMisfit, detail);
 }
 
 function memoryCheck(ram: MemoryOption, board: BoardOption) {
   if (memoryFits(ram, board))
     return checkOf('memory', [...ram.sources, ...board.sources])(
       'ok',
-      'Memory fits the slots',
-      `${plural(ram.modules, `${ram.generation} module`)} in the board’s four ${board.memory} slots.`,
+      text.memoryFits,
+      text.memoryFitsDetail(ram, board),
     );
   // The failure rests on the key positions, which the module's own sources
   // do not describe.
@@ -142,11 +134,7 @@ function memoryCheck(ram: MemoryOption, board: BoardOption) {
     'jedecmo329',
     'ddr5architecture',
     ...board.sources,
-  ])(
-    'fail',
-    'Memory does not fit the slots',
-    `The key notch of a ${ram.generation} module is in a different place from a ${board.memory} slot’s, so it cannot be pushed in. The slots stay empty.`,
-  );
+  ])('fail', text.memoryMisfit, text.memoryMisfitDetail(ram, board));
 }
 
 /**
@@ -160,22 +148,21 @@ function speedCheck(cpu: ProcessorOption, ram: MemoryOption) {
   const result = checkOf('speed', [...cpu.sources, ...ram.sources]);
   const maker = cpu.brand === 'amd' ? 'AMD' : 'Intel';
   const rated = cpu.memorySpeed[ram.modules];
-  const profile = `The kit reaches DDR5-${ram.speed} through its XMP or EXPO profile, which runs it past the processor’s rating.`;
+  const profile = text.speedProfile(ram.speed);
   if (rated === undefined)
     return result(
       'ok',
-      'Memory speed is within the published rating',
-      `${maker} rates the ${cpu.name} for up to DDR5-${cpu.memorySpeed[2]} and publishes no separate figure for ${ram.modules} modules. ${profile}`,
+      text.speedRated,
+      `${text.speedUnrated(maker, cpu, ram.modules)} ${profile}`,
     );
-  const four = cpu.memorySpeed[4];
-  const detail = `${maker} rates the ${cpu.name} at DDR5-${cpu.memorySpeed[2]} with two single-rank modules${four ? ` and DDR5-${four} with four` : ''}. ${profile}`;
+  const detail = `${text.speedRating(maker, cpu)} ${profile}`;
   return ram.modules === 4 && rated < cpu.memorySpeed[2]
     ? result(
         'warn',
-        'Four modules run slower',
-        `${detail} With every slot filled that profile is unlikely to hold, so expect the memory to run nearer DDR5-${rated}.`,
+        text.speedSlower,
+        `${detail} ${text.speedSlowerDetail(rated)}`,
       )
-    : result('ok', 'Memory speed is within reach', detail);
+    : result('ok', text.speedWithin, detail);
 }
 
 /** Exported so the tests can try a card longer than any on offer. */
@@ -190,68 +177,46 @@ export function lengthCheck(
     ...(cooler.radiator ? cooler.sources : []),
   ]);
   const radiator = cooler.radiator
-    ? ` With the radiator inside the front fans, that is ${caseRoom.cardLength} mm less its ${cooler.radiator.thickness} mm.`
+    ? ` ${text.lengthRadiator(caseRoom.cardLength, cooler.radiator.thickness)}`
     : '';
   return gpu.length <= room
     ? result(
         'ok',
-        'Card fits the case',
-        `${gpu.length} mm long, and the case takes cards up to about ${room} mm.${radiator}`,
+        text.lengthFits,
+        `${text.lengthFitsDetail(gpu.length, room)}${radiator}`,
       )
     : result(
         'fail',
-        'Card is too long for the case',
-        `${gpu.length} mm long, but the case only takes about ${room} mm.${radiator}`,
+        text.lengthTooLong,
+        `${text.lengthTooLongDetail(gpu.length, room)}${radiator}`,
       );
 }
 
 function supplyCheck(gpu: GraphicsOption, psu: PowerOption) {
   const result = checkOf('supply', [...gpu.sources, ...psu.sources]);
-  const detail = `${gpu.psuSource} gives ${gpu.psu} W as the ${gpu.psuKind} supply for the ${gpu.name}. The ${psu.name} is rated ${psu.watts} W.`;
-  if (psu.watts >= gpu.psu)
-    return result('ok', 'Supply meets the card maker’s figure', detail);
+  const detail = text.supplyDetail(gpu, psu);
+  if (psu.watts >= gpu.psu) return result('ok', text.supplyMeets, detail);
   return gpu.psuKind === 'minimum'
-    ? result('fail', 'Supply is below the card’s minimum', detail)
-    : result('warn', 'Supply is below the card maker’s recommendation', detail);
+    ? result('fail', text.supplyBelowMinimum, detail)
+    : result('warn', text.supplyBelowRecommendation, detail);
 }
 
 function connectorCheck(gpu: GraphicsOption, psu: PowerOption) {
   const result = checkOf('connector', [...gpu.sources, ...psu.sources]);
-  const leads = plural(psu.eightPin, '8-pin PCIe lead');
   if (gpu.connector === '8-pin')
     return psu.eightPin >= 1
-      ? result(
-          'ok',
-          'Power cable matches the card',
-          `The card takes one 8-pin PCIe lead, and the ${psu.name} has ${leads}.`,
-        )
-      : result(
-          'fail',
-          'No lead for the card',
-          `The card takes an 8-pin PCIe lead, and the ${psu.name} has none.`,
-        );
+      ? result('ok', text.cableMatches, text.eightPinDetail(psu))
+      : result('fail', text.noLead, text.noEightPinDetail(psu));
   if (psu.sixteenPin)
-    return result(
-      'ok',
-      'Power cable matches the card',
-      `The card takes a 16-pin 12V-2x6 lead, which the ${psu.name} has.`,
-    );
+    return result('ok', text.cableMatches, text.sixteenPinDetail(psu));
   if (!gpu.adapter)
-    return result(
-      'warn',
-      'No 16-pin lead for the card',
-      `The ${psu.name} has only 8-pin PCIe leads, and the card has a 16-pin 12V-2x6 socket. It needs a 12V-2x6 cable or an adapter.`,
-    );
+    return result('warn', text.noSixteenPin, text.noSixteenPinDetail(psu));
   return psu.eightPin >= gpu.adapter.leads
-    ? result(
-        'warn',
-        'Card needs its adapter',
-        `The ${psu.name} has no 16-pin 12V-2x6 lead. The card comes with a ${gpu.adapter.name} adapter, and the supply has ${leads} to fill it.`,
-      )
+    ? result('warn', text.needsAdapter, text.adapterDetail(psu, gpu.adapter))
     : result(
         'fail',
-        'Not enough leads for the card’s adapter',
-        `The ${psu.name} has no 16-pin 12V-2x6 lead, and the card’s ${gpu.adapter.name} adapter needs ${gpu.adapter.leads} leads where the supply has ${psu.eightPin}.`,
+        text.adapterShort,
+        text.adapterShortDetail(psu, gpu.adapter),
       );
 }
 
@@ -264,13 +229,12 @@ function storageCheck(
   psu: PowerOption,
   board: BoardOption,
 ) {
-  const m2 =
-    'The M.2 drive sits in the board’s M.2 slot and takes its power through it.';
+  const m2 = text.m2;
   if (!drives.sata)
     return checkOf('storage', [...drives.sources, ...board.sources])(
       'ok',
-      'Drive fits the board',
-      `${m2} The build needs no drive cables.`,
+      text.driveFits,
+      `${m2} ${text.noCables}`,
     );
   const result = checkOf('storage', [
     ...drives.sources,
@@ -278,16 +242,8 @@ function storageCheck(
     ...psu.sources,
   ]);
   return psu.sata >= 1
-    ? result(
-        'ok',
-        'Both drives are connected',
-        `${m2} The SATA SSD takes a data cable to one of the board’s SATA ports and a power lead from the ${psu.name}, which has ${plural(psu.sata, 'SATA power connector')}.`,
-      )
-    : result(
-        'fail',
-        'No power lead for the SATA drive',
-        `${m2} The SATA SSD needs a SATA power lead, and the ${psu.name} has none.`,
-      );
+    ? result('ok', text.drivesConnected, `${m2} ${text.sataDetail(psu)}`)
+    : result('fail', text.noSataLead, `${m2} ${text.noSataLeadDetail(psu)}`);
 }
 
 function budgetCheck(
@@ -304,17 +260,11 @@ function budgetCheck(
   const draw = cpu.watts + gpu.watts;
   // The figure is for the parts chosen, so it still answers whether this
   // supply would carry them when the processor cannot go into this board.
-  const unseated = socketFits(cpu, board)
-    ? ''
-    : ` The ${cpu.name} is counted as chosen, though it does not fit this board.`;
-  const detail = `${cpu.watts} W (${cpu.wattsLabel}) plus ${gpu.watts} W for the card is ${draw} W, against ${psu.watts} W. Memory, drives, fans and short peaks add more on top.${unseated}`;
+  const unseated = socketFits(cpu, board) ? '' : ` ${text.unseated(cpu)}`;
+  const detail = `${text.budgetDetail(cpu, gpu, psu)}${unseated}`;
   return draw <= psu.watts
-    ? result('ok', 'Processor and card are within the supply’s rating', detail)
-    : result(
-        'fail',
-        'Processor and card add up to more than the supply',
-        detail,
-      );
+    ? result('ok', text.budgetWithin, detail)
+    : result('fail', text.budgetOver, detail);
 }
 
 /** Rated draw: the processor's and the card's published power figures. */

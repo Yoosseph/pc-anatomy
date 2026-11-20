@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { ExplorerState, Selection } from '@/lib/explorer-state';
 import type { PartLabel } from '@/lib/inventory-labels';
 import { useViewerEngine } from './use-viewer-engine';
+import { t } from '@/lib/i18n/messages';
 type Props = {
   state: ExplorerState;
   /** Nothing has been drawn yet. */
@@ -51,17 +52,13 @@ export default function Viewer({
       labels: setLabels,
       error: reportError,
     }),
-    'The 3D viewer could not load. Reload to try again.',
+    t.viewer.loadFailed,
   );
   return (
     <>
-      <div
-        ref={host}
-        className="viewport"
-        aria-label="Interactive 3D computer model"
-      >
+      <div ref={host} className="viewport" aria-label={t.viewer.model}>
         {labels.length > 0 && (
-          <ul className="part-labels" aria-label="Parts on the tray">
+          <ul className="part-labels" aria-label={t.viewer.tray}>
             {labels.map((label) => (
               <li
                 key={label.concept}
@@ -88,16 +85,16 @@ export default function Viewer({
           rather than being drawn underneath it. */}
       {loading && !error && (
         <div className="empty-scene loading">
-          <h3>Loading components for you…</h3>
+          <h3>{t.viewer.loadingComponents}</h3>
         </div>
       )}
       {!ready && !error && (
-        <output className="viewer-status sr-only">Loading…</output>
+        <output className="viewer-status sr-only">{t.viewer.loading}</output>
       )}
       {error && (
         <div className="viewer-status error" role="alert">
           {error}
-          <button onClick={() => location.reload()}>Reload viewer</button>
+          <button onClick={() => location.reload()}>{t.viewer.reload}</button>
         </div>
       )}
       {hover && (
@@ -112,9 +109,7 @@ export default function Viewer({
           {hover.name}
           <span>
             {hoverHint ??
-              (hover.opens
-                ? 'Left-click to open · right-click to inspect'
-                : 'Click to inspect')}
+              (hover.opens ? t.viewer.hoverOpen : t.viewer.hoverInspect)}
           </span>
         </div>
       )}

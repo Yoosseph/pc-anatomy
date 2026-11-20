@@ -2,6 +2,7 @@ import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { isPhysical, type LevelId } from './levels.ts';
+import { t } from './i18n/messages.ts';
 
 /** Shared WebGL, lighting, camera, and controls owned by every model stage. */
 export function createStageRuntime(
@@ -81,7 +82,7 @@ export function createStageRuntime(
 
   const contextLost = (event: Event) => {
     event.preventDefault();
-    onError('The 3D context was interrupted. Reload the viewer to continue.');
+    onError(t.viewer.contextLost);
   };
   renderer.domElement.addEventListener('webglcontextlost', contextLost);
 

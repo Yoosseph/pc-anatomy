@@ -18,9 +18,9 @@ import {
 import type { ExplorerState } from '@/lib/explorer-state';
 import type { LevelId } from '@/lib/levels';
 import type { ReactNode } from 'react';
+import { t } from '@/lib/i18n/messages';
 
 const views = ['perspective', 'top', 'front', 'back'] as const;
-const viewLabels = ['3D', 'TOP', 'FRONT', 'BACK'];
 
 type Props = {
   children?: ReactNode;
@@ -85,18 +85,16 @@ export default function StageTools({
           navigationUI: 'hide',
         });
     } catch {
-      setFullscreenError(
-        'Fullscreen is blocked by this browser. Press F11 instead.',
-      );
+      setFullscreenError(t.tools.fullscreenBlocked);
     }
   }, []);
 
   return (
     <div className="stage-tools">
-      <div className="view-controls" aria-label="Camera controls">
-        {views.map((option, i) => {
+      <div className="view-controls" aria-label={t.tools.camera}>
+        {views.map((option) => {
           const active = flattened ? option === 'top' : view === option;
-          const name = option[0].toUpperCase() + option.slice(1) + ' view';
+          const name = t.tools.views[option].name;
           return (
             <button
               key={option}
@@ -107,14 +105,16 @@ export default function StageTools({
               className={active ? 'active' : ''}
               onClick={() => onSetView(option)}
             >
-              {viewLabels[i]}
+              {t.tools.views[option].short}
             </button>
           );
         })}
         <span />
         <button
-          title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          title={fullscreen ? t.tools.exitFullscreen : t.tools.enterFullscreen}
+          aria-label={
+            fullscreen ? t.tools.exitFullscreen : t.tools.enterFullscreen
+          }
           aria-pressed={fullscreen}
           className={fullscreen ? 'active' : ''}
           onClick={() => void toggleFullscreen()}
@@ -127,18 +127,20 @@ export default function StageTools({
           className={'airflow-toggle' + (showingAirflow ? ' active' : '')}
           title={
             showingAirflow
-              ? 'Hide the path the air takes'
+              ? t.tools.airflowHideTitle
               : assembled
-                ? 'Show the path the air takes through the machine'
-                : 'Show airflow — it draws on the assembled machine'
+                ? t.tools.airflowShowTitle
+                : t.tools.airflowAssembledTitle
           }
-          aria-label={showingAirflow ? 'Hide airflow' : 'Show airflow'}
+          aria-label={
+            showingAirflow ? t.tools.airflowHide : t.tools.airflowShow
+          }
           aria-pressed={showingAirflow}
           onClick={onToggleAirflow}
         >
           <Wind size={15} />
-          <span>Airflow</span>
-          <small>{showingAirflow ? 'On' : 'Off'}</small>
+          <span>{t.tools.airflow}</span>
+          <small>{showingAirflow ? t.common.on : t.common.off}</small>
         </button>
       )}
       {children}
@@ -151,17 +153,14 @@ export default function StageTools({
             onClick={onToggleHiddenMenu}
           >
             <EyeOff size={15} />
-            <span>
-              {hiddenComponents.length} hidden component
-              {hiddenComponents.length === 1 ? '' : 's'}
-            </span>
+            <span>{t.tools.hiddenCount(hiddenComponents.length)}</span>
             <ChevronDown size={14} />
           </button>
           {hiddenMenuOpen && (
             <div className="hidden-components-menu" id="hidden-components-menu">
               <div className="hidden-menu-heading">
-                <strong>Hidden on this scale</strong>
-                <button onClick={onClearHidden}>Show all</button>
+                <strong>{t.tools.hiddenHeading}</strong>
+                <button onClick={onClearHidden}>{t.systems.showAll}</button>
               </div>
               <ul>
                 {hiddenComponents.map((component) => (
@@ -172,11 +171,11 @@ export default function StageTools({
                     <i />
                     <span>{component.shortName}</span>
                     <button
-                      aria-label={`Show ${component.name}`}
+                      aria-label={t.common.show(component.name)}
                       onClick={() => onUnhide(component.id)}
                     >
                       <Eye size={14} />
-                      Show
+                      {t.tools.unhide}
                     </button>
                   </li>
                 ))}

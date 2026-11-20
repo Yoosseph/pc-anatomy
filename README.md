@@ -116,6 +116,8 @@ The rail on the left carries the scale tree and per-system visibility. The GPU m
 
 ![Every part of the machine laid out flat as a component inventory, seen on the desktop workbench](docs/screenshots/workbench-inventory.png)
 
+The site speaks English and French. It follows the browser's language on a first visit, and the language menu at the end of the top bar switches between them and remembers the choice.
+
 On the assembled desktop, turn on **Power** beside **Airflow** to trace the
 24-pin ATX, 8-pin EPS, 12V-2x6 GPU and SATA power feeds. Choose **All**, **CPU**,
 **GPU** or **Storage** to follow a destination; GPU includes its separate PCIe

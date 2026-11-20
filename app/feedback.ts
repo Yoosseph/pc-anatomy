@@ -6,6 +6,7 @@
  * not pull server code into its bundle; `tests/feedback.test.ts` fails if the
  * two copies drift apart.
  */
+import { t } from '../lib/i18n/messages.ts';
 
 export const LIMITS = {
   name: 80,
@@ -20,11 +21,7 @@ export const LIMITS = {
 export const KINDS = ['issue', 'idea', 'other'] as const;
 export type Kind = (typeof KINDS)[number];
 
-export const KIND_LABELS: Record<Kind, string> = {
-  issue: 'Issue or mistake',
-  idea: 'Idea or request',
-  other: 'Collaboration or something else',
-};
+export const KIND_LABELS: Record<Kind, string> = t.feedback.kinds;
 
 /** What the visitor is typing. Kept while the dialog is closed. */
 export type Draft = {

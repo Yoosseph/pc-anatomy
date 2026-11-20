@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { t } from '@/lib/i18n/messages';
 
 type ViewerEngine<State> = {
   update: (state: State) => void;
   dispose: () => void;
 };
 
-const webglError =
-  'WebGL could not start. Enable graphics acceleration in your browser, then reload the viewer.';
+const webglError = t.viewer.webgl;
 
 type ViewerFactory<State, Callbacks, Engine> = (
   host: HTMLDivElement,

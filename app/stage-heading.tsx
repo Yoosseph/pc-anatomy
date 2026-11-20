@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight, MousePointerClick, X } from 'lucide-react';
 import type { Concept } from '@/lib/manifest';
 import { levelPath, levels, type LevelId } from '@/lib/levels';
 import { hueOfLevel, hueOfSystem, hueStyle } from '@/lib/palette';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   level: LevelId;
@@ -19,8 +20,8 @@ type Props = {
 function hintCopy() {
   return typeof matchMedia !== 'undefined' &&
     matchMedia('(pointer: coarse)').matches
-    ? 'Tap a part to see what it is and take it apart, or press Auto.'
-    : 'Click a part to open it, right-click to inspect it, or press Auto.';
+    ? t.stage.hintTouch
+    : t.stage.hintPointer;
 }
 
 export default function StageHeading({
@@ -39,18 +40,18 @@ export default function StageHeading({
       <div>
         <h1>
           {explode === 100
-            ? 'Component inventory'
+            ? t.stage.inventory
             : explode > 0
               ? logical
-                ? 'Resources, separated'
-                : 'Coming apart'
+                ? t.stage.separated
+                : t.stage.comingApart
               : scale.title}
         </h1>
         {path.length > 1 && (
           <div className="stage-meta">
-            <nav className="breadcrumbs" aria-label="Component hierarchy">
+            <nav className="breadcrumbs" aria-label={t.stage.hierarchy}>
               <button
-                aria-label="Back one level"
+                aria-label={t.stage.back}
                 onClick={() => onNavigate(path[path.length - 2])}
               >
                 <ArrowLeft size={14} />
@@ -79,7 +80,7 @@ export default function StageHeading({
           <p className="first-visit-hint">
             <MousePointerClick size={15} aria-hidden="true" />
             <span>{hintCopy()}</span>
-            <button aria-label="Dismiss hint" onClick={onDismissHint}>
+            <button aria-label={t.stage.dismissHint} onClick={onDismissHint}>
               <X size={14} />
             </button>
           </p>

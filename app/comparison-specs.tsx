@@ -17,6 +17,7 @@ import {
 import { byId } from '@/lib/manifest';
 import { levels } from '@/lib/levels';
 import { sources } from '@/lib/sources';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   left: ComparisonLevel;
@@ -30,7 +31,7 @@ type Pair = readonly [ComparisonItem, ComparisonItem];
 const letters = ['A', 'B'] as const;
 
 function SpecValue({ value }: { value: string | null }) {
-  return value ?? <span className="spec-unlisted">Not listed</span>;
+  return value ?? <span className="spec-unlisted">{t.specs.notListed}</span>;
 }
 
 /** Like parts: one row per field label, gaps left visible. */
@@ -42,7 +43,7 @@ function SpecTable({ pair }: { pair: Pair }) {
       <table className="comparison-specs-grid">
         <thead>
           <tr className="spec-row spec-head">
-            <th scope="col">Specification</th>
+            <th scope="col">{t.specs.specification}</th>
             <th scope="col">A · {left.shortName}</th>
             <th scope="col">B · {right.shortName}</th>
           </tr>
@@ -71,9 +72,7 @@ function SpecTable({ pair }: { pair: Pair }) {
         </tbody>
       </table>
       {!rows.length && (
-        <p className="comparison-specs-note">
-          No specifications listed for these models.
-        </p>
+        <p className="comparison-specs-note">{t.specs.noneForModels}</p>
       )}
     </>
   );
@@ -90,7 +89,7 @@ function SpecCards({ pair }: { pair: Pair }) {
           </h3>
           <p>
             {levels[item.system].name} ·{' '}
-            {item.kind === 'physical' ? 'Hardware' : 'Architecture diagram'}
+            {item.kind === 'physical' ? t.compare.hardware : t.specs.diagram}
           </p>
           <dl>
             {item.specs.map((spec) => (
@@ -100,9 +99,7 @@ function SpecCards({ pair }: { pair: Pair }) {
               </div>
             ))}
           </dl>
-          {!item.specs.length && (
-            <p>No specifications listed for this model.</p>
-          )}
+          {!item.specs.length && <p>{t.specs.noneForModel}</p>}
         </section>
       ))}
     </div>
@@ -158,16 +155,14 @@ export default function ComparisonSpecs({
       >
         <div className="comparison-specs-heading">
           <div>
-            <SheetTitle>Specification comparison</SheetTitle>
+            <SheetTitle>{t.specs.title}</SheetTitle>
             <SheetDescription>
-              {aligned
-                ? 'Matching fields are aligned. Not listed means the catalogue has no value for that model.'
-                : 'Different kinds of parts, with each model’s own specifications.'}
+              {aligned ? t.specs.aligned : t.specs.independent}
             </SheetDescription>
           </div>
           <button
             ref={closeButton}
-            aria-label="Close specification comparison"
+            aria-label={t.specs.close}
             onClick={() => onOpenChange(false)}
           >
             <X size={18} />

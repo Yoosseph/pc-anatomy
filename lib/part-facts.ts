@@ -10,6 +10,7 @@ import {
   type BuildSlot,
   type DesktopBuild,
 } from './desktop-build.ts';
+import { buildText } from './i18n/build-messages.ts';
 
 /**
  * What the parts picker shows on each option, beyond its name: the few facts
@@ -59,10 +60,10 @@ export function partFacts<S extends BuildSlot>(
       return {
         facts: cooler.radiator
           ? [
-              { text: `${cooler.radiator.length} mm radiator` },
-              { text: `Card room ${cardClearance(cooler)} mm` },
+              { text: buildText.facts.radiator(cooler.radiator.length) },
+              { text: buildText.facts.cardRoom(cardClearance(cooler)) },
             ]
-          : [{ text: `${cooler.height} mm tall` }],
+          : [{ text: buildText.facts.tall(cooler.height ?? 0) }],
       };
     }
     case 'board': {
@@ -93,7 +94,7 @@ export function partFacts<S extends BuildSlot>(
       const drives = storageOptions[with_.storage];
       return {
         facts: drives.sata
-          ? [{ text: 'M.2 NVMe' }, { text: '2.5-inch SATA' }]
+          ? [{ text: 'M.2 NVMe' }, { text: buildText.facts.sata25 }]
           : [{ text: 'M.2 NVMe' }],
       };
     }
@@ -110,7 +111,7 @@ export function partFacts<S extends BuildSlot>(
         ],
         meter: {
           share: gpu.length / room,
-          label: `${Math.round(gpu.length)} of ${room} mm`,
+          label: buildText.facts.lengthOf(Math.round(gpu.length), room),
           tone: gpu.length <= room ? 'ok' : 'fail',
         },
       };
@@ -123,15 +124,21 @@ export function partFacts<S extends BuildSlot>(
         gpu.connector === '8-pin' ? psu.eightPin >= 1 : psu.sixteenPin;
       return {
         facts: [
-          { text: psu.modular ? 'Modular' : 'Fixed cables' },
           {
-            text: psu.sixteenPin ? '12V-2x6 lead' : `${psu.eightPin} × 8-pin`,
+            text: psu.modular
+              ? buildText.facts.modular
+              : buildText.facts.fixedCables,
+          },
+          {
+            text: psu.sixteenPin
+              ? buildText.facts.sixteenPinLead
+              : `${psu.eightPin} × 8-pin`,
             tone: agree(lead),
           },
         ],
         meter: {
           share: draw / psu.watts,
-          label: `${draw} of ${psu.watts} W rated`,
+          label: buildText.facts.drawOf(draw, psu.watts),
           tone: draw > psu.watts ? 'fail' : psu.watts < gpu.psu ? 'warn' : 'ok',
         },
       };

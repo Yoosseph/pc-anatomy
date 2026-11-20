@@ -30,6 +30,7 @@ import {
   type LevelId,
 } from '@/lib/levels';
 import { brandOf, brandStyle, hueOfLevel, hueStyle } from '@/lib/palette';
+import { t } from '@/lib/i18n/messages';
 
 /** One icon per scale, so the branch you are on is recognisable at a glance. */
 const levelIcon: Record<LevelId, typeof Box> = {
@@ -113,26 +114,6 @@ const levelIcon: Record<LevelId, typeof Box> = {
   xve: Microscope,
 };
 
-/** What a menu's dropdowns are, where each is a product of its own. */
-const dropdowns: Record<string, string> = {
-  GPU: 'cards',
-  Memory: 'generations',
-  Processor: 'processors',
-};
-/** Menus whose every scale is a whole product, so they are counted as such. */
-const products: Record<string, string> = {
-  Motherboard: 'boards',
-  'Power supply': 'models',
-};
-
-/** The line under a menu: "5 cards · 17 scales", "3 boards", "1 scale inside". */
-function menuNote(label: string, scales: number, submenus: number) {
-  if (submenus > 0)
-    return `${submenus} ${dropdowns[label] ?? 'models'} · ${scales} scales`;
-  if (products[label]) return `${scales} ${products[label]}`;
-  return `${scales} ${scales === 1 ? 'scale' : 'scales'} inside`;
-}
-
 type Props = {
   level: LevelId;
   shownMenu: LevelId | null;
@@ -164,12 +145,12 @@ export default function ScaleNav({
     <div className="explore-section">
       <button
         className="mobile-close"
-        aria-label="Close systems"
+        aria-label={t.nav.close}
         onClick={onClose}
       >
         <X size={17} />
       </button>
-      <nav className="system-picker" aria-label="Choose a system">
+      <nav className="system-picker" aria-label={t.nav.chooseSystem}>
         {systemRoots.map((root) => {
           const Icon = levelIcon[root];
           return (
@@ -183,10 +164,10 @@ export default function ScaleNav({
               </span>
               <strong>
                 {root === 'pc'
-                  ? 'Desktop PC'
+                  ? t.nav.desktop
                   : root === 'legion'
-                    ? 'Laptops'
-                    : 'Mac'}
+                    ? t.nav.laptops
+                    : t.nav.mac}
               </strong>
             </button>
           );
@@ -195,18 +176,18 @@ export default function ScaleNav({
       <button className="compare-button" onClick={onCompare}>
         <GitCompareArrows size={16} />
         <span>
-          <strong>Compare components</strong>
+          <strong>{t.nav.compare}</strong>
         </span>
         <ChevronRight size={14} />
       </button>
       <button className="compare-button build-button" onClick={onBuild}>
         <Wrench size={16} />
         <span>
-          <strong>Build your own PC</strong>
+          <strong>{t.nav.build}</strong>
         </span>
         <ChevronRight size={14} />
       </button>
-      <nav className="scale-navigation" aria-label="Exploration scale">
+      <nav className="scale-navigation" aria-label={t.nav.scale}>
         <button
           className={level === rootLevel ? 'active' : ''}
           aria-current={level === rootLevel ? 'true' : undefined}
@@ -246,7 +227,7 @@ export default function ScaleNav({
                   <small>
                     {levels[id].detailed
                       ? levels[id].summary
-                      : levels[id].summary + ' · placeholder'}
+                      : `${levels[id].summary} · ${t.nav.placeholder}`}
                   </small>
                 </div>
               </button>
@@ -269,9 +250,9 @@ export default function ScaleNav({
                     <Icon size={15} />
                   </b>
                   <div>
-                    {label}
+                    {t.branches[label] ?? label}
                     <small>
-                      {menuNote(label, scales.length, submenus.length)}
+                      {t.nav.menuNote(label, scales.length, submenus.length)}
                     </small>
                   </div>
                   <ChevronDown size={15} />
@@ -312,8 +293,7 @@ export default function ScaleNav({
                               {sub.label}
                               <small>
                                 {sub.note ? sub.note + ' · ' : ''}
-                                {sub.levels.length}{' '}
-                                {sub.levels.length === 1 ? 'scale' : 'scales'}
+                                {t.nav.scales(sub.levels.length)}
                               </small>
                             </div>
                             <ChevronDown size={13} />

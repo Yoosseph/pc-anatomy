@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { categories, manifest, type Category } from '@/lib/manifest';
 import { hueOfSystem, hueStyle } from '@/lib/palette';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   level: LevelId;
@@ -35,9 +36,11 @@ export default function SystemsList({
   return (
     <div className="systems-section">
       <div className="section-heading">
-        VISIBLE SYSTEMS{' '}
+        {t.systems.heading}{' '}
         <button onClick={onToggleAll}>
-          {visible.length === categories.length ? 'Hide all' : 'Show all'}
+          {visible.length === categories.length
+            ? t.systems.hideAll
+            : t.systems.showAll}
         </button>
       </div>
       <div className="layer-scroll">
@@ -47,14 +50,16 @@ export default function SystemsList({
               <button
                 className="category-visibility"
                 aria-pressed={visible.includes(category)}
-                aria-label={
-                  (visible.includes(category) ? 'Hide ' : 'Show ') + category
-                }
+                aria-label={(visible.includes(category)
+                  ? t.common.hide
+                  : t.common.show)(t.categories[category])}
                 onClick={() => onToggleCategory(category)}
               >
                 <i />
-                <span>{category}</span>
-                <small>{visible.includes(category) ? 'On' : 'Off'}</small>
+                <span>{t.categories[category]}</span>
+                <small>
+                  {visible.includes(category) ? t.common.on : t.common.off}
+                </small>
               </button>
               <button
                 className="category-expand"
@@ -62,11 +67,9 @@ export default function SystemsList({
                   setExpanded(expanded === category ? null : category)
                 }
                 aria-expanded={expanded === category}
-                aria-label={
-                  (expanded === category ? 'Hide ' : 'Show ') +
-                  category +
-                  ' components'
-                }
+                aria-label={(expanded === category
+                  ? t.systems.hideParts
+                  : t.systems.showParts)(t.categories[category])}
               >
                 <ChevronDown size={12} />
               </button>
@@ -93,11 +96,10 @@ export default function SystemsList({
                         onCheckedChange={(checked) =>
                           onSetConceptVisible(c.id, category, checked)
                         }
-                        aria-label={
-                          (visible.includes(category) && !hidden.includes(c.id)
-                            ? 'Hide '
-                            : 'Show ') + c.name
-                        }
+                        aria-label={(visible.includes(category) &&
+                          !hidden.includes(c.id)
+                          ? t.common.hide
+                          : t.common.show)(c.name)}
                       />
                     </div>
                   ))}

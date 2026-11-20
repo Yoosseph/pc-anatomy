@@ -48,7 +48,6 @@ import {
   changedParts,
   graphicsOptions,
   isCustomBuild,
-  plural,
   powerOptions,
   processorOptions,
   slotOptions,
@@ -58,6 +57,8 @@ import {
   type DesktopBuild,
 } from '@/lib/desktop-build';
 import { partFacts, type Meter } from '@/lib/part-facts';
+import { t } from '@/lib/i18n/messages';
+import { buildText } from '@/lib/i18n/build-messages';
 import './build.css';
 
 const statusIcon = {
@@ -65,11 +66,7 @@ const statusIcon = {
   warn: TriangleAlert,
   fail: CircleX,
 } satisfies Record<CheckStatus, typeof CircleCheck>;
-const statusWord: Record<CheckStatus, string> = {
-  ok: 'Works',
-  warn: 'Check',
-  fail: 'Problem',
-};
+const statusWord: Record<CheckStatus, string> = buildText.workspace.status;
 const slotIcon = {
   processor: Cpu,
   cooler: Fan,
@@ -80,15 +77,7 @@ const slotIcon = {
   power: Plug,
 } satisfies Record<BuildSlot, typeof Cpu>;
 /** Short names for the slot tags on each check. */
-const slotTag: Record<BuildSlot, string> = {
-  processor: 'CPU',
-  cooler: 'Cooler',
-  board: 'Board',
-  memory: 'RAM',
-  storage: 'Storage',
-  graphics: 'GPU',
-  power: 'PSU',
-};
+const slotTag: Record<BuildSlot, string> = buildText.workspace.slotTags;
 const slotLabel = Object.fromEntries(
   slots.map(({ id, label }) => [id, label]),
 ) as Record<BuildSlot, string>;
@@ -176,13 +165,13 @@ export default function BuildWorkspace({
       <header className="build-topbar">
         <button className="build-back" onClick={onExit}>
           <ChevronLeft size={17} aria-hidden="true" />
-          <span>Explorer</span>
+          <span>{buildText.workspace.explorer}</span>
         </button>
         <div className="build-title">
           <span className="build-title-icon" aria-hidden="true">
             <Wrench size={17} />
           </span>
-          <h1>Build your PC</h1>
+          <h1>{t.build.title}</h1>
         </div>
         <ShareBuild />
       </header>
@@ -191,7 +180,11 @@ export default function BuildWorkspace({
         className={'build-panels' + (sheet ? '' : ' sheet-down')}
         data-tab={tab}
       >
-        <div className="build-tabs" role="tablist" aria-label="Build panels">
+        <div
+          className="build-tabs"
+          role="tablist"
+          aria-label={buildText.workspace.panels}
+        >
           <button
             role="tab"
             aria-selected={tab === 'parts'}
@@ -200,7 +193,7 @@ export default function BuildWorkspace({
               setSheet(true);
             }}
           >
-            Parts
+            {buildText.workspace.parts}
             {changed > 0 && <span className="build-tab-count">{changed}</span>}
           </button>
           <button
@@ -212,7 +205,7 @@ export default function BuildWorkspace({
             }}
             className={'status-' + overall}
           >
-            Checks
+            {buildText.workspace.checks}
             {flagged > 0 && (
               <span className="build-tab-count status">{flagged}</span>
             )}
@@ -220,7 +213,11 @@ export default function BuildWorkspace({
           <button
             className="build-sheet-toggle"
             aria-expanded={sheet}
-            aria-label={sheet ? 'Hide the panels' : 'Show the panels'}
+            aria-label={
+              sheet
+                ? buildText.workspace.hidePanels
+                : buildText.workspace.showPanels
+            }
             onClick={() => setSheet((shown) => !shown)}
           >
             <ChevronDown size={16} aria-hidden="true" />
@@ -230,11 +227,16 @@ export default function BuildWorkspace({
         <section
           id="build-parts"
           className={'build-parts' + (partsOpen ? '' : ' collapsed')}
-          aria-label="Parts"
+          aria-label={buildText.workspace.parts}
         >
           <PanelHead
-            title="Parts"
-            note={`${slots.length} slots`}
+            title={buildText.workspace.parts}
+            toggle={
+              partsOpen
+                ? buildText.workspace.hideParts
+                : buildText.workspace.showParts
+            }
+            note={buildText.workspace.slotCount(slots.length)}
             open={partsOpen}
             side="left"
             controls="build-parts"
@@ -258,11 +260,7 @@ export default function BuildWorkspace({
                   />
                 ))}
               </ol>
-              <p className="build-fixed">
-                The case stays the same in every build: an ATX tower with
-                standoffs for ATX and micro-ATX boards, room for a 420 mm card
-                and three 120 mm front fans.
-              </p>
+              <p className="build-fixed">{buildText.workspace.fixedCase}</p>
             </div>
           ) : (
             <SlotRail build={build} checks={checks} onShow={showSlot} />
@@ -272,11 +270,16 @@ export default function BuildWorkspace({
         <section
           id="build-report"
           className={'build-report' + (checksOpen ? '' : ' collapsed')}
-          aria-label="Compatibility"
+          aria-label={buildText.workspace.compatibility}
         >
           <PanelHead
-            title="Compatibility"
-            note={plural(checks.length, 'check')}
+            title={buildText.workspace.compatibility}
+            toggle={
+              checksOpen
+                ? buildText.workspace.hideCompatibility
+                : buildText.workspace.showCompatibility
+            }
+            note={buildText.workspace.checkCount(checks.length)}
             open={checksOpen}
             side="right"
             controls="build-report"
@@ -285,16 +288,11 @@ export default function BuildWorkspace({
           {checksOpen ? (
             <div className="build-scroll">
               <Report build={build} checks={checks} onShowSlot={showSlot} />
-              <p className="build-note">
-                Figures are each maker’s published numbers, or measurements of
-                the modelled case. A supply below a recommendation may still run
-                the machine; one below a stated minimum is not supported by the
-                card’s maker.
-              </p>
+              <p className="build-note">{buildText.workspace.figuresNote}</p>
               {isCustomBuild(build) && (
                 <button className="build-restore" onClick={onRestore}>
                   <RotateCcw size={13} aria-hidden="true" />
-                  Back to the original build
+                  {buildText.workspace.restore}
                 </button>
               )}
             </div>
@@ -312,16 +310,16 @@ export default function BuildWorkspace({
         {fitting && (
           <output className="build-fitting" aria-live="polite">
             <LoaderCircle size={14} aria-hidden="true" />
-            Fitting the parts…
+            {buildText.workspace.fitting}
           </output>
         )}
         <button aria-pressed={airflow} onClick={onToggleAirflow}>
           <Wind size={14} aria-hidden="true" />
-          Airflow
+          {t.tools.airflow}
         </button>
         <button aria-pressed={power} onClick={onTogglePower}>
           <Zap size={14} aria-hidden="true" />
-          Power
+          {t.power.toggle}
         </button>
       </div>
     </>
@@ -346,6 +344,7 @@ function useNarrow() {
 /** A panel's title, and the button that folds it away or brings it back. */
 function PanelHead({
   title,
+  toggle,
   note,
   open,
   side,
@@ -353,6 +352,8 @@ function PanelHead({
   onToggle,
 }: {
   title: string;
+  /** What pressing the fold button does, as its label. */
+  toggle: string;
   note: string;
   open: boolean;
   side: 'left' | 'right';
@@ -379,8 +380,8 @@ function PanelHead({
         className="build-collapse"
         aria-expanded={open}
         aria-controls={controls}
-        aria-label={`${open ? 'Hide' : 'Show'} ${title.toLowerCase()}`}
-        title={`${open ? 'Hide' : 'Show'} ${title.toLowerCase()}`}
+        aria-label={toggle}
+        title={toggle}
         onClick={onToggle}
       >
         <Icon size={16} aria-hidden="true" />
@@ -451,7 +452,7 @@ function ShareBuild() {
       <button
         className={'build-share' + (shared?.copied ? ' copied' : '')}
         onClick={copy}
-        title="Copy a link to this build"
+        title={buildText.workspace.shareTitle}
       >
         {shared?.copied ? (
           <Check size={15} aria-hidden="true" />
@@ -459,7 +460,9 @@ function ShareBuild() {
           <Share2 size={15} aria-hidden="true" />
         )}
         <span aria-live="polite">
-          {shared?.copied ? 'Copied' : 'Share your build'}
+          {shared?.copied
+            ? buildText.workspace.copied
+            : buildText.workspace.share}
         </span>
       </button>
       {shared && (
@@ -468,12 +471,12 @@ function ShareBuild() {
             {shared.copied ? (
               <>
                 <Check size={14} aria-hidden="true" />
-                Link copied to your clipboard
+                {buildText.workspace.linkCopied}
               </>
             ) : (
               <>
                 <Link2 size={14} aria-hidden="true" />
-                Copy this link
+                {buildText.workspace.copyLink}
               </>
             )}
           </p>
@@ -482,8 +485,8 @@ function ShareBuild() {
           </p>
           <p className="build-share-hint">
             {shared.copied
-              ? 'Paste it into a message or a post. Whoever opens it sees this build, part for part.'
-              : 'The browser did not allow copying, so the link is selected for you to copy.'}
+              ? buildText.workspace.copiedHint
+              : buildText.workspace.copyBlocked}
           </p>
         </div>
       )}
@@ -572,7 +575,7 @@ function SlotSection({
           {options.length > 2 && brands.length > 1 && (
             <fieldset
               className="build-filter"
-              aria-label={`Filter ${slotLabel[slot].toLowerCase()} by maker`}
+              aria-label={buildText.workspace.filterByMaker(slotLabel[slot])}
             >
               {(['all', ...brands] as const).map((b) => (
                 <button
@@ -581,14 +584,16 @@ function SlotSection({
                   className={b === 'all' ? '' : 'brand-' + b}
                   onClick={() => setBrand(b)}
                 >
-                  {b === 'all' ? `All ${options.length}` : brandName[b]}
+                  {b === 'all'
+                    ? buildText.workspace.allOptions(options.length)
+                    : brandName[b]}
                 </button>
               ))}
             </fieldset>
           )}
           <fieldset
             className="build-options"
-            aria-label={`${slotLabel[slot]} options`}
+            aria-label={buildText.workspace.options(slotLabel[slot])}
           >
             {shown.map((option) => (
               <OptionCard
@@ -672,7 +677,11 @@ function OptionCard<S extends BuildSlot>({
           ) : (
             <TriangleAlert size={12} aria-hidden="true" />
           )}
-          <em>{fit.status === 'fail' ? 'Conflicts' : 'Check'}</em>
+          <em>
+            {fit.status === 'fail'
+              ? buildText.workspace.conflicts
+              : buildText.workspace.status.warn}
+          </em>
           {fit.reason}
         </span>
       )}
@@ -703,7 +712,7 @@ function SlotRail({
   onShow: (slot: BuildSlot) => void;
 }) {
   return (
-    <ul className="build-rail" aria-label="Slots">
+    <ul className="build-rail" aria-label={buildText.workspace.slots}>
       {slots.map(({ id, label }) => {
         const Icon = slotIcon[id];
         const status = slotStatus(checks, id);
@@ -714,7 +723,7 @@ function SlotRail({
             <button
               className={'build-rail-slot status-' + status}
               title={`${label}: ${part}`}
-              aria-label={`${label}: ${part}, ${statusWord[status].toLowerCase()}`}
+              aria-label={`${label}: ${part}, ${statusWord[status].toLocaleLowerCase()}`}
               onClick={() => onShow(id)}
             >
               <Icon size={16} aria-hidden="true" />
@@ -741,10 +750,8 @@ function VerdictRail({
   return (
     <button
       className={'build-rail-verdict status-' + status}
-      title="Show compatibility"
-      aria-label={`Compatibility: ${
-        flagged ? plural(flagged, 'thing') + ' to look at' : 'everything works'
-      }`}
+      title={buildText.workspace.showCompatibility}
+      aria-label={buildText.workspace.verdict(flagged)}
       onClick={onShow}
     >
       <Icon size={18} aria-hidden="true" />
@@ -766,9 +773,9 @@ function PowerBudget({ build }: { build: DesktopBuild }) {
   return (
     <div className={'build-power' + (over ? ' over' : '')}>
       <div className="build-power-head">
-        <span>Rated draw</span>
+        <span>{buildText.workspace.ratedDraw}</span>
         <strong>
-          {cpu + gpu} W <small>of {supply} W</small>
+          {cpu + gpu} W <small>{buildText.workspace.ofWatts(supply)}</small>
         </strong>
       </div>
       {/* The figures are in the heading and the key; this is their picture. */}
@@ -784,7 +791,9 @@ function PowerBudget({ build }: { build: DesktopBuild }) {
       <div className="build-power-key">
         <Key slot="processor">CPU {cpu} W</Key>
         <Key slot="graphics">GPU {gpu} W</Key>
-        <Key slot="power">PSU {supply} W</Key>
+        <Key slot="power">
+          {buildText.workspace.slotTags.power} {supply} W
+        </Key>
       </div>
     </div>
   );
@@ -798,16 +807,8 @@ function Key({ slot, children }: { slot: BuildSlot; children: ReactNode }) {
   );
 }
 
-const groupTitle: Record<CheckStatus, string> = {
-  fail: 'Problems to fix',
-  warn: 'Worth checking',
-  ok: 'Passing',
-};
-const countWord: Record<CheckStatus, string> = {
-  fail: 'to fix',
-  warn: 'to check',
-  ok: 'pass',
-};
+const groupTitle: Record<CheckStatus, string> = buildText.workspace.groups;
+const countWord: Record<CheckStatus, string> = buildText.workspace.counts;
 
 /** The checks under each result, worst first. */
 function byStatus(checks: BuildCheck[]) {
@@ -883,7 +884,10 @@ function Report({
             </section>
           ),
       )}
-      <section className="build-check-group status-ok" aria-label="Passing">
+      <section
+        className="build-check-group status-ok"
+        aria-label={buildText.workspace.groups.ok}
+      >
         <button
           className="build-passing"
           aria-expanded={passing}
@@ -891,8 +895,8 @@ function Report({
         >
           <CircleCheck size={14} aria-hidden="true" />
           {groups.ok.length === checks.length
-            ? `All ${checks.length} checks pass`
-            : `${plural(groups.ok.length, 'check')} passing`}
+            ? buildText.workspace.allPass(checks.length)
+            : buildText.workspace.passing(groups.ok.length)}
           <ChevronDown size={14} aria-hidden="true" />
         </button>
         {passing && <ul className="build-checks">{groups.ok.map(row)}</ul>}
@@ -921,14 +925,12 @@ function Verdict({
       <output>
         <strong>
           {overall === 'ok'
-            ? 'Everything works together'
+            ? buildText.workspace.allWork
             : overall === 'warn'
-              ? `Works, with ${plural(count('warn'), 'thing')} to check`
-              : `${plural(count('fail'), 'problem')} to fix`}
+              ? buildText.workspace.worksWith(count('warn'))
+              : buildText.workspace.toFix(count('fail'))}
         </strong>
-        <small>
-          {count('ok')} of {total} checks pass
-        </small>
+        <small>{buildText.workspace.passCount(count('ok'), total)}</small>
       </output>
       <span className="build-tally" aria-hidden="true">
         {(['ok', 'warn', 'fail'] as const).map((s) => (
@@ -1006,7 +1008,7 @@ function CheckRow({
                   style={tint(slot)}
                   onClick={() => onShowSlot(slot)}
                 >
-                  Change the {slotLabel[slot].toLowerCase()}
+                  {buildText.workspace.change(slotLabel[slot])}
                   <ChevronRight size={13} aria-hidden="true" />
                 </button>
               ))}

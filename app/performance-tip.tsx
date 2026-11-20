@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, X, Zap } from 'lucide-react';
 import { hasHardwareAcceleration } from '@/lib/graphics-acceleration';
+import { t } from '@/lib/i18n/messages';
 
 const seenKey = 'pc-anatomy-performance-tip-v1';
 
@@ -41,7 +42,7 @@ export default function PerformanceTip({ ready }: { ready: boolean }) {
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <aside
       className="performance-tip"
-      aria-label="3D performance tip"
+      aria-label={t.tip.label}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setFocused(true)}
@@ -53,23 +54,18 @@ export default function PerformanceTip({ ready }: { ready: boolean }) {
       <Zap size={19} aria-hidden="true" />
       <div>
         <output>
-          <strong>Smoother 3D exploration</strong>
-          <span className="tip-copy">
-            Try enabling browser hardware acceleration for smoother rendering.
-          </span>
+          <strong>{t.tip.title}</strong>
+          <span className="tip-copy">{t.tip.text}</span>
         </output>
         <a
           href="/guide/index.html#smoother-3d"
           target="_blank"
           rel="noreferrer"
         >
-          How to enable it <ArrowUpRight size={13} />
+          {t.tip.link} <ArrowUpRight size={13} />
         </a>
       </div>
-      <button
-        aria-label="Dismiss performance tip"
-        onClick={() => setVisible(false)}
-      >
+      <button aria-label={t.tip.dismiss} onClick={() => setVisible(false)}>
         <X size={17} />
       </button>
     </aside>

@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { t } from '@/lib/i18n/messages';
 import { CONTACT_ENDPOINT, NEW_ISSUE } from './links';
 import {
   EMPTY_DRAFT,
@@ -31,12 +32,9 @@ type Props = {
 type Status = 'idle' | 'sending' | Outcome;
 
 const PROBLEMS: Partial<Record<Status, string>> = {
-  invalid:
-    'Something in the form could not be accepted. Check the message is between 10 and 5000 characters and the email address is complete.',
-  rate_limited:
-    'That is a lot of messages in a short time. Please wait a few minutes and try again.',
-  failed:
-    'The message could not be sent. Check your connection and try again; what you wrote is still here.',
+  invalid: t.feedback.invalid,
+  rate_limited: t.feedback.rateLimited,
+  failed: t.feedback.failed,
 };
 
 /**
@@ -81,39 +79,32 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
   return (
     <Dialog open={open} onOpenChange={change} modal>
       <DialogContent className="about-dialog feedback-dialog">
-        <DialogTitle>Send feedback</DialogTitle>
-        <DialogDescription>
-          Spotted a mistake, have an idea, or want to work together on PC
-          Anatomy? Tell me here.
-        </DialogDescription>
+        <DialogTitle>{t.feedback.title}</DialogTitle>
+        <DialogDescription>{t.feedback.description}</DialogDescription>
         {status === 'sent' ? (
           <div className="feedback-done">
             <output>
-              Thank you, your message was sent.
-              {replyTo && ' I will reply to the address you gave.'}
+              {t.feedback.sent}
+              {replyTo && ` ${t.feedback.willReply}`}
             </output>
             <button
               type="button"
               className="feedback-submit"
               onClick={() => setStatus('idle')}
             >
-              Send another
+              {t.feedback.sendAnother}
             </button>
           </div>
         ) : status === 'unavailable' ? (
           <div className="feedback-done" role="alert">
-            <p>
-              The feedback form is not available on this copy of the site. You
-              can open an issue on GitHub instead; what you wrote is kept here
-              so you can copy it across.
-            </p>
+            <p>{t.feedback.unavailable}</p>
             <a
               className="feedback-submit"
               href={NEW_ISSUE}
               target="_blank"
               rel="noreferrer"
             >
-              Open a GitHub issue
+              {t.feedback.openIssue}
               <ArrowUpRight size={15} />
             </a>
             <button
@@ -121,13 +112,13 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
               className="feedback-back"
               onClick={() => setStatus('idle')}
             >
-              Back to the form
+              {t.feedback.back}
             </button>
           </div>
         ) : (
           <form className="feedback-form" onSubmit={submit}>
             <fieldset className="feedback-kinds">
-              <legend>What is it about?</legend>
+              <legend>{t.feedback.about}</legend>
               {KINDS.map((kind) => (
                 <label key={kind}>
                   <input
@@ -144,7 +135,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
             <div className="feedback-row">
               <label>
                 <span>
-                  Name <small>optional</small>
+                  {t.feedback.name} <small>{t.feedback.optional}</small>
                 </span>
                 <input
                   name="name"
@@ -156,7 +147,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
               </label>
               <label>
                 <span>
-                  Email <small>optional, so I can reply</small>
+                  {t.feedback.email} <small>{t.feedback.emailHint}</small>
                 </span>
                 <input
                   name="email"
@@ -170,7 +161,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
             </div>
             <div className="feedback-message">
               <label>
-                <span>Message</span>
+                <span>{t.feedback.message}</span>
                 <textarea
                   name="message"
                   value={draft.message}
@@ -184,7 +175,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
               </label>
               <small id="feedback-count" className="feedback-count">
                 {length < LIMITS.messageMin
-                  ? `At least ${LIMITS.messageMin} characters`
+                  ? t.feedback.atLeast(LIMITS.messageMin)
                   : `${length} / ${LIMITS.messageMax}`}
               </small>
             </div>
@@ -202,11 +193,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
                 />
               </label>
             </div>
-            <p className="feedback-note">
-              The address of this page, what you have selected and the interface
-              language are sent along with your message. Your message is emailed
-              to the PC Anatomy maintainer and only used to reply to you.
-            </p>
+            <p className="feedback-note">{t.feedback.privacy}</p>
             {problem && (
               <p className="feedback-error" role="alert">
                 {problem}
@@ -222,7 +209,7 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
               ) : (
                 <Send size={15} />
               )}
-              {status === 'sending' ? 'Sending…' : 'Send'}
+              {status === 'sending' ? t.feedback.sending : t.feedback.send}
             </button>
           </form>
         )}

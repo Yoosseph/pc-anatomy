@@ -19,6 +19,7 @@ import SearchDialog from './search-dialog';
 import DetailPanel from './detail-panel';
 import AboutDialog from './about-dialog';
 import ComparisonWorkbench from './comparison-workbench';
+import { t } from '@/lib/i18n/messages';
 
 /**
  * The build workspace is its own download: most visits never open it, and
@@ -185,13 +186,13 @@ export default function Home() {
             // behind it.
             <button
               className="drawer-scrim"
-              aria-label="Close systems"
+              aria-label={t.nav.close}
               onClick={() => explorer.setLayers(false)}
             />
           )}
           <aside
             className={'explorer' + (layers ? ' mobile-open' : '')}
-            aria-label="System visibility"
+            aria-label={t.page.systemVisibility}
           >
             <ScaleNav
               level={state.level}
@@ -231,16 +232,16 @@ export default function Home() {
         onSelect={building ? pointAt : choose}
         onCount={setCount}
         onDived={explorer.arrive}
-        hoverHint={building ? 'Click to find its slot' : undefined}
+        hoverHint={building ? t.page.findSlot : undefined}
       />
       {building ? null : (
         <>
           {count === 0 && (
             <div className="empty-scene">
               <EyeOff size={27} />
-              <h3>No structures visible</h3>
+              <h3>{t.page.nothingVisible}</h3>
               <button onClick={explorer.showEverything}>
-                Show all systems
+                {t.page.showEverything}
               </button>
             </div>
           )}

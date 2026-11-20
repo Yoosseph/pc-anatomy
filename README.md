@@ -208,7 +208,7 @@ The one exception is the feedback form, described next, and the site works witho
 
 ## Feedback form
 
-The **Feedback** button at the start of the header opens a short form: what it is about (an issue or mistake, an idea, something else), an optional name and reply address, and the message. The page address, the current selection and the interface language go along with it. The form posts to `api/contact.ts`, a Vercel Function that emails the message through [Resend](https://resend.com), labelled `[PC Anatomy]` in the subject and tagged `source: pc-anatomy` so it stands out in a Resend account shared with other sites.
+The **Give feedback** button at the start of the header opens a short form: what it is about (an issue or mistake, an idea, something else), an optional name and reply address, and the message. The page address, the current selection and the interface language go along with it. The form posts to `api/contact.ts`, a Vercel Function that emails the message through [Resend](https://resend.com), labelled `[PC Anatomy]` in the subject and tagged `source: pc-anatomy` so it stands out in a Resend account shared with other sites.
 
 No key or address is stored in this repository. They are read from environment variables set in the Vercel project, under **Settings → Environment Variables**, for both Production and Preview. A deployment only picks up new variables after a redeploy.
 

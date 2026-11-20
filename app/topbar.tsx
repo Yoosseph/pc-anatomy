@@ -72,7 +72,7 @@ export default function Topbar({
           title="Report a mistake or suggest an idea"
         >
           <MessageSquare size={15} />
-          <span>Feedback</span>
+          <span>Give feedback</span>
         </button>
         <a
           className="chip guide-link"

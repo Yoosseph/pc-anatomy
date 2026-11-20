@@ -3354,15 +3354,23 @@ a {
     white-space: nowrap;
   }
 }
-@media (max-width: 359px) {
-  /* No room for it beside the controls; the About panel links the source. */
+@media (max-width: 389px) {
+  /* No room for it beside "Give feedback"; the About panel links the source. */
   .byline {
     display: none;
+  }
+}
+@media (max-width: 359px) {
+  .header-actions {
+    gap: 4px;
+  }
+  .feedback-button.chip {
+    padding: 0 9px;
   }
   .search-button,
   .mobile-layers,
   .info-button.chip {
-    min-width: 40px;
+    min-width: 36px;
   }
 }
 .feedback-message {

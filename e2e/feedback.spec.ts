@@ -4,7 +4,7 @@ const MESSAGE = 'The RTX 5090 enables 170 SMs, the page says 172.';
 
 async function openForm(page: Page) {
   await page.goto('/');
-  const button = page.getByRole('button', { name: 'Feedback' });
+  const button = page.getByRole('button', { name: 'Give feedback' });
   await expect(button).toBeVisible();
   await button.click();
   await expect(
@@ -17,7 +17,7 @@ test('Feedback is the first header control, and clear of the others', async ({
 }) => {
   await page.goto('/');
   const actions = page.locator('.header-actions > *');
-  await expect(actions.first()).toHaveText('Feedback');
+  await expect(actions.first()).toHaveText('Give feedback');
   const feedback = (await actions.first().boundingBox())!;
   const viewport = page.viewportSize()!;
   expect(feedback.x).toBeGreaterThanOrEqual(0);
@@ -87,7 +87,7 @@ test('a closed form keeps what was typed', async ({ page }) => {
   await page.getByLabel('Message').fill(MESSAGE);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toBeHidden();
-  await page.getByRole('button', { name: 'Feedback' }).click();
+  await page.getByRole('button', { name: 'Give feedback' }).click();
   await expect(page.getByLabel('Message')).toHaveValue(MESSAGE);
 });
 

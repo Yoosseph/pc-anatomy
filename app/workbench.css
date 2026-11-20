@@ -3343,6 +3343,53 @@ a {
 .feedback-button .label-short {
   display: none;
 }
+/* The select lies invisibly over the chip, so the whole chip opens the
+   language list while the chip itself shows only the short code. */
+.language-picker {
+  position: relative;
+  gap: 6px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.language-picker select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+.language-picker:focus-within {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
+}
+/* Where the bar gets tight, the short code alone says what the chip is. */
+@media (max-width: 1140px) {
+  .language-picker > svg {
+    display: none;
+  }
+}
+/* Guide gives up its label as About does below 1100px, to make room for
+   the language chip at the end of the row. */
+@media (max-width: 900px) {
+  .guide-link.chip {
+    width: 34px;
+    padding: 0;
+  }
+  .guide-link.chip > span {
+    display: none;
+  }
+}
+/* Below 720px the long Feedback label never fitted beside the byline; the
+   phone label takes over a little earlier. */
+@media (max-width: 720px) {
+  .feedback-button .label-full {
+    display: none;
+  }
+  .feedback-button .label-short {
+    display: inline;
+  }
+}
 @media (max-width: 1100px) {
   .info-button.chip {
     width: 34px;

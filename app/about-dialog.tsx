@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { sources } from '@/lib/manifest';
+import { t } from '@/lib/i18n/messages';
 import { GUIDE, GUIDE_ACCELERATION, REPOSITORY } from './links';
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
@@ -15,38 +16,22 @@ export default function AboutDialog({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal>
       <DialogContent className="about-dialog">
-        <DialogTitle>From the case down to a compute core.</DialogTitle>
-        <DialogDescription>
-          PC Anatomy is a free, interactive 3D computer hardware explorer. Learn
-          how a desktop PC works by inspecting and disassembling its components.
-        </DialogDescription>
+        <DialogTitle>{t.about.title}</DialogTitle>
+        <DialogDescription>{t.about.description}</DialogDescription>
+        <p>{t.about.intro}</p>
+        <h3>{t.about.modelsHeading}</h3>
         <p>
-          Start with an assembled ATX tower, take it apart, and keep going: into
-          the motherboard, into the graphics card, and down through the GB202
-          processor to a single streaming multiprocessor. Every scale is a
-          branch you can descend or step back out of.
-        </p>
-        <h3>Two kinds of model.</h3>
-        <p>
-          <strong>Hardware</strong> is original, approximate mechanical
-          geometry. The ATX board outline, the expansion-slot pitch and the rear
-          I/O aperture follow the published form factor. The RTX 5090, Ryzen 9
-          9950X and Core Ultra 9 285K are named subjects; everything else is a
-          representative example of its component family, not a bill of
-          materials for a particular build.
+          <strong>{t.about.hardware}</strong> {t.about.hardwareText}
         </p>
         <p>
-          <strong>Silicon</strong> shows documented logical architecture. Exact
-          transistor-level placement is not publicly available. A full GB202 has
-          192 SMs; the RTX 5090 enables 170. GPC interiors show a representative
-          full cluster, not an invented map of disabled units.
+          <strong>{t.about.silicon}</strong> {t.about.siliconText}
         </p>
-        <h3>Research & credits</h3>
+        <h3>{t.about.creditsHeading}</h3>
         <a className="about-source" href={GUIDE_ACCELERATION}>
-          Browser hardware acceleration setup <ArrowUpRight size={15} />
+          {t.about.acceleration} <ArrowUpRight size={15} />
         </a>
         <a className="about-source" href={GUIDE}>
-          PC components: an illustrated beginner’s guide
+          {t.about.guide}
           <ArrowUpRight size={15} />
         </a>
         {Object.entries(sources)
@@ -69,7 +54,7 @@ export default function AboutDialog({ open, onOpenChange }: Props) {
           target="_blank"
           rel="noreferrer"
         >
-          Interaction inspiration · Human Atlas
+          {t.about.inspiration}
           <ArrowUpRight size={15} />
         </a>
         <a
@@ -78,13 +63,10 @@ export default function AboutDialog({ open, onOpenChange }: Props) {
           target="_blank"
           rel="noreferrer"
         >
-          PC Anatomy source code
+          {t.about.source}
           <ArrowUpRight size={15} />
         </a>
-        <p className="about-foot">
-          No affiliation with NVIDIA, AMD or Intel. No third-party model assets.
-          Research reviewed September 2026.
-        </p>
+        <p className="about-foot">{t.about.foot}</p>
       </DialogContent>
     </Dialog>
   );

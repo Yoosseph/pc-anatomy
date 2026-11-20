@@ -49,6 +49,12 @@ npm run dev
   than the source supports.
 - **No reveal thresholds.** A component that exists in the assembled product
   exists at slider position zero and moves continuously as it comes apart.
+- **Write in English, then translate.** Interface text goes through `t` in
+  `lib/i18n/messages.ts`, never as a literal in a component. Catalogue text
+  stays in `lib/concepts/` in English; when you change or add a sentence,
+  update its translation in `lib/i18n/fr/catalogue/` too, or remove the stale
+  entry, and `tests/i18n.test.ts` will tell you which. See
+  [Languages](ARCHITECTURE.md#languages).
 - **Keep the docs true.** A change that moves a module, alters the scale tree or
   settles a design decision updates ARCHITECTURE.md in the same pull request.
 

@@ -27,6 +27,7 @@ import {
   type ComparisonViewState,
 } from '@/lib/comparison-state';
 import { hueOfCategory, hueStyle } from '@/lib/palette';
+import { t } from '@/lib/i18n/messages';
 import ComparisonPicker from './comparison-picker';
 import ComparisonViewer from './comparison-viewer';
 import ComparisonSpecs from './comparison-specs';
@@ -37,15 +38,15 @@ import './comparison.css';
 type Props = { initialLevel: ComparisonLevel; onExit: () => void };
 
 function framingNote(framing: ComparisonFraming, trueSizeAvailable: boolean) {
-  if (framing === 'scale') return 'Same physical scale in both panes.';
-  return trueSizeAvailable
-    ? 'Each model fits its pane. Sizes are not relative.'
-    : 'Each model fits its pane. Diagrams and illustrative parts have no physical scale.';
+  if (framing === 'scale') return t.compare.sameScale;
+  return trueSizeAvailable ? t.compare.fitRelative : t.compare.fitNoScale;
 }
 
 function disassemblyTitle(left: ComparisonItem, right: ComparisonItem) {
-  if (left.kind !== right.kind) return 'Explore both';
-  return left.kind === 'logical' ? 'Expand both' : 'Disassemble both';
+  if (left.kind !== right.kind) return t.compare.exploreBoth;
+  return left.kind === 'logical'
+    ? t.compare.expandBoth
+    : t.compare.disassembleBoth;
 }
 
 type PartSelectorProps = {
@@ -62,7 +63,7 @@ function PartSelector({ side, item, buttonRef, onOpen }: PartSelectorProps) {
       className={`comparison-selector ${side}`}
       style={hueStyle(hueOfCategory(item.category))}
       ref={buttonRef}
-      aria-label={`Choose part ${sideLetter(side)}`}
+      aria-label={t.compare.choosePart(sideLetter(side))}
       aria-haspopup="dialog"
       onClick={onOpen}
     >
@@ -147,45 +148,45 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
           <button
             ref={specsButton}
             className="comparison-specs-button"
-            aria-label="Specs"
+            aria-label={t.compare.specs}
             onClick={() =>
               setState((current) => setComparisonSpecsOpen(current, true))
             }
           >
             <BarChart3 size={16} />
-            <span>Specs</span>
+            <span>{t.compare.specs}</span>
           </button>
           <button
             className="comparison-exit"
             onClick={onExit}
-            aria-label="Back to explorer"
+            aria-label={t.compare.back}
           >
             <ChevronLeft size={17} />
-            <span>Back to explorer</span>
+            <span>{t.compare.back}</span>
           </button>
         </div>
       </header>
-      <section className="comparison-setup" aria-label="Comparison pair">
+      <section className="comparison-setup" aria-label={t.compare.pair}>
         <div className="comparison-pair">
           {selector('left')}
           <button
             className="comparison-swap"
             onClick={() => setState(swapComparisonSides)}
-            aria-label="Swap comparison sides"
+            aria-label={t.compare.swap}
           >
             <ArrowLeftRight size={18} />
           </button>
           {selector('right')}
         </div>
         <div className="comparison-framing">
-          <fieldset aria-label="Model scale">
+          <fieldset aria-label={t.compare.modelScale}>
             <button
               aria-pressed={state.framing === 'fit'}
               onClick={() =>
                 setState((current) => setComparisonFraming(current, 'fit'))
               }
             >
-              Fit each
+              {t.compare.fitEach}
             </button>
             <button
               aria-pressed={state.framing === 'scale'}
@@ -195,7 +196,7 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
                 setState((current) => setComparisonFraming(current, 'scale'))
               }
             >
-              True size
+              {t.compare.trueSize}
             </button>
           </fieldset>
           <p id="comparison-scale-note">
@@ -205,7 +206,7 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
       </section>
       <fieldset
         className="comparison-mobile-switch"
-        aria-label="Visible comparison side"
+        aria-label={t.compare.visibleSide}
       >
         {(['left', 'right'] as const).map((side) => (
           <button
@@ -215,14 +216,14 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
               setState((current) => setComparisonActiveSide(current, side))
             }
           >
-            {side === 'left' ? 'A · Left' : 'B · Right'}
+            {side === 'left' ? t.compare.left : t.compare.right}
           </button>
         ))}
       </fieldset>
       <div className="comparison-divider" aria-hidden="true" />
       <ComparisonViewer key={viewerRevision} state={viewerState} />
       <div className="sr-only" aria-live="polite">
-        Comparing {leftItem.name} with {rightItem.name}.
+        {t.compare.comparing(leftItem.name, rightItem.name)}
       </div>
       <Disassembly
         level={state.left}
@@ -232,10 +233,10 @@ export default function ComparisonWorkbench({ initialLevel, onExit }: Props) {
         onToggleAuto={toggleAuto}
         onSetExplode={setExplode}
         onReset={reset}
-        sectionLabel="Shared disassembly control"
+        sectionLabel={t.compare.sharedControl}
         title={disassemblyTitle(leftItem, rightItem)}
-        sliderLabel="Disassemble or expand both models"
-        valueText={`${Math.round(state.explode)} percent for both models`}
+        sliderLabel={t.compare.slider}
+        valueText={t.compare.percentBoth(Math.round(state.explode))}
       />
       <ComparisonSpecs
         left={state.left}

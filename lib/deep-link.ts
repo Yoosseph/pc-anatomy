@@ -1,6 +1,7 @@
 import { byId, isLevelRoot } from './manifest.ts';
 import { isPhysical, levels, rootLevel, type LevelId } from './levels.ts';
 import type { Selection } from './explorer-state.ts';
+import { t } from './i18n/messages.ts';
 import {
   defaultBuild,
   isCustomBuild,
@@ -163,7 +164,7 @@ function readBuild(params: URLSearchParams): DesktopBuild | undefined {
 
 /** The page title for a place: the part when one is described, else the scale. */
 export function placeTitle(place: Place): string {
-  if (place.workspace === 'build') return 'Build your PC · PC Anatomy';
+  if (place.workspace === 'build') return `${t.build.title} · PC Anatomy`;
   if (place.level === rootLevel && !place.selection) return 'PC Anatomy';
   const name = place.selection
     ? byId[place.selection.concept]?.name

@@ -5,6 +5,7 @@ import {
   type ComparisonViewState,
 } from '@/lib/comparison-state';
 import { useViewerEngine } from './use-viewer-engine';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   state: ComparisonViewState;
@@ -37,7 +38,7 @@ export default function ComparisonViewer({ state }: Props) {
         ),
       error: reportError,
     }),
-    'The comparison viewer could not load. Reload to try again.',
+    t.compare.viewerFailed,
   );
 
   return (
@@ -46,24 +47,24 @@ export default function ComparisonViewer({ state }: Props) {
         ref={host}
         className="comparison-viewport"
         data-active-side={state.activeSide}
-        aria-label={`Synchronized 3D comparison of ${left.shortName} and ${right.shortName}`}
+        aria-label={t.compare.viewport(left.shortName, right.shortName)}
       >
         <section
           className="comparison-pane-a11y left"
-          aria-label={`Left viewport: ${left.name}`}
+          aria-label={t.compare.leftViewport(left.name)}
         />
         <section
           className="comparison-pane-a11y right"
-          aria-label={`Right viewport: ${right.name}`}
+          aria-label={t.compare.rightViewport(right.name)}
         />
       </div>
       {!ready && !error && (
-        <output className="comparison-loading">Loading both models…</output>
+        <output className="comparison-loading">{t.compare.loading}</output>
       )}
       {error && (
         <div className="comparison-error" role="alert">
           {error}
-          <button onClick={() => location.reload()}>Reload viewer</button>
+          <button onClick={() => location.reload()}>{t.viewer.reload}</button>
         </div>
       )}
       {hover && (
@@ -76,7 +77,7 @@ export default function ComparisonViewer({ state }: Props) {
           }}
         >
           {hover.name}
-          <span>Compared part</span>
+          <span>{t.compare.comparedPart}</span>
         </div>
       )}
     </>

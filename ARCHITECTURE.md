@@ -153,7 +153,7 @@ npm run format    # oxfmt
 npm test          # node --experimental-strip-types --test tests/*.test.ts
 npm run build     # tsc --noEmit && vite build
 npm run size      # after a build: entry chunk under budget, no three.js in it
-npm run test:e2e  # after a build: Playwright tests of the feedback form, desktop and phone
+npm run test:e2e  # after a build: Playwright tests of the feedback form and the language menu, desktop and phone
 npm start         # preview the production build
 ```
 
@@ -348,13 +348,16 @@ subsystems stop touching.
 | `app/feedback.ts`, `api/contact.ts` | The feedback form. `feedback.ts` holds the form's rules without React (limits, payload, what each response means); `api/contact.ts` is the only server code, a Vercel Function that validates a message and emails it through Resend. It reads its key and inbox from environment variables and imports nothing from the project, so the two files each keep a copy of the limits and `tests/feedback.test.ts` checks they agree. |
 | `app/viewer.tsx` | The React ↔ three.js bridge: lazy scene load, the loading line, hover label, names on the laid-out parts, error state. |
 | `app/links.ts` | Destinations used by more than one panel. |
+| `lib/i18n/locale.ts`, `messages.ts`, `build-messages.ts`, `content.ts`, `pack.ts` | Languages: the locale and the menu's `setLocale`, the English interface strings and `t`, the build workspace's strings, the `ContentPack` and how a pack is written over a component or scale, and the pack for the current language. See [Languages](#languages). |
+| `lib/i18n/fr/` | The French pack: interface strings, specification labels, and the catalogue translated by sentence, one file per subsystem. |
+| `app/language-picker.tsx` | The language menu in the top bar. |
 | `app/globals.css`, `app/workbench.css` | The visual direction, desktop through phone. |
-| `tests/*.test.ts` | 193 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, links, taps, labels and the engine staying out of the entry chunk, and the feedback function and form. |
+| `tests/*.test.ts` | 201 tests: catalogue integrity, layout, picking, geometry presence, airflow, power flow, the case, the memory dive, comparison catalogue/state/framing behaviour, the part colours, build-workspace checks and every board, card, cooler, module count, drive and supply in the tower, links, taps, labels and the engine staying out of the entry chunk, the feedback function and form, and that every translation still matches the English it replaces. |
 | `scripts/generate-icons.mjs` | Rasterises `public/favicon.svg` into PNG and ICO variants. Uses Playwright and Edge. |
 | `scripts/generate-reference-index.mjs` | Regenerates `docs/component-references.md` from the catalogue. Run it after changing citations. |
 | `scripts/generate-sitemap.mjs`, `sitemap-urls.ts` | Regenerates `public/sitemap.xml`: the site, the guide, every scale and every part, in the link format the explorer reads. Run it after adding scales or parts; a test fails when it falls behind. |
 | `scripts/build-smoke.mjs` | The build workspace in headless Edge: opens it on the explorer's scene, swaps every slot, filters a slot by maker, times each choice from click to next frame, folds both panels away and back, follows a shared link (checking the link Share shows is the address), leaves and comes back, opens the installed card, survives Reset, and checks phone widths with the sheet up and down. Screenshots go to `outputs/build`. |
-| `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the entry chunk or the chunk is over budget. |
+| `scripts/check-bundle-size.mjs` | `npm run size`. Fails if three.js is in the first download (the entry chunk and the chunks it preloads) or that download is over budget. |
 
 ## The interfaces you will touch
 
@@ -548,6 +551,71 @@ These interaction decisions are settled, and re-opening them has been tried:
   tints and borders. The interface's colours are not the model's: the 3D
   pieces keep the quieter tints in `concept.ts`, which are tuned to sit under
   the scene's lighting, and changing those changes every render.
+
+## Languages
+
+The site is written in English and translated on top. English is the source:
+every string in the codebase is English first, tests and scripts always run
+in English, and an English reader downloads nothing extra. French is the
+first translation.
+
+**The locale is settled once, before anything renders.** `lib/i18n/locale.ts`
+reads the visitor's saved choice, else the browser's preferred languages,
+else English. The language menu in the top bar saves a choice and reloads;
+the address carries the whole view, so the reload lands where the visitor
+was. Nothing reacts to the language changing underneath it, which keeps every
+module that reads text simple, including the ones outside React (the build
+checks, the power legend, the page title). `app/main.tsx` sets `<html lang>`,
+and the feedback form sends it along.
+
+**Two kinds of text, two mechanisms.**
+
+- *Interface strings* live in `lib/i18n/messages.ts` as one typed English
+  object, `en`, read through `t` (`t.topbar.feedback`). Anything that varies
+  with a number or a name is a function, so each language places the value
+  and agrees its plurals itself. A translation is typed `Messages`, so a
+  missing key fails to compile. Strings only the build workspace reads are in
+  `lib/i18n/build-messages.ts` (`buildText`), so they stay in its lazy chunk.
+  Component systems (`Category`) and menu labels (`branchLabel`) are
+  identifiers; they are translated where they are shown, through
+  `t.categories` and `t.branches`.
+- *Catalogue text* — names, descriptions, purposes, quantities, accuracy
+  notes, specification values and scale headings — is translated by
+  sentence, keyed by the English it replaces, the way gettext catalogues
+  work. Many components share their prose (every alternative board is drawn
+  from the X670E board's parts), so each sentence is translated once and
+  every component that uses it follows. Specification *labels* stay English
+  in the catalogue, so comparison rows keep lining up by field; they are
+  translated where shown, through `specLabel`.
+
+**A language is one lazy pack.** `lib/i18n/content.ts` defines the
+`ContentPack` (messages, build-workspace messages and catalogue text) and
+where each language's pack is imported from. `lib/i18n/pack.ts` awaits it at
+the top level, and `lib/manifest.ts` and `lib/levels.ts` import it, so the
+catalogue and the scale tree are built already translated and nothing that
+copies a name out of them (the comparison catalogue, search) ever sees the
+English first. For English the await settles at once. The top-level await is
+also why the bundler splits the first download into a few preloaded chunks,
+which `scripts/check-bundle-size.mjs` adds up. A translated catalogue keeps
+each component's English names among its search terms.
+
+`lib/i18n/fr/` is the French pack: `messages.ts` and `build-messages.ts` for
+the interface, `spec-labels.ts`, and `catalogue/`, one file per file in
+`lib/concepts/` plus `levels.ts` for the scale tree.
+
+**Editing English text.** Change the English as usual. Its translation is now
+keyed by the old sentence, so `tests/i18n.test.ts` fails, naming it: update
+the key and the French in the same change, or delete the entry if you cannot
+translate it (the site then shows the English). The same test fails if a new
+component's description or purpose has no translation. Product names and
+codes ("RTX 5090", "10 phases") read the same in every language and need no
+entry.
+
+**Adding a language.** Add its code to `locales` and its name to
+`localeNames` in `locale.ts`, copy `lib/i18n/fr/` and translate it, point the
+new code at it in `content.ts`, and add the pack to the list in
+`tests/i18n.test.ts`. The compiler checks the messages; the tests check the
+catalogue.
 
 ## Part comparison mode
 
@@ -778,14 +846,17 @@ A component joins the written catalogue to selectable geometry through its id.
 2. In that scale's builder, create the geometry and pass the same id to `add` or
    `instances`. The helper supplies selection identity, explode placement,
    inventory layout and counting.
-3. Add any new reference to `lib/sources.ts` and document it in `SOURCES.md`,
+3. Translate its text: add each new sentence to the matching file in
+   `lib/i18n/fr/catalogue/`, and any new specification label to
+   `lib/i18n/fr/spec-labels.ts`. `tests/i18n.test.ts` lists what is missing.
+4. Add any new reference to `lib/sources.ts` and document it in `SOURCES.md`,
    then regenerate the index:
    `node --experimental-strip-types scripts/generate-reference-index.mjs`,
    and the sitemap:
    `node --experimental-strip-types scripts/generate-sitemap.mjs`.
-4. If the concept lives in a new catalogue file, export its array and compose it
+5. If the concept lives in a new catalogue file, export its array and compose it
    into `lib/manifest.ts`.
-5. Run the checks. The tests reject anonymous geometry, duplicate ids, broken
+6. Run the checks. The tests reject anonymous geometry, duplicate ids, broken
    parent links, and scales with nothing to render.
 
 Do not introduce a reveal threshold for assembled geometry. A component that
@@ -806,6 +877,10 @@ Five integration points, and the tests check both directions of the link:
    instead and is reached from its subsystem menu; `submenu` gives it a dropdown
    of its own inside that menu.
 5. Export and compose the new concepts in `lib/manifest.ts`.
+
+Then translate its navigation text and catalogue as for a component; a new
+`branchLabel` also needs an entry in `t.branches`, and a new menu with
+dropdowns its noun in `t.nav.menuNote`.
 
 The scale tree drives navigation, breadcrumbs, lighting, the disassembly
 timeline and the comparison picker. Do not add a second hand-written route
@@ -838,8 +913,9 @@ the model has. 368 concepts are physical, 225 are logical diagrams.
 
 ## Tests
 
-193 tests, all through Node's built-in runner, plus Playwright tests of the
-feedback form in `e2e/` (`npm run test:e2e`, not part of CI).
+201 tests, all through Node's built-in runner, plus Playwright tests of the
+feedback form and the language menu in `e2e/` (`npm run test:e2e`, not part
+of CI).
 
 `.github/workflows/ci.yml` runs `npm ci`, type checking, linting, tests, a
 production build and the bundle-size check on every push and pull request

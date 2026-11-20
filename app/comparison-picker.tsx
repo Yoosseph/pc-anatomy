@@ -21,6 +21,7 @@ import {
 } from '@/lib/comparison-state';
 import { levels, systemRoots } from '@/lib/levels';
 import { hueOfCategory, hueStyle } from '@/lib/palette';
+import { t } from '@/lib/i18n/messages';
 
 type Props = {
   side: ComparisonSide;
@@ -55,12 +56,12 @@ function PickerResult({ item, selected, takenBy, onChoose }: ResultProps) {
         </span>
         <span className="comparison-result-kind">
           {takenBy
-            ? `On ${takenBy}`
+            ? t.compare.takenBy(takenBy)
             : item.kind === 'logical'
-              ? 'Diagram'
-              : 'Hardware'}
+              ? t.compare.diagram
+              : t.compare.hardware}
         </span>
-        {selected && <Check size={16} aria-label="Selected" />}
+        {selected && <Check size={16} aria-label={t.compare.selected} />}
       </button>
     </li>
   );
@@ -123,12 +124,10 @@ export default function ComparisonPicker({
       >
         <header className="comparison-picker-heading">
           <div>
-            <DialogTitle>Choose part {sideLetter(side)}</DialogTitle>
-            <DialogDescription>
-              Browse any system. Your other choice stays in place.
-            </DialogDescription>
+            <DialogTitle>{t.compare.choosePart(sideLetter(side))}</DialogTitle>
+            <DialogDescription>{t.compare.pickerDescription}</DialogDescription>
           </div>
-          <button aria-label="Close part picker" onClick={onClose}>
+          <button aria-label={t.compare.closePicker} onClick={onClose}>
             <X size={20} />
           </button>
         </header>
@@ -137,16 +136,16 @@ export default function ComparisonPicker({
             <Search size={17} aria-hidden="true" />
             <input
               ref={search}
-              aria-label="Search parts"
-              placeholder="Search parts, models or architecture…"
+              aria-label={t.compare.searchLabel}
+              placeholder={t.compare.searchPlaceholder}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
           <label className="comparison-system-filter">
-            <span>System</span>
+            <span>{t.compare.system}</span>
             <select
-              aria-label="System"
+              aria-label={t.compare.system}
               value={system ?? 'all'}
               onChange={(event) =>
                 setSystem(
@@ -156,7 +155,7 @@ export default function ComparisonPicker({
                 )
               }
             >
-              <option value="all">All systems</option>
+              <option value="all">{t.compare.allSystems}</option>
               {systemRoots.map((root) => (
                 <option key={root} value={root}>
                   {levels[root].name}
@@ -166,13 +165,17 @@ export default function ComparisonPicker({
           </label>
         </div>
         <div className="comparison-picker-body">
-          <nav className="comparison-category-nav" aria-label="Part categories">
+          <nav
+            className="comparison-category-nav"
+            aria-label={t.compare.categories}
+          >
             <button
               aria-pressed={!category}
               style={hueStyle('system')}
               onClick={() => setCategory(undefined)}
             >
-              All parts <span aria-hidden="true">{matches.length}</span>
+              {t.compare.allParts}{' '}
+              <span aria-hidden="true">{matches.length}</span>
             </button>
             {comparisonCategories.map((entry) => (
               <button
@@ -189,13 +192,13 @@ export default function ComparisonPicker({
           </nav>
           <div className="comparison-results">
             <output className="comparison-result-count">
-              {results.length} {results.length === 1 ? 'part' : 'parts'}
+              {t.compare.partCount(results.length)}
             </output>
             {!results.length && (
               <div className="comparison-empty">
-                <strong>No matching parts</strong>
-                <p>Try another category, system or search.</p>
-                <button onClick={clear}>Clear filters</button>
+                <strong>{t.compare.noMatches}</strong>
+                <p>{t.compare.noMatchesHint}</p>
+                <button onClick={clear}>{t.compare.clearFilters}</button>
               </div>
             )}
             {groups.map((group) => (

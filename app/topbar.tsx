@@ -7,7 +7,9 @@ import {
   MessageSquare,
   Search,
 } from 'lucide-react';
+import { t } from '@/lib/i18n/messages';
 import { GUIDE, REPOSITORY } from './links';
+import LanguagePicker from './language-picker';
 
 /** GitHub's mark (Octicons, MIT). lucide-react no longer ships brand icons. */
 function GitHubMark({ size = 14 }: { size?: number }) {
@@ -43,7 +45,7 @@ export default function Topbar({
 }: Props) {
   return (
     <header className="topbar">
-      <button className="brand" onClick={onReset} aria-label="Reset PC Anatomy">
+      <button className="brand" onClick={onReset} aria-label={t.topbar.reset}>
         <span className="brand-icon">
           <Cpu size={21} />
         </span>
@@ -54,11 +56,11 @@ export default function Topbar({
         href={REPOSITORY}
         target="_blank"
         rel="noreferrer"
-        title="PC Anatomy on GitHub"
+        title={t.topbar.github}
       >
         <GitHubMark size={13} />
         <span className="byline-text">
-          <span className="byline-prefix">Created by </span>
+          <span className="byline-prefix">{t.topbar.createdBy} </span>
           <strong>Yoseph</strong>
         </span>
       </a>
@@ -69,48 +71,45 @@ export default function Topbar({
         <button
           className="chip chip-accent feedback-button"
           onClick={onFeedback}
-          title="Report a mistake, suggest an idea or get in touch about working together"
+          title={t.topbar.feedbackTitle}
         >
           <MessageSquare size={15} />
           {/* One of the two is hidden at a time, so the button's name is
               always the label that is showing. */}
-          <span className="label-full">Feedback / Idea / Collaboration</span>
-          <span className="label-short">Feedback</span>
+          <span className="label-full">{t.topbar.feedback}</span>
+          <span className="label-short">{t.topbar.feedbackShort}</span>
         </button>
-        <a
-          className="chip guide-link"
-          href={GUIDE}
-          title="Learn about PC components"
-        >
+        <a className="chip guide-link" href={GUIDE} title={t.topbar.guideTitle}>
           <BookOpen size={15} />
-          <span>Guide</span>
+          <span>{t.topbar.guide}</span>
         </a>
         <button
           className="mobile-layers"
           onClick={onToggleLayers}
-          aria-label="Toggle systems"
+          aria-label={t.topbar.toggleSystems}
           aria-expanded={layers}
         >
           <Layers3 size={19} />
         </button>
         <button
           className="search-button"
-          aria-label="Find a component"
+          aria-label={t.topbar.findComponent}
           onClick={onSearch}
         >
           <Search size={16} />
-          <span>Search components</span>
+          <span>{t.topbar.search}</span>
           <kbd>/</kbd>
         </button>
         <button
           className="chip info-button"
-          aria-label="About and sources"
-          title="About and credits"
+          aria-label={t.topbar.aboutLabel}
+          title={t.topbar.aboutTitle}
           onClick={onAbout}
         >
           <Info size={16} />
-          <span>About</span>
+          <span>{t.topbar.about}</span>
         </button>
+        <LanguagePicker />
       </div>
     </header>
   );

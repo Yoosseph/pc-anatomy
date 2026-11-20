@@ -10,19 +10,20 @@ import {
   type LevelId,
 } from './levels.ts';
 import type { Category } from './concept.ts';
+import { specLabel, t } from './i18n/messages.ts';
 
 /** Picker headings, in display order. Empty categories are not shown. */
 const categoryDefinitions = [
-  { id: 'systems', label: 'Complete systems' },
-  { id: 'boards', label: 'Boards' },
-  { id: 'processors', label: 'Processors' },
-  { id: 'graphics', label: 'Graphics' },
-  { id: 'memory', label: 'Memory' },
-  { id: 'storage', label: 'Storage' },
-  { id: 'cooling', label: 'Cooling' },
-  { id: 'power', label: 'Power & batteries' },
-  { id: 'displays', label: 'Displays' },
-  { id: 'chassis', label: 'Chassis' },
+  { id: 'systems', label: t.compareCategories.systems },
+  { id: 'boards', label: t.compareCategories.boards },
+  { id: 'processors', label: t.compareCategories.processors },
+  { id: 'graphics', label: t.compareCategories.graphics },
+  { id: 'memory', label: t.compareCategories.memory },
+  { id: 'storage', label: t.compareCategories.storage },
+  { id: 'cooling', label: t.compareCategories.cooling },
+  { id: 'power', label: t.compareCategories.power },
+  { id: 'displays', label: t.compareCategories.displays },
+  { id: 'chassis', label: t.compareCategories.chassis },
 ] as const;
 
 export type ComparisonCategoryId = (typeof categoryDefinitions)[number]['id'];
@@ -94,7 +95,11 @@ function catalogueItem(level: LevelId): ComparisonItem {
     // a chip's dimensions or a child's core count do not describe the parent.
     specs: Object.entries(root.specifications)
       .filter(([, value]) => value.trim())
-      .map(([label, value]) => ({ id: specId(label), label, value })),
+      .map(([label, value]) => ({
+        id: specId(label),
+        label: specLabel(label),
+        value,
+      })),
     millimetersPerUnit:
       definition.kind === 'physical'
         ? (definition.millimetersPerUnit ?? null)
@@ -139,7 +144,7 @@ function menuPath(level: LevelId) {
   if (!menu) return [levels[path[0]].name];
   return [
     levels[path[0]].name,
-    menu.label,
+    t.branches[menu.label] ?? menu.label,
     ...path
       .slice(0, -1)
       .filter((id) => menu.levels.includes(id))

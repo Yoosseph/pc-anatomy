@@ -23,7 +23,7 @@ export type Kind = (typeof KINDS)[number];
 export const KIND_LABELS: Record<Kind, string> = {
   issue: 'Issue or mistake',
   idea: 'Idea or request',
-  other: 'Something else',
+  other: 'Collaboration or something else',
 };
 
 /** What the visitor is typing. Kept while the dialog is closed. */

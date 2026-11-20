@@ -83,7 +83,8 @@ export default function FeedbackDialog({ open, onOpenChange, context }: Props) {
       <DialogContent className="about-dialog feedback-dialog">
         <DialogTitle>Send feedback</DialogTitle>
         <DialogDescription>
-          Spotted a mistake, or have an idea for PC Anatomy? Tell me here.
+          Spotted a mistake, have an idea, or want to work together on PC
+          Anatomy? Tell me here.
         </DialogDescription>
         {status === 'sent' ? (
           <div className="feedback-done">

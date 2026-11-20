@@ -203,7 +203,26 @@ npm run build
 npm start
 ```
 
-The project is entirely static. The production output is written to `dist/` and needs no backend.
+The explorer is entirely static. The production output is written to `dist/` and needs no backend.
+The one exception is the feedback form, described next, and the site works without it.
+
+## Feedback form
+
+The **Give feedback** button at the start of the header opens a short form: what it is about (an issue or mistake, an idea, something else), an optional name and reply address, and the message. The page address, the current selection and the interface language go along with it. The form posts to `api/contact.ts`, a Vercel Function that emails the message through [Resend](https://resend.com), labelled `[PC Anatomy]` in the subject and tagged `source: pc-anatomy` so it stands out in a Resend account shared with other sites.
+
+No key or address is stored in this repository. They are read from environment variables set in the Vercel project, under **Settings → Environment Variables**, for both Production and Preview. A deployment only picks up new variables after a redeploy.
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `RESEND_API_KEY` | yes | A Resend API key. A sending-access key restricted to the domain is enough. |
+| `CONTACT_TO_EMAIL` | yes | The inbox that receives the messages. |
+| `CONTACT_FROM_EMAIL` | no | The sender, such as `feedback@pc-anatomy.com`; a bare address is sent as `PC Anatomy <address>`. The domain must be verified in Resend, or Resend refuses the message. Without this variable the function sends from `PC Anatomy <onboarding@resend.dev>`, which only delivers to the address the Resend account was registered with. |
+
+Never give these a `VITE_` prefix: Vite copies every `VITE_` variable into the public JavaScript.
+
+**Without them**, as in a fork, a local `npm run dev` or a static preview, the function answers `503 not_configured` (or does not exist at all) and the form says it is unavailable and links to [a new GitHub issue](https://github.com/Yoosseph/pc-anatomy/issues/new) instead, keeping what the visitor wrote. Use `vercel dev` to try the real form locally. If a message fails to send, the function logs Resend's status and reason; in Vercel that is **Logs**, filtered to `/api/contact`.
+
+The function also refuses other origins (403), anything but JSON (415), bodies over 20 KB (413) and invalid fields (400), allows five messages per address in ten minutes (429), and quietly drops anything that fills the hidden honeypot field.
 
 ## Search appearance
 
@@ -240,6 +259,7 @@ npm run check
 npm run lint
 npm test
 npm run build
+npm run test:e2e   # after the build: browser tests of the feedback form
 ```
 
 GitHub Actions runs these checks on every push and pull request using Node.js 24, the version Vercel deploys with.

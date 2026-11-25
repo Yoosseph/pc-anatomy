@@ -248,6 +248,14 @@ a {
   color: #191a1c;
   border-radius: 7px;
 }
+.brand[aria-pressed='true'] .brand-icon {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brand-icon {
+    transition: transform 320ms ease-in-out;
+  }
+}
 .brand small {
   display: block;
   letter-spacing: 1.7px;

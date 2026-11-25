@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import {
   BookOpen,
   Cpu,
@@ -26,7 +27,6 @@ function GitHubMark({ size = 14 }: { size?: number }) {
 
 type Props = {
   layers: boolean;
-  onReset: () => void;
   onToggleLayers: () => void;
   onSearch: () => void;
   onAbout: () => void;
@@ -35,16 +35,37 @@ type Props = {
 
 export default function Topbar({
   layers,
-  onReset,
   onToggleLayers,
   onSearch,
   onAbout,
   onFeedback,
 }: Props) {
+  const [light, setLight] = useState(
+    () => document.documentElement.dataset.theme === 'light',
+  );
+
+  function toggleTheme() {
+    const theme = light ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    setLight(!light);
+    try {
+      localStorage.setItem('pc-anatomy-theme', theme);
+    } catch {
+      // The theme still works when the browser disables storage.
+    }
+  }
+
   return (
     <header className="topbar">
-      <button className="brand" onClick={onReset} aria-label="Reset PC Anatomy">
-        <span className="brand-icon">
+      <button
+        type="button"
+        className="brand"
+        onClick={toggleTheme}
+        aria-label="Light theme"
+        aria-pressed={light}
+        title={light ? 'Switch to dark theme' : 'Switch to light theme'}
+      >
+        <span className="brand-icon" aria-hidden="true">
           <Cpu size={21} />
         </span>
         <span>PC Anatomy</span>

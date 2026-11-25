@@ -172,7 +172,6 @@ export default function Home() {
         <>
           <Topbar
             layers={layers}
-            onReset={explorer.reset}
             onToggleLayers={() => explorer.setLayers(!layers)}
             onSearch={() => setSearch(true)}
             onAbout={() => setAbout(true)}

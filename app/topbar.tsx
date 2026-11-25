@@ -46,6 +46,8 @@ export default function Topbar({
     () => document.documentElement.dataset.theme === 'light',
   );
 
+  const themeAction = light ? 'Switch to dark' : 'Switch to light';
+
   function toggleTheme() {
     const theme = light ? 'dark' : 'light';
     document.documentElement.dataset.theme = theme;
@@ -64,8 +66,8 @@ export default function Topbar({
         type="button"
         className="brand"
         onClick={toggleTheme}
-        aria-label={light ? 'Switch to dark mode' : 'Switch to light mode'}
-        title={light ? 'Switch to dark theme' : 'Switch to light theme'}
+        aria-label={themeAction}
+        title={themeAction}
       >
         <span className="brand-icon" aria-hidden="true">
           <Cpu size={21} />
@@ -74,7 +76,7 @@ export default function Topbar({
           <span className="brand-name">PC Anatomy</span>
           <span className="theme-action">
             {light ? <Moon size={12} /> : <Sun size={12} />}
-            {light ? 'Dark mode' : 'Light mode'}
+            {themeAction}
           </span>
         </span>
       </button>

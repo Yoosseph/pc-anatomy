@@ -1,3 +1,22 @@
+:root {
+  --light-ink: #192c3a;
+  --light-secondary: #425868;
+  --light-muted: #536a79;
+  --light-surface: #ffffff;
+  --light-panel: #f4f7fa;
+  --light-hover: #e8eff3;
+  --light-border: #c5d2da;
+  --light-border-strong: #9cabb6;
+  --light-blue: #2863a3;
+  --light-teal: #17677b;
+  --light-purple: #705099;
+  --light-amber: #86550b;
+  --light-green: #247348;
+  --light-lime: #506b17;
+  --light-pink: #993a77;
+  --light-red: #aa433e;
+}
+
 html[data-theme='light'] {
-  filter: invert(1);
+  color-scheme: light;
 }

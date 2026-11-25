@@ -6,7 +6,9 @@ import {
   Info,
   Layers3,
   MessageSquare,
+  Moon,
   Search,
+  Sun,
 } from 'lucide-react';
 import { GUIDE, REPOSITORY } from './links';
 
@@ -47,6 +49,7 @@ export default function Topbar({
   function toggleTheme() {
     const theme = light ? 'dark' : 'light';
     document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     setLight(!light);
     try {
       localStorage.setItem('pc-anatomy-theme', theme);
@@ -61,14 +64,19 @@ export default function Topbar({
         type="button"
         className="brand"
         onClick={toggleTheme}
-        aria-label="Light theme"
-        aria-pressed={light}
+        aria-label={light ? 'Switch to dark mode' : 'Switch to light mode'}
         title={light ? 'Switch to dark theme' : 'Switch to light theme'}
       >
         <span className="brand-icon" aria-hidden="true">
           <Cpu size={21} />
         </span>
-        <span>PC Anatomy</span>
+        <span className="brand-copy">
+          <span className="brand-name">PC Anatomy</span>
+          <span className="theme-action">
+            {light ? <Moon size={12} /> : <Sun size={12} />}
+            {light ? 'Dark mode' : 'Light mode'}
+          </span>
+        </span>
       </button>
       <a
         className="byline"

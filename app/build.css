@@ -14,7 +14,7 @@
   --build-ok: light-dark(var(--light-teal), #7de0b7);
   --build-warn: light-dark(var(--light-amber), #e8b860);
   --build-fail: light-dark(var(--light-red), #f08a80);
-  --build-panel: light-dark(#fffffff2, #0e0f10f2);
+  --build-panel: light-dark(#d4d7d9f2, #0e0f10f2);
   --build-card: light-dark(var(--light-surface), #141619);
   --build-line: light-dark(var(--light-hover), #24272b);
   /* One colour per slot: its icon, its options, its tags on the checks. They
@@ -29,9 +29,9 @@
   --slot-power: var(--hue-power);
   background: radial-gradient(
     ellipse at 50% 46%,
-    light-dark(var(--light-panel), #1d2022) 0%,
-    light-dark(var(--light-surface), #111315) 50%,
-    light-dark(var(--light-surface), #08090a) 90%
+    light-dark(#fff, #1d2022) 0%,
+    light-dark(#fff, #111315) 50%,
+    light-dark(#fff, #08090a) 90%
   );
 }
 .build-workbench:has(.build-parts.collapsed) {
@@ -185,7 +185,7 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 7px;
-  color: light-dark(var(--light-surface), #191a1c);
+  color: light-dark(#fff, #191a1c);
   background: linear-gradient(
     135deg,
     var(--accent-bright),
@@ -457,7 +457,7 @@
   border-color: light-dark(var(--light-border), #474c52);
 }
 .build-filter button[aria-pressed='true'] {
-  color: light-dark(var(--light-surface), #101214);
+  color: light-dark(#fff, #101214);
   font-weight: 600;
   background: var(--slot);
   border-color: var(--slot);
@@ -549,7 +549,7 @@
   margin-top: 1px;
   border-radius: 50%;
   border: 1.5px solid light-dark(var(--light-border), #565c63);
-  color: light-dark(var(--light-surface), #101214);
+  color: light-dark(#fff, #101214);
   transition:
     border-color 0.14s ease,
     background 0.14s ease;
@@ -928,7 +928,7 @@
   border-radius: 4px;
   text-align: center;
   font: inherit;
-  color: light-dark(var(--light-surface), #121314);
+  color: light-dark(#fff, #121314);
   background: var(--state);
 }
 .build-passing {
@@ -1139,7 +1139,7 @@
   border-radius: 17px;
   font-size: 12px;
   color: light-dark(var(--light-ink), #c9cdd1);
-  background: light-dark(#ffffffe6, #121416e6);
+  background: light-dark(#d4d7d9e6, #121416e6);
   backdrop-filter: blur(6px);
 }
 .build-fitting {
@@ -1295,7 +1295,7 @@
     border-radius: 9px;
     font-size: 11px;
     line-height: 18px;
-    color: light-dark(var(--light-surface), #191a1c);
+    color: light-dark(#fff, #191a1c);
     background: light-dark(var(--light-muted), #8d939a);
   }
   .build-tab-count.status {

@@ -5,7 +5,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: light-dark(var(--light-surface), #15212a);
+  --color-primary-foreground: light-dark(#fff, #15212a);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-input: light-dark(var(--light-border-strong), #33485a);

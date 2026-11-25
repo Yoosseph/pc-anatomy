@@ -12,9 +12,9 @@
 .comparison-workbench {
   background: radial-gradient(
     ellipse at 50% 47%,
-    light-dark(var(--light-panel), #212327) 0%,
-    light-dark(var(--light-surface), #111315) 48%,
-    light-dark(var(--light-surface), #070809) 88%
+    light-dark(#fff, #212327) 0%,
+    light-dark(#fff, #111315) 48%,
+    light-dark(#fff, #070809) 88%
   );
 }
 :is(.comparison-specs-button, .comparison-exit, .comparison-swap) {
@@ -56,7 +56,7 @@
   width: 34px;
   height: 34px;
   padding: 7px;
-  color: light-dark(var(--light-surface), #152226);
+  color: light-dark(#fff, #152226);
   background: var(--accent);
   border-radius: 6px;
 }
@@ -151,7 +151,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  color: light-dark(var(--light-surface), #0f2226);
+  color: light-dark(#fff, #0f2226);
   background: var(--accent);
   font: 700 11px monospace;
 }

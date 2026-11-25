@@ -10,7 +10,9 @@ test('chip labels the next theme and keeps original hardware colors', async ({ p
   await expect(header).toHaveCSS('background-color', 'rgb(13, 14, 14)');
   await enable.click();
   await expect(disable.getByText('Dark mode')).toBeVisible();
-  await expect(header).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(header).toHaveCSS('background-color', 'rgb(212, 215, 217)');
+  await expect(page.locator('.explorer')).toHaveCSS('background-color', 'rgb(225, 227, 229)');
+  await expect(page.locator('body')).toHaveCSS('background-image', /rgb\(255, 255, 255\) 80%/);
   await expect(root).toHaveCSS('filter', 'none');
   await page.reload();
   await expect(disable).toBeVisible();

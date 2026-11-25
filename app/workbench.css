@@ -83,12 +83,12 @@ html[data-theme='light'] {
 .chip-accent {
   background: var(--accent);
   border-color: var(--accent);
-  color: light-dark(var(--light-surface), #0b1416);
+  color: light-dark(#fff, #0b1416);
 }
 .chip-accent:hover {
   background: var(--accent-bright);
   border-color: var(--accent-bright);
-  color: light-dark(var(--light-surface), #0b1416);
+  color: light-dark(#fff, #0b1416);
 }
 .chip:focus-visible {
   outline: 2px solid var(--accent-bright);
@@ -114,9 +114,9 @@ body {
      screen show a seam in landscape. */
   background: radial-gradient(
     ellipse at 62% 45%,
-    light-dark(var(--light-surface), #1b1d1e) 0%,
-    light-dark(var(--light-panel), #0f1011) 44%,
-    light-dark(var(--light-hover), #070808) 80%
+    light-dark(#fff, #1b1d1e) 0%,
+    light-dark(#fff, #0f1011) 44%,
+    light-dark(#fff, #070808) 80%
   );
 }
 button,
@@ -248,7 +248,7 @@ a {
     var(--accent-bright),
     var(--accent-violet)
   );
-  color: light-dark(var(--light-surface), #191a1c);
+  color: light-dark(#fff, #191a1c);
   border-radius: 7px;
 }
 .brand-copy {
@@ -755,7 +755,7 @@ a {
   padding: 0 9px;
   border: 1px solid light-dark(var(--light-border), #3d4552);
   border-radius: 11px;
-  background: light-dark(#ffffffe6, #121519e6);
+  background: light-dark(#d4d7d9e6, #121519e6);
   color: light-dark(var(--light-ink), #d9dee5);
   font-size: 11.5px;
   line-height: 20px;
@@ -884,7 +884,7 @@ a {
   padding: 15px;
   border: 1px solid light-dark(var(--light-border), #62513b);
   border-radius: 8px;
-  background: light-dark(#f4f7faf2, #17191bf2);
+  background: light-dark(#e1e3e5f2, #17191bf2);
   box-shadow: 0 12px 36px #0005;
   color: light-dark(var(--light-ink), #dfe3e6);
 }
@@ -1091,7 +1091,7 @@ a {
   bottom: calc(100% + 8px);
   width: min(290px, calc(100vw - 40px));
   padding: 12px;
-  background: light-dark(#f4f7faf2, #17191bf2);
+  background: light-dark(#e1e3e5f2, #17191bf2);
   border: 1px solid light-dark(var(--light-border), #565a60);
   border-radius: 6px;
   box-shadow: 0 18px 45px #0009;
@@ -1157,7 +1157,7 @@ a {
   max-width: 260px;
   padding: 8px 10px;
   color: light-dark(var(--light-red), #e2c8ad);
-  background: light-dark(#f4f7faed, #211b17ed);
+  background: light-dark(#e1e3e5ed, #211b17ed);
   border: 1px solid light-dark(var(--light-amber), #665240);
   border-radius: 4px;
   font-size: 11px;
@@ -1304,7 +1304,7 @@ a {
     light-dark(var(--light-blue), #62a9b7) 68%,
     light-dark(var(--light-blue), #3f8794) 100%
   );
-  color: light-dark(var(--light-surface), #062026);
+  color: light-dark(#fff, #062026);
   cursor: pointer;
   box-shadow:
     0 0 0 1px #0b0c0d,
@@ -1346,7 +1346,7 @@ a {
   font: 700 9px monospace;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: light-dark(var(--light-surface), #06272e);
+  color: light-dark(#fff, #06272e);
 }
 .disassembly .play:hover {
   filter: brightness(1.07);
@@ -1677,12 +1677,12 @@ a {
   font-size: 14px;
   /* In the colour of what it opens: a card's scale is violet, a board's green. */
   background: color-mix(in srgb, var(--hue, light-dark(var(--light-blue), #83c6d2)) 88%, light-dark(var(--light-surface), #0f1011));
-  color: light-dark(var(--light-surface), #121314);
+  color: light-dark(#fff, #121314);
   border-radius: 4px;
   font-weight: 600;
 }
 .open-component:hover {
-  color: light-dark(var(--light-surface), #121314);
+  color: light-dark(#fff, #121314);
   background: color-mix(in srgb, var(--hue, light-dark(var(--light-blue), #afe1e8)) 78%, light-dark(var(--light-ink), #ffffff));
 }
 .detail-actions {
@@ -2286,7 +2286,7 @@ a {
     display: none;
   }
   .has-selection .view-controls {
-    background: light-dark(#f4f7fad9, #171819d9);
+    background: light-dark(#e1e3e5d9, #171819d9);
   }
   .has-selection .view-controls button {
     padding: 4px 9px;
@@ -3284,7 +3284,7 @@ a {
   padding: 0 18px;
   border-radius: 6px;
   background: var(--accent);
-  color: light-dark(var(--light-surface), #0b1416);
+  color: light-dark(#fff, #0b1416);
   font-size: 13.5px;
   font-weight: 600;
   white-space: nowrap;

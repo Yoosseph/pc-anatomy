@@ -2,6 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script src="/theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>How PC Components Work — A Visual Guide | PC Anatomy</title>
     <meta
@@ -37,8 +39,8 @@
       :root {
         color-scheme: dark;
         font-family: 'Segoe UI', system-ui, sans-serif;
-        color: #e4e7e9;
-        background: #101214;
+        color: light-dark(var(--light-ink), #e4e7e9);
+        background: light-dark(#fff, #101214);
       }
       * {
         box-sizing: border-box;
@@ -47,11 +49,11 @@
         margin: 0;
       }
       a {
-        color: #a1d9e2;
+        color: light-dark(var(--light-blue), #a1d9e2);
         text-underline-offset: 4px;
       }
       a:focus-visible {
-        outline: 2px solid #a1d9e2;
+        outline: 2px solid light-dark(var(--light-blue), #a1d9e2);
         outline-offset: 5px;
       }
       header,
@@ -65,13 +67,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        border-bottom: 1px solid #30363b;
+        border-bottom: 1px solid light-dark(var(--light-border), #30363b);
       }
       .brand {
         display: flex;
         align-items: center;
         gap: 12px;
-        color: #fff;
+        color: light-dark(var(--light-ink), #fff);
         font-weight: 700;
         text-decoration: none;
       }
@@ -83,7 +85,7 @@
         padding-top: 70px;
       }
       .eyebrow {
-        color: #a1d9e2;
+        color: light-dark(var(--light-blue), #a1d9e2);
         font-size: 12px;
         letter-spacing: 0.16em;
         text-transform: uppercase;
@@ -99,14 +101,14 @@
         max-width: 700px;
         font-size: 19px;
         line-height: 1.7;
-        color: #b8c2c8;
+        color: light-dark(var(--light-secondary), #b8c2c8);
       }
       .cta {
         display: inline-block;
         margin: 12px 0 30px;
         padding: 14px 22px;
-        color: #11191c;
-        background: #a1d9e2;
+        color: light-dark(#fff, #11191c);
+        background: light-dark(var(--light-blue), #a1d9e2);
         border-radius: 8px;
         text-decoration: none;
         font-weight: 650;
@@ -117,12 +119,12 @@
       figure img {
         display: block;
         width: 100%;
-        border: 1px solid #30363b;
+        border: 1px solid light-dark(var(--light-border), #30363b);
         border-radius: 12px;
         height: auto;
       }
       figcaption {
-        color: #8e9da5;
+        color: light-dark(var(--light-secondary), #8e9da5);
         font-size: 13px;
         line-height: 1.6;
         margin-top: 12px;
@@ -132,7 +134,7 @@
         flex-wrap: wrap;
         gap: 12px 22px;
         padding: 22px 0;
-        border-block: 1px solid #30363b;
+        border-block: 1px solid light-dark(var(--light-border), #30363b);
       }
       .components {
         display: grid;
@@ -149,7 +151,7 @@
         letter-spacing: -0.025em;
       }
       h2 span {
-        color: #a1d9e2;
+        color: light-dark(var(--light-blue), #a1d9e2);
         font:
           12px ui-monospace,
           monospace;
@@ -157,20 +159,20 @@
       }
       p,
       li {
-        color: #b8c2c8;
+        color: light-dark(var(--light-secondary), #b8c2c8);
         line-height: 1.8;
       }
       strong {
-        color: #e4e7e9;
+        color: light-dark(var(--light-ink), #e4e7e9);
       }
       .how {
-        border-top: 1px solid #30363b;
+        border-top: 1px solid light-dark(var(--light-border), #30363b);
       }
       .how p {
         max-width: 780px;
       }
       footer {
-        border-top: 1px solid #30363b;
+        border-top: 1px solid light-dark(var(--light-border), #30363b);
         font-size: 13px;
         padding-bottom: 40px;
       }

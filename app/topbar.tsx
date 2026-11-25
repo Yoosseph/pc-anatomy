@@ -1,11 +1,14 @@
 'use client';
+import { useState } from 'react';
 import {
   BookOpen,
   Cpu,
   Info,
   Layers3,
   MessageSquare,
+  Moon,
   Search,
+  Sun,
 } from 'lucide-react';
 import { GUIDE, REPOSITORY } from './links';
 
@@ -26,7 +29,6 @@ function GitHubMark({ size = 14 }: { size?: number }) {
 
 type Props = {
   layers: boolean;
-  onReset: () => void;
   onToggleLayers: () => void;
   onSearch: () => void;
   onAbout: () => void;
@@ -35,19 +37,48 @@ type Props = {
 
 export default function Topbar({
   layers,
-  onReset,
   onToggleLayers,
   onSearch,
   onAbout,
   onFeedback,
 }: Props) {
+  const [light, setLight] = useState(
+    () => document.documentElement.dataset.theme === 'light',
+  );
+
+  const themeAction = light ? 'Switch to dark' : 'Switch to light';
+
+  function toggleTheme() {
+    const theme = light ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    setLight(!light);
+    try {
+      localStorage.setItem('pc-anatomy-theme', theme);
+    } catch {
+      // The theme still works when the browser disables storage.
+    }
+  }
+
   return (
     <header className="topbar">
-      <button className="brand" onClick={onReset} aria-label="Reset PC Anatomy">
-        <span className="brand-icon">
+      <button
+        type="button"
+        className="brand"
+        onClick={toggleTheme}
+        aria-label={themeAction}
+        title={themeAction}
+      >
+        <span className="brand-icon" aria-hidden="true">
           <Cpu size={21} />
         </span>
-        <span>PC Anatomy</span>
+        <span className="brand-copy">
+          <span className="brand-name">PC Anatomy</span>
+          <span className="theme-action">
+            {light ? <Moon size={12} /> : <Sun size={12} />}
+            {themeAction}
+          </span>
+        </span>
       </button>
       <a
         className="byline"
